@@ -9,8 +9,8 @@ structure TestSupport = struct
             [] => true
           | unequal =>
             (app (fn (a,b) =>
-                     print ("--- Expected \"" ^ (converter b)
-                            ^ "\", obtained \"" ^ (converter a) ^ "\"\n"))
+                     print ("--- Expected " ^ (converter b)
+                            ^ ", obtained " ^ (converter a) ^ "\n"))
                  unequal;
              false)
 
