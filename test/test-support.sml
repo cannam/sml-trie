@@ -6,7 +6,7 @@ structure TestSupport = struct
 
     fun report converter (a,b) =
         print ("--- Expected " ^ (converter b)
-               ^ ", obtained " ^ (converter a) ^ "\n")
+               ^ "\n--- Obtained " ^ (converter a) ^ "\n")
                                     
     fun check converter (a,b) =
         if a = b then true
