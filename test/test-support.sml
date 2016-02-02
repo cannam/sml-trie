@@ -4,9 +4,9 @@ structure TestSupport = struct
     type test = string * (unit -> bool)
     type test_suite = string * test list
 
-    fun report converter (a,b) =
-        print ("--- Expected " ^ (converter b)
-               ^ "\n--- Obtained " ^ (converter a) ^ "\n")
+    fun report converter (exp,obt) =
+        print ("--- Expected " ^ (converter exp)
+               ^ "\n--- Obtained " ^ (converter obt) ^ "\n")
                                     
     fun check converter (a,b) =
         if a = b then true
