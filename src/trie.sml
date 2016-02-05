@@ -31,11 +31,11 @@ functor TrieFn (E : TRIE_ELEMENT) : TRIE where type Elt.t = E.t = struct
                                     val compare = Elt.compare
                                     end)
 
-    datatype value = VALUE | NO_VALUE
+    datatype value = VALUE
+                   | NO_VALUE
 
-    datatype node =
-             LEAF of value
-           | NODE of value * node Map.map
+    datatype node = LEAF of value
+                  | NODE of value * node Map.map
 
     type t = node
 
@@ -68,8 +68,11 @@ functor TrieFn (E : TRIE_ELEMENT) : TRIE where type Elt.t = E.t = struct
         in
             enumerate' ([], trie)
         end
-                
+            
 (*			 
+    fun match (trie, []) = enumerate trie
+      | match (LEAF  = 
+
     fun match (trie, []) = enumerate trie
       | match (LEAF, _) = []
       | match (NODE n, first::rest) =
@@ -104,7 +107,7 @@ structure StringTrieTest = struct
     fun test () =
         let
             val strings =
-                ["poot", "parp", "alligator", "zebra", "alliance", "aardvark"]
+                ["poot", "parp", "par", "alligator", "zebra", "alliance", "aardvark"]
             val t = List.foldl (fn (s, t) => StringTrie.add (t, s))
                                StringTrie.empty
                                strings
