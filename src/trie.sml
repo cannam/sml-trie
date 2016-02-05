@@ -6,6 +6,7 @@ signature TRIE = sig
 
     val empty : t
     val add : t * entry -> t
+    val contains : t * entry -> bool
     val remove : t * entry -> t
     val enumerate : t -> entry list
     val match : t * entry -> entry list
@@ -56,6 +57,14 @@ functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
             SOME n => NODE (v, Map.insert (m, x, remove (n, xs)))
           | NONE => NODE (v, m)
 
+    fun contains (LEAF VALUE, []) = true
+      | contains (LEAF _, _) = false
+      | contains (NODE (v, m), []) = v = VALUE
+      | contains (NODE (v, m), x::xs) = 
+        case Map.find (m, x) of
+            SOME sub => contains (sub, xs)
+          | NONE => false
+
     fun concatMap f xx = List.concat (List.map f xx)
 
     fun string_of_entry e =
@@ -99,6 +108,9 @@ structure StringTrie :> TRIE where type entry = string = struct
     fun add (trie, s) =
         CharListTrie.add (trie, String.explode s)
 
+    fun contains (trie, s) =
+        CharListTrie.contains (trie, String.explode s)
+                         
     fun remove (trie, s) =
         CharListTrie.remove (trie, String.explode s)
 
@@ -124,7 +136,11 @@ structure StringTrieTest = struct
             val match = StringTrie.match (t, "all")
         in
 	    print ("contents: (" ^ (String.concatWith "," contents) ^ ")\n");
-	    print ("match: (" ^ (String.concatWith "," match) ^ ")\n")
+	    print ("match: (" ^ (String.concatWith "," match) ^ ")\n");
+            print ("contains pa: " ^ (Bool.toString (StringTrie.contains (t, "pa"))) ^ "\n");
+            print ("contains par: " ^ (Bool.toString (StringTrie.contains (t, "par"))) ^ "\n");
+            print ("contains parp: " ^ (Bool.toString (StringTrie.contains (t, "parp"))) ^ "\n");
+            print ("contains part: " ^ (Bool.toString (StringTrie.contains (t, "part"))) ^ "\n")
         end
       
 end
