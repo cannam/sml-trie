@@ -8,8 +8,11 @@ signature TRIE = sig
     val add : t * entry -> t
     val contains : t * entry -> bool
     val remove : t * entry -> t
+(*    val foldl : (entry * 'a -> 'a) -> 'a -> t -> 'a *)
     val enumerate : t -> entry list
     val match : t * entry -> entry list
+(*    val foldl_match : (entry * 'a -> 'a) -> 'a -> (t * entry) -> 'a  *)
+    val prefix_of : t * entry -> entry 
     
 end
 
@@ -90,6 +93,20 @@ functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
             SOME sub => map (fn entry => x :: entry) (match (sub, xs))
           | NONE => []
 
+    fun prefix_of (trie, e) =
+        let fun prefix' (best, acc, LEAF v, _) = if v = VALUE then acc else best
+              | prefix' (best, acc, NODE (v, m), []) = if v = VALUE then acc else best
+              | prefix' (best, acc, NODE (v, m), x::xs) =
+                case Map.find (m, x) of
+                    SOME sub => prefix' (if v = VALUE then acc else best,
+                                         x :: acc,
+                                         sub,
+                                         xs)
+                  | NONE => if v = VALUE then acc else best
+        in
+            rev (prefix' ([], [], trie, e))
+        end
+
 end
 
 structure StringTrie :> TRIE where type entry = string = struct
@@ -119,6 +136,9 @@ structure StringTrie :> TRIE where type entry = string = struct
 
     fun match (trie, s) =
         List.map String.implode (CharListTrie.match (trie, String.explode s))
+
+    fun prefix_of (trie, s) =
+        String.implode (CharListTrie.prefix_of (trie, (String.explode s)))
                  
 end
 
@@ -127,7 +147,7 @@ structure StringTrieTest = struct
     fun test () =
         let
             val strings =
-                ["poot", "parp", "par", "alligator", "zebra", "alliance", "aardvark"]
+                ["poot", "parp", "par", "alligator", "zebra", "alliance", "aardvark","a"]
             val t = List.foldl (fn (s, t) => StringTrie.add (t, s))
                                StringTrie.empty
                                strings
@@ -140,7 +160,13 @@ structure StringTrieTest = struct
             print ("contains pa: " ^ (Bool.toString (StringTrie.contains (t, "pa"))) ^ "\n");
             print ("contains par: " ^ (Bool.toString (StringTrie.contains (t, "par"))) ^ "\n");
             print ("contains parp: " ^ (Bool.toString (StringTrie.contains (t, "parp"))) ^ "\n");
-            print ("contains part: " ^ (Bool.toString (StringTrie.contains (t, "part"))) ^ "\n")
+            print ("contains part: " ^ (Bool.toString (StringTrie.contains (t, "part"))) ^ "\n");
+            print ("prefix_of pa: " ^ (StringTrie.prefix_of (t, "pa")) ^ "\n");
+            print ("prefix_of par: " ^ (StringTrie.prefix_of (t, "par")) ^ "\n");
+            print ("prefix_of parp: " ^ (StringTrie.prefix_of (t, "parp")) ^ "\n");
+            print ("prefix_of part: " ^ (StringTrie.prefix_of (t, "part")) ^ "\n");
+            print ("prefix_of \"\": " ^ (StringTrie.prefix_of (t, "")) ^ "\n");
+            print ("prefix_of allia: " ^ (StringTrie.prefix_of (t, "allia")) ^ "\n")
         end
       
 end
