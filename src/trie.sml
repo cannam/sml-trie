@@ -6,6 +6,7 @@ signature TRIE = sig
 
     val empty : t
     val add : t * entry -> t
+    val remove : t * entry -> t
     val enumerate : t -> entry list
     val match : t * entry -> entry list
     
@@ -46,6 +47,14 @@ functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
         case Map.find (m, x) of
             SOME n => NODE (v, Map.insert (m, x, add (n, xs)))
           | NONE => NODE (v, Map.insert (m, x, add (empty, xs)))
+
+    fun remove (LEAF v, []) = LEAF NO_VALUE
+      | remove (NODE (_, m), []) = NODE (NO_VALUE, m)
+      | remove (LEAF v, x::xs) = LEAF v
+      | remove (NODE (v, m), x::xs) =
+        case Map.find (m, x) of
+            SOME n => NODE (v, Map.insert (m, x, remove (n, xs)))
+          | NONE => NODE (v, m)
 
     fun concatMap f xx = List.concat (List.map f xx)
 
@@ -90,6 +99,9 @@ structure StringTrie :> TRIE where type entry = string = struct
     fun add (trie, s) =
         CharListTrie.add (trie, String.explode s)
 
+    fun remove (trie, s) =
+        CharListTrie.remove (trie, String.explode s)
+
     fun enumerate trie =
         List.map String.implode (CharListTrie.enumerate trie)
 
@@ -107,6 +119,7 @@ structure StringTrieTest = struct
             val t = List.foldl (fn (s, t) => StringTrie.add (t, s))
                                StringTrie.empty
                                strings
+            val t = StringTrie.remove (t, "poot")
 	    val contents = StringTrie.enumerate t
             val match = StringTrie.match (t, "all")
         in
