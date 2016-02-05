@@ -1,17 +1,8 @@
 
-signature TRIE_ELEMENT = sig
-    type t
-    val compare : t * t -> order
-    val toString : t -> string
-end
-
 signature TRIE = sig
 
-    structure Elt : TRIE_ELEMENT
-
     type t
-
-    type entry = Elt.t list
+    type entry
 
     val empty : t
     val add : t * entry -> t
@@ -20,16 +11,20 @@ signature TRIE = sig
     
 end
 
-functor TrieFn (E : TRIE_ELEMENT) : TRIE where type Elt.t = E.t = struct
+signature TRIE_ELEMENT = sig
+    type t
+    val compare : t * t -> order
+    val toString : t -> string
+end
 
-    structure Elt = E
+functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
 
-    type elt = Elt.t
+    type elt = E.t
     type entry = elt list
     
     structure Map = RedBlackMapFn (struct
-                                    type ord_key = Elt.t
-                                    val compare = Elt.compare
+                                    type ord_key = E.t
+                                    val compare = E.compare
                                     end)
 
     datatype value = VALUE
@@ -55,7 +50,7 @@ functor TrieFn (E : TRIE_ELEMENT) : TRIE where type Elt.t = E.t = struct
     fun concatMap f xx = List.concat (List.map f xx)
 
     fun string_of_entry e =
-        String.concatWith " " (map Elt.toString e)
+        String.concatWith " " (map E.toString e)
 
     fun enumerate trie =
         let fun enumerate' (acc, LEAF VALUE) = [rev acc]
@@ -79,7 +74,7 @@ functor TrieFn (E : TRIE_ELEMENT) : TRIE where type Elt.t = E.t = struct
 
 end
 
-structure StringTrie = struct (*!!! with trie sig? *)
+structure StringTrie :> TRIE where type entry = string = struct
 
     structure CharListTrie = TrieFn(struct
 				     type t = char
@@ -88,6 +83,7 @@ structure StringTrie = struct (*!!! with trie sig? *)
 				     end)
 
     type t = CharListTrie.t
+    type entry = string
 
     val empty = CharListTrie.empty
 
