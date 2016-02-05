@@ -16,6 +16,7 @@ signature TRIE = sig
     val empty : t
     val add : t * entry -> t
     val enumerate : t -> entry list
+    val match : t * entry -> entry list
     
 end
 
@@ -68,21 +69,17 @@ functor TrieFn (E : TRIE_ELEMENT) : TRIE where type Elt.t = E.t = struct
         in
             enumerate' ([], trie)
         end
-            
-(*			 
-    fun match (trie, []) = enumerate trie
-      | match (LEAF  = 
 
     fun match (trie, []) = enumerate trie
-      | match (LEAF, _) = []
-      | match (NODE n, first::rest) =
-	case Map.find (n, first) of
-	    SOME s => first :: (match (s, rest))
-	  | NONE => []
-*)			 
+      | match (LEAF _, x::xs) = []
+      | match (NODE (v, m), x::xs) = 
+        case Map.find (m, x) of
+            SOME sub => map (fn entry => x :: entry) (match (sub, xs))
+          | NONE => []
+
 end
 
-structure StringTrie = struct
+structure StringTrie = struct (*!!! with trie sig? *)
 
     structure CharListTrie = TrieFn(struct
 				     type t = char
@@ -95,11 +92,14 @@ structure StringTrie = struct
     val empty = CharListTrie.empty
 
     fun add (trie, s) =
-      CharListTrie.add (trie, String.explode s)
+        CharListTrie.add (trie, String.explode s)
 
     fun enumerate trie =
-      List.map String.implode (CharListTrie.enumerate trie)
+        List.map String.implode (CharListTrie.enumerate trie)
 
+    fun match (trie, s) =
+        List.map String.implode (CharListTrie.match (trie, String.explode s))
+                 
 end
 
 structure StringTrieTest = struct
@@ -112,8 +112,10 @@ structure StringTrieTest = struct
                                StringTrie.empty
                                strings
 	    val contents = StringTrie.enumerate t
+            val match = StringTrie.match (t, "all")
         in
-	    print ("contents: (" ^ (String.concatWith "," contents) ^ ")\n")
+	    print ("contents: (" ^ (String.concatWith "," contents) ^ ")\n");
+	    print ("match: (" ^ (String.concatWith "," match) ^ ")\n")
         end
       
 end
