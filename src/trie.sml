@@ -42,8 +42,6 @@ functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
 
     val empty = LEAF NO_VALUE
 
-    (*!!! this implementation assumes entries are unique -- adding one that already exists does nothing. we could alternatively count them. *)
-
     fun add (LEAF _, []) = LEAF VALUE
       | add (NODE (_, m), []) = NODE (VALUE, m)
       | add (LEAF v, x::xs) = NODE (v, Map.insert (Map.empty, x, add (empty, xs)))
@@ -94,15 +92,17 @@ functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
           | NONE => []
 
     fun prefix_of (trie, e) =
-        let fun prefix' (best, acc, LEAF v, _) = if v = VALUE then acc else best
-              | prefix' (best, acc, NODE (v, m), []) = if v = VALUE then acc else best
+        let fun prefix' (best, acc, LEAF VALUE, _) = acc
+              | prefix' (best, acc, NODE (VALUE, _), []) = acc
+              | prefix' (best, acc, LEAF NO_VALUE, _) = best
+              | prefix' (best, acc, NODE (NO_VALUE, _), []) = best
               | prefix' (best, acc, NODE (v, m), x::xs) =
-                case Map.find (m, x) of
-                    SOME sub => prefix' (if v = VALUE then acc else best,
-                                         x :: acc,
-                                         sub,
-                                         xs)
-                  | NONE => if v = VALUE then acc else best
+                let val best = if v = VALUE then acc else best
+                in
+                    case Map.find (m, x) of
+                        SOME sub => prefix' (best, x :: acc, sub, xs)
+                      | NONE => best
+                end
         in
             rev (prefix' ([], [], trie, e))
         end
