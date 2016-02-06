@@ -1,25 +1,7 @@
 
-signature TRIE = sig
-
-    type t
-    type entry
-
-    val empty : t
-    val add : t * entry -> t
-    val contains : t * entry -> bool
-    val remove : t * entry -> t
-    val foldl : (entry * 'a -> 'a) -> 'a -> t -> 'a 
-    val enumerate : t -> entry list
-    val match : t * entry -> entry list
-    val foldl_match : (entry * 'a -> 'a) -> 'a -> (t * entry) -> 'a 
-    val prefix_of : t * entry -> entry 
-    
-end
-
 signature TRIE_ELEMENT = sig
     type t
     val compare : t * t -> order
-    val toString : t -> string
 end
 
 functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
@@ -67,9 +49,6 @@ functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
           | NONE => false
 
     fun concatMap f xx = List.concat (List.map f xx)
-
-    fun string_of_entry e =
-        String.concatWith " " (map E.toString e)
 
     (*!!! nb pfx is reversed *)
     fun foldl_prefixed f (acc, pfx, LEAF VALUE) = f (rev pfx, acc)
@@ -120,7 +99,6 @@ structure StringTrie :> TRIE where type entry = string = struct
     structure CharListTrie = TrieFn(struct
 				     type t = char
 				     val compare = Char.compare
-				     val toString = Char.toString
 				     end)
 
     type t = CharListTrie.t
