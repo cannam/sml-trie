@@ -62,7 +62,7 @@ functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
 
     fun enumerate trie = rev (foldl (op::) [] trie)
 
-    fun foldl_match f acc (trie, e) =
+    fun foldl_prefix_match f acc (trie, e) =
         let fun foldl_match' (acc, pfx, trie, []) =
                 foldl_prefixed f (acc, pfx, trie)
               | foldl_match' (acc, pfx, LEAF _, _) = acc
@@ -74,7 +74,7 @@ functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
             foldl_match' (acc, [], trie, e)
         end
 
-    fun match (trie, e) = rev (foldl_match (op::) [] (trie, e))
+    fun prefix_match (trie, e) = rev (foldl_prefix_match (op::) [] (trie, e))
     
     fun prefix_of (trie, e) =
         let fun prefix' (best, acc, LEAF VALUE, _) = acc
@@ -122,11 +122,11 @@ structure StringTrie :> TRIE where type entry = string = struct
         CharListTrie.foldl (fn (e, acc) => f (String.implode e, acc))
                            acc trie
                  
-    fun match (trie, s) =
-        List.map String.implode (CharListTrie.match (trie, String.explode s))
+    fun prefix_match (trie, s) =
+        List.map String.implode (CharListTrie.prefix_match (trie, String.explode s))
 
-    fun foldl_match f acc (trie, s) =
-        CharListTrie.foldl_match (fn (e, acc) => f (String.implode e, acc))
+    fun foldl_prefix_match f acc (trie, s) =
+        CharListTrie.foldl_prefix_match (fn (e, acc) => f (String.implode e, acc))
                                  acc (trie, String.explode s)
 
     fun prefix_of (trie, s) =
@@ -145,7 +145,7 @@ structure StringTrieTest = struct
                                strings
             val t = StringTrie.remove (t, "poot")
 	    val contents = StringTrie.enumerate t
-            val match = StringTrie.match (t, "all")
+            val match = StringTrie.prefix_match (t, "all")
         in
 	    print ("contents: (" ^ (String.concatWith "," contents) ^ ")\n");
 	    print ("match: (" ^ (String.concatWith "," match) ^ ")\n");

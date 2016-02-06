@@ -24,17 +24,20 @@ signature TRIE = sig
     (* Return a list of all entries in the trie, in sort order *)
     val enumerate : t -> entry list
 
-    (* Fold over all the entries in the trie that have the given entry
-       as a prefix, in sort order *)
-    val foldl_match : (entry * 'a -> 'a) -> 'a -> (t * entry) -> 'a 
+    (* Fold over all the entries in the trie that have the given
+       prefix, in sort order. The prefix does not need to be present as
+       an entry in the trie *)
+    val foldl_prefix_match : (entry * 'a -> 'a) -> 'a -> (t * entry) -> 'a 
 
     (* Return a list of all entries in the trie that have the given
-       entry as a prefix, in sort order *)
-    val match : t * entry -> entry list
+       entry as a prefix, in sort order. The prefix does not need to
+       be present as an entry in the trie *)
+    val prefix_match : t * entry -> entry list
 
-    (* Return the longest prefix of the given entry that is present as
-       an entry in the trie. (If the given entry is itself present, it
-       will be its own longest prefix and so it will be returned.) *)
+    (* Return the longest prefix of the given value that is present as
+       an entry in the trie. The given value does not need to be
+       present as an entry in the trie; if it is present, it will be
+       its own longest prefix, and so it will be returned *)
     val prefix_of : t * entry -> entry 
     
 end

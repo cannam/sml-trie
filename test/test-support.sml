@@ -26,9 +26,10 @@ structure TestSupport = struct
             if (List.length a <> List.length b)
             then 
                 (print ("--- Lists have differing lengths (expected " ^
-                        (Int.toString (List.length a)) ^
+                        (Int.toString (List.length b)) ^
                         ", obtained " ^
-                        (Int.toString (List.length b)));
+                        (Int.toString (List.length a)) ^
+                        ")\n");
                  false)
             else
                 check_lists' (a, b)
