@@ -8,10 +8,10 @@ signature TRIE = sig
     val add : t * entry -> t
     val contains : t * entry -> bool
     val remove : t * entry -> t
-(*    val foldl : (entry * 'a -> 'a) -> 'a -> t -> 'a *)
+    val foldl : (entry * 'a -> 'a) -> 'a -> t -> 'a 
     val enumerate : t -> entry list
     val match : t * entry -> entry list
-(*    val foldl_match : (entry * 'a -> 'a) -> 'a -> (t * entry) -> 'a  *)
+    val foldl_match : (entry * 'a -> 'a) -> 'a -> (t * entry) -> 'a 
     val prefix_of : t * entry -> entry 
     
 end
@@ -71,26 +71,32 @@ functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
     fun string_of_entry e =
         String.concatWith " " (map E.toString e)
 
-    fun enumerate trie =
-        let fun enumerate' (acc, LEAF VALUE) = [rev acc]
-              | enumerate' (acc, LEAF NO_VALUE) = []
-              | enumerate' (acc, NODE (v, m)) =
-                let val sub = concatMap (fn (e, n) => enumerate' (e :: acc, n))
-                                        (Map.listItemsi m)
-                in
-                    if v = VALUE then (rev acc) :: sub else sub
-                end
+    (*!!! nb pfx is reversed *)
+    fun foldl_prefixed f (acc, pfx, LEAF VALUE) = f (rev pfx, acc)
+      | foldl_prefixed f (acc, pfx, LEAF NO_VALUE) = acc
+      | foldl_prefixed f (acc, pfx, NODE (v, m)) =
+        List.foldl (fn ((e, n), acc) => foldl_prefixed f (acc, e :: pfx, n))
+                   (if v = VALUE then f (rev pfx, acc) else acc)
+                   (Map.listItemsi m)                      
+                          
+    fun foldl f acc trie = foldl_prefixed f (acc, [], trie)
+
+    fun enumerate trie = rev (foldl (op::) [] trie)
+
+    fun foldl_match f acc (trie, e) =
+        let fun foldl_match' (acc, pfx, trie, []) =
+                foldl_prefixed f (acc, pfx, trie)
+              | foldl_match' (acc, pfx, LEAF _, _) = acc
+              | foldl_match' (acc, pfx, NODE (v, m), x::xs) =
+                case Map.find (m, x) of
+                    SOME sub => foldl_match' (acc, x :: pfx, sub, xs)
+                  | NONE => acc
         in
-            enumerate' ([], trie)
+            foldl_match' (acc, [], trie, e)
         end
 
-    fun match (trie, []) = enumerate trie
-      | match (LEAF _, x::xs) = []
-      | match (NODE (v, m), x::xs) = 
-        case Map.find (m, x) of
-            SOME sub => map (fn entry => x :: entry) (match (sub, xs))
-          | NONE => []
-
+    fun match (trie, e) = rev (foldl_match (op::) [] (trie, e))
+    
     fun prefix_of (trie, e) =
         let fun prefix' (best, acc, LEAF VALUE, _) = acc
               | prefix' (best, acc, NODE (VALUE, _), []) = acc
@@ -134,8 +140,16 @@ structure StringTrie :> TRIE where type entry = string = struct
     fun enumerate trie =
         List.map String.implode (CharListTrie.enumerate trie)
 
+    fun foldl f acc trie =
+        CharListTrie.foldl (fn (e, acc) => f (String.implode e, acc))
+                           acc trie
+                 
     fun match (trie, s) =
         List.map String.implode (CharListTrie.match (trie, String.explode s))
+
+    fun foldl_match f acc (trie, s) =
+        CharListTrie.foldl_match (fn (e, acc) => f (String.implode e, acc))
+                                 acc (trie, String.explode s)
 
     fun prefix_of (trie, s) =
         String.implode (CharListTrie.prefix_of (trie, (String.explode s)))
