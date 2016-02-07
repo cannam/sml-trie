@@ -41,3 +41,14 @@ signature TRIE = sig
     val prefix_of : t * entry -> entry 
     
 end
+
+signature LIST_ENTRY_TRIE = sig
+
+    include TRIE
+
+    type element
+    type pattern = element option list
+
+    val foldl_pattern_match : (entry * 'a -> 'a) -> 'a -> (t * pattern) -> 'a
+             
+end

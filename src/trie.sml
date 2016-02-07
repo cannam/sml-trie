@@ -4,10 +4,11 @@ signature TRIE_ELEMENT = sig
     val compare : t * t -> order
 end
 
-functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
+functor ListEntryTrieFn (E : TRIE_ELEMENT) :> LIST_ENTRY_TRIE where type element = E.t where type entry = E.t list = struct
 
-    type elt = E.t
-    type entry = elt list
+    type element = E.t
+    type entry = element list
+    type pattern = element option list
     
     structure Map = RedBlackMapFn (struct
                                     type ord_key = E.t
@@ -75,6 +76,21 @@ functor TrieFn (E : TRIE_ELEMENT) :> TRIE where type entry = E.t list = struct
         end
 
     fun prefix_match (trie, e) = rev (foldl_prefix_match (op::) [] (trie, e))
+
+    fun foldl_pattern_match f acc (trie, p) =
+        let fun foldl_match' (acc, pfx, trie, []) = f (rev pfx, acc)
+              | foldl_match' (acc, pfx, LEAF _, _) = acc
+              | foldl_match' (acc, pfx, NODE (v, m), NONE::xs) =
+                List.foldl (fn ((e, n), acc) => foldl_match' (acc, e :: pfx, n, xs))
+                           acc
+                           (Map.listItemsi m)
+              | foldl_match' (acc, pfx, NODE (v, m), (SOME x)::xs) =
+                case Map.find (m, x) of
+                    SOME sub => foldl_match' (acc, x :: pfx, sub, xs)
+                  | NONE => acc
+        in
+            foldl_match' (acc, [], trie, p)
+        end
     
     fun prefix_of (trie, e) =
         let fun prefix' (best, acc, LEAF VALUE, _) = acc
@@ -96,10 +112,10 @@ end
 
 structure StringTrie :> TRIE where type entry = string = struct
 
-    structure CharListTrie = TrieFn(struct
-				     type t = char
-				     val compare = Char.compare
-				     end)
+    structure CharListTrie = ListEntryTrieFn(struct
+				              type t = char
+				              val compare = Char.compare
+				              end)
 
     type t = CharListTrie.t
     type entry = string
@@ -145,7 +161,7 @@ structure StringTrieTest = struct
                                strings
             val t = StringTrie.remove (t, "poot")
 	    val contents = StringTrie.enumerate t
-            val match = StringTrie.prefix_match (t, "all")
+            val match = StringTrie.prefix_match (t, "pa")
         in
 	    print ("contents: (" ^ (String.concatWith "," contents) ^ ")\n");
 	    print ("match: (" ^ (String.concatWith "," match) ^ ")\n");
