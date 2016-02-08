@@ -1,6 +1,7 @@
 
 signature TRIE = sig
 
+    (*!!! should have type trie as well? check mlton coding standards for comparison *)
     type t
     type entry
 
@@ -9,6 +10,7 @@ signature TRIE = sig
 
     (* Add the given entry, returning a new trie. If the entry is
        already present, the returned trie will be unchanged *)
+    (*!!! should be insert for consistency with ORD_SET ? what about other names? *)
     val add : t * entry -> t
 
     (* Test whether the trie contains the given entry *)
