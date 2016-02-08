@@ -86,7 +86,7 @@ structure TestTrie :> TESTS = struct
 	  check_lists id
 		      (T.pattern_match (t, [SOME #"a", NONE, NONE, NONE, NONE,
 					    NONE, NONE, SOME #"e"]),
-		       ["alliance", "abrasive"])
+		       ["abrasive", "alliance"])
       end
 	  
     fun tests () = [
@@ -97,31 +97,6 @@ structure TestTrie :> TESTS = struct
 	( "prefix_of", test_prefix_of ),
 	( "pattern_match", test_pattern_match )
     ]
-	  
-(*		      
-    fun test () =
-        let
-            val t = 
-            val t = StringTrie.remove (t, "poot")
-	    val contents = StringTrie.enumerate t
-            val match = StringTrie.prefix_match (t, "pa")
-        in
-	    print ("contents: (" ^ (String.concatWith "," contents) ^ ")\n");
-	    print ("match: (" ^ (String.concatWith "," match) ^ ")\n");
-            print ("contains pa: " ^ (Bool.toString (StringTrie.contains (t, "pa"))) ^ "\n");
-            print ("contains par: " ^ (Bool.toString (StringTrie.contains (t, "par"))) ^ "\n");
-            print ("contains parp: " ^ (Bool.toString (StringTrie.contains (t, "parp"))) ^ "\n");
-            print ("contains part: " ^ (Bool.toString (StringTrie.contains (t, "part"))) ^ "\n");
-            print ("prefix_of pa: " ^ (StringTrie.prefix_of (t, "pa")) ^ "\n");
-            print ("prefix_of par: " ^ (StringTrie.prefix_of (t, "par")) ^ "\n");
-            print ("prefix_of parp: " ^ (StringTrie.prefix_of (t, "parp")) ^ "\n");
-            print ("prefix_of part: " ^ (StringTrie.prefix_of (t, "part")) ^ "\n");
-            print ("prefix_of \"\": " ^ (StringTrie.prefix_of (t, "")) ^ "\n");
-            print ("prefix_of allia: " ^ (StringTrie.prefix_of (t, "allia")) ^ "\n")
-        end
-      
-end
-*)		   
 
 end
 

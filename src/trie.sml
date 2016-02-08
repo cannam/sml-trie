@@ -4,7 +4,9 @@ signature TRIE_ELEMENT = sig
     val compare : t * t -> order
 end
 
-functor ListEntryTrieFn (E : TRIE_ELEMENT) :> PATTERN_MATCH_TRIE where type element = E.t where type entry = E.t list = struct
+functor ListEntryTrieFn (E : TRIE_ELEMENT)
+	:> PATTERN_MATCH_TRIE
+	       where type element = E.t where type entry = E.t list = struct
 
     type element = E.t
     type entry = element list
@@ -79,7 +81,9 @@ functor ListEntryTrieFn (E : TRIE_ELEMENT) :> PATTERN_MATCH_TRIE where type elem
     fun prefix_match (trie, e) = rev (foldl_prefix_match (op::) [] (trie, e))
 
     fun foldl_pattern_match f acc (trie, p) =
-        let fun foldl_match' (acc, pfx, trie, []) = f (rev pfx, acc)
+        let fun foldl_match' (acc, pfx, LEAF VALUE, []) = f (rev pfx, acc)
+	      | foldl_match' (acc, pfx, NODE (VALUE, _), []) = f (rev pfx, acc)
+	      | foldl_match' (acc, pfx, _, []) = acc
               | foldl_match' (acc, pfx, LEAF _, _) = acc
               | foldl_match' (acc, pfx, NODE (v, m), NONE::xs) =
                 List.foldl (fn ((e, n), acc) => foldl_match' (acc, e :: pfx, n, xs))
@@ -113,7 +117,9 @@ functor ListEntryTrieFn (E : TRIE_ELEMENT) :> PATTERN_MATCH_TRIE where type elem
 
 end
 
-structure StringTrie :> PATTERN_MATCH_TRIE where type entry = string where type element = char = struct
+structure StringTrie
+	  :> PATTERN_MATCH_TRIE
+		 where type entry = string where type element = char = struct
 
     structure CharListTrie = ListEntryTrieFn(struct
 				              type t = char
