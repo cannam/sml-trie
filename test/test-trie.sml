@@ -9,12 +9,12 @@ structure TestTrie :> TESTS = struct
 
     val strings = [ "poot", "parp", "par",
 		    "alligator", "zebra",
-		    "alliance", "aardvark",
+		    "alliance", "abrasive",
 		    "a" ]
 
     val cutdown_strings = [ "poot", "parp",
 			    "alligator",
-			    "alliance", "aardvark",
+			    "alliance", "abrasive",
 			    "a" ]
 
     fun sorted s = ListMergeSort.sort String.> s
@@ -50,15 +50,18 @@ structure TestTrie :> TESTS = struct
 	      sorted cutdown_strings)
 		  
     fun test_prefix_match () =
-      check_lists id (T.prefix_match (make_test_trie (), "pa"),
-		      [ "par", "parp" ])
-      andalso
-      check_lists id (T.prefix_match (make_test_trie (), "par"),
-		      [ "par", "parp" ])
-      andalso
-      check_lists id (T.prefix_match (make_test_trie (), ""),
-		      sorted strings)
-
+      let val t = make_test_trie ()
+      in
+	  check_lists id (T.prefix_match (t, "pa"),
+			  [ "par", "parp" ])
+	  andalso
+	  check_lists id (T.prefix_match (t, "par"),
+			  [ "par", "parp" ])
+	  andalso
+	  check_lists id (T.prefix_match (t, ""),
+			  sorted strings)
+      end
+	  
     fun test_prefix_of () =
       let val t = make_test_trie ()
       in
@@ -68,14 +71,31 @@ structure TestTrie :> TESTS = struct
 		       (T.prefix_of (t, "parp"), "parp"),
 		       (T.prefix_of (t, "part"), "par")]
       end
+
+    fun test_pattern_match () =
+      let val t = make_test_trie ()
+      in
+	  check_lists id
+		      (T.pattern_match (t, [SOME #"p", NONE, SOME #"r"]),
+		       ["par"])
+	  andalso
+	  check_lists id
+		      (T.pattern_match (t, [SOME #"a", SOME #"l", SOME #"l"]),
+		       [])
+	  andalso
+	  check_lists id
+		      (T.pattern_match (t, [SOME #"a", NONE, NONE, NONE, NONE,
+					    NONE, NONE, SOME #"e"]),
+		       ["alliance", "abrasive"])
+      end
 	  
     fun tests () = [
 	( "enumerate", test_enumerate ),
 	( "contains", test_contains ),
 	( "remove", test_remove ),
 	( "prefix_match", test_prefix_match ),
-	( "prefix_of", test_prefix_of )
-	    (*!!! + pattern match *)
+	( "prefix_of", test_prefix_of ),
+	( "pattern_match", test_pattern_match )
     ]
 	  
 (*		      

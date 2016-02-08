@@ -28,8 +28,9 @@ structure TestSupport = struct
                 (print ("--- Lists have differing lengths (expected " ^
                         (Int.toString (List.length b)) ^
                         ", obtained " ^
-                        (Int.toString (List.length a)) ^
-                        ")\n");
+                        (Int.toString (List.length a)) ^ ": [" ^
+			(String.concatWith "," (List.map converter a)) ^
+                        "])\n");
                  false)
             else
                 check_lists' (a, b)
