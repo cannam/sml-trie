@@ -4,7 +4,7 @@ signature TRIE_ELEMENT = sig
     val compare : t * t -> order
 end
 
-functor ListEntryTrieFn (E : TRIE_ELEMENT) :> LIST_ENTRY_TRIE where type element = E.t where type entry = E.t list = struct
+functor ListEntryTrieFn (E : TRIE_ELEMENT) :> PATTERN_MATCH_TRIE where type element = E.t where type entry = E.t list = struct
 
     type element = E.t
     type entry = element list
@@ -93,6 +93,8 @@ functor ListEntryTrieFn (E : TRIE_ELEMENT) :> LIST_ENTRY_TRIE where type element
             foldl_match' (acc, [], trie, p)
         end
     
+    fun pattern_match (trie, p) = rev (foldl_pattern_match (op::) [] (trie, p))
+
     fun prefix_of (trie, e) =
         let fun prefix' (best, acc, LEAF VALUE, _) = acc
               | prefix' (best, acc, NODE (VALUE, _), []) = acc
@@ -111,8 +113,7 @@ functor ListEntryTrieFn (E : TRIE_ELEMENT) :> LIST_ENTRY_TRIE where type element
 
 end
 
-(*!!! This could be a LIST_ENTRY_TRIE with element = char, but since a string is not a list of char, that suggests maybe LIST_ENTRY_TRIE is misnamed (could be PATTERN_CAPABLE_TRIE or something?) *)
-structure StringTrie :> TRIE where type entry = string = struct
+structure StringTrie :> PATTERN_MATCH_TRIE where type entry = string where type element = char = struct
 
     structure CharListTrie = ListEntryTrieFn(struct
 				              type t = char
@@ -120,6 +121,8 @@ structure StringTrie :> TRIE where type entry = string = struct
 				              end)
 
     type t = CharListTrie.t
+    type element = char
+    type pattern = char option list
     type entry = string
 
     val empty = CharListTrie.empty
@@ -133,21 +136,28 @@ structure StringTrie :> TRIE where type entry = string = struct
     fun remove (trie, s) =
         CharListTrie.remove (trie, String.explode s)
 
-    fun enumerate trie =
-        List.map String.implode (CharListTrie.enumerate trie)
-
     fun foldl f acc trie =
         CharListTrie.foldl (fn (e, acc) => f (String.implode e, acc))
                            acc trie
-                 
-    fun prefix_match (trie, s) =
-        List.map String.implode (CharListTrie.prefix_match (trie, String.explode s))
+
+    fun enumerate trie =
+        List.map String.implode (CharListTrie.enumerate trie)
 
     fun foldl_prefix_match f acc (trie, s) =
         CharListTrie.foldl_prefix_match (fn (e, acc) => f (String.implode e, acc))
                                  acc (trie, String.explode s)
+                 
+    fun prefix_match (trie, s) =
+        List.map String.implode (CharListTrie.prefix_match (trie, String.explode s))
 
     fun prefix_of (trie, s) =
         String.implode (CharListTrie.prefix_of (trie, (String.explode s)))
+
+    fun foldl_pattern_match f acc (trie, p) =
+        CharListTrie.foldl_pattern_match (fn (e, acc) => f (String.implode e, acc))
+					 acc (trie, p)
+                 
+    fun pattern_match (trie, p) =
+        List.map String.implode (CharListTrie.pattern_match (trie, p))
                  
 end
