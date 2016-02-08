@@ -111,6 +111,7 @@ functor ListEntryTrieFn (E : TRIE_ELEMENT) :> LIST_ENTRY_TRIE where type element
 
 end
 
+(*!!! This could be a LIST_ENTRY_TRIE with element = char, but since a string is not a list of char, that suggests maybe LIST_ENTRY_TRIE is misnamed (could be PATTERN_CAPABLE_TRIE or something?) *)
 structure StringTrie :> TRIE where type entry = string = struct
 
     structure CharListTrie = ListEntryTrieFn(struct
