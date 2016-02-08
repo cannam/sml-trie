@@ -51,25 +51,26 @@ functor ListEntryTrieFn (E : TRIE_ELEMENT) :> LIST_ENTRY_TRIE where type element
 
     fun concatMap f xx = List.concat (List.map f xx)
 
-    (*!!! nb pfx is reversed *)
-    fun foldl_prefixed f (acc, pfx, LEAF VALUE) = f (rev pfx, acc)
-      | foldl_prefixed f (acc, pfx, LEAF NO_VALUE) = acc
-      | foldl_prefixed f (acc, pfx, NODE (v, m)) =
-        List.foldl (fn ((e, n), acc) => foldl_prefixed f (acc, e :: pfx, n))
-                   (if v = VALUE then f (rev pfx, acc) else acc)
+    (* rpfx is reversed prefix built up so far (using cons) *)
+    fun foldl_helper f (acc, rpfx, LEAF VALUE) = f (rev rpfx, acc)
+      | foldl_helper f (acc, rpfx, LEAF NO_VALUE) = acc
+      | foldl_helper f (acc, rpfx, NODE (v, m)) =
+        List.foldl (fn ((e, n), acc) => foldl_helper f (acc, e :: rpfx, n))
+                   (if v = VALUE then f (rev rpfx, acc) else acc)
                    (Map.listItemsi m)                      
                           
-    fun foldl f acc trie = foldl_prefixed f (acc, [], trie)
+    fun foldl f acc trie = foldl_helper f (acc, [], trie)
 
     fun enumerate trie = rev (foldl (op::) [] trie)
 
     fun foldl_prefix_match f acc (trie, e) =
-        let fun foldl_match' (acc, pfx, trie, []) =
-                foldl_prefixed f (acc, pfx, trie)
-              | foldl_match' (acc, pfx, LEAF _, _) = acc
-              | foldl_match' (acc, pfx, NODE (v, m), x::xs) =
+        (* rpfx is reversed prefix built up so far (using cons) *)
+        let fun foldl_match' (acc, rpfx, trie, []) =
+                foldl_helper f (acc, rpfx, trie)
+              | foldl_match' (acc, rpfx, LEAF _, _) = acc
+              | foldl_match' (acc, rpfx, NODE (v, m), x::xs) =
                 case Map.find (m, x) of
-                    SOME sub => foldl_match' (acc, x :: pfx, sub, xs)
+                    SOME sub => foldl_match' (acc, x :: rpfx, sub, xs)
                   | NONE => acc
         in
             foldl_match' (acc, [], trie, e)
