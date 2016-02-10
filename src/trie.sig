@@ -40,10 +40,8 @@ signature TRIE = sig
        an entry in the trie. The given value does not need to be
        present as an entry in the trie; if it is present, it will be
        its own longest prefix, and so it will be returned. If there is
-       no prefix of the given entry in the trie, an empty entry will
-       be returned !!! no -- should return option, shouldn't assume in
-       api that the entry type admits an empty form *)
-    val prefix_of : t * entry -> entry 
+       no prefix of the given entry in the trie, return an empty entry *)
+    val prefix_of : t * entry -> entry
     
 end
 

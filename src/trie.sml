@@ -112,7 +112,7 @@ functor ListEntryTrieFn (E : TRIE_ELEMENT)
               | prefix' (best, acc, LEAF NO_VALUE, _) = best
               | prefix' (best, acc, NODE (NO_VALUE, _), []) = best
         in
-            rev (prefix' ([], [], trie, e))
+	    rev (prefix' ([], [], trie, e))
         end
 
 end
@@ -157,7 +157,7 @@ structure StringTrie
         List.map String.implode (CharListTrie.prefix_match (trie, String.explode s))
 
     fun prefix_of (trie, s) =
-        String.implode (CharListTrie.prefix_of (trie, (String.explode s)))
+        String.implode (CharListTrie.prefix_of (trie, String.explode s))
 
     fun foldl_pattern_match f acc (trie, p) =
         CharListTrie.foldl_pattern_match (fn (e, acc) => f (String.implode e, acc))
