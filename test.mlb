@@ -1,0 +1,14 @@
+$(SML_LIB)/basis/basis.mlb
+$(SML_LIB)/smlnj-lib/Util/lib-base-sig.sml
+$(SML_LIB)/smlnj-lib/Util/lib-base.sml
+$(SML_LIB)/smlnj-lib/Util/ord-key-sig.sml
+$(SML_LIB)/smlnj-lib/Util/ord-map-sig.sml
+$(SML_LIB)/smlnj-lib/Util/redblack-map-fn.sml
+trie.sig
+trie.sml
+$(SML_LIB)/smlnj-lib/Util/listsort-sig.sml
+$(SML_LIB)/smlnj-lib/Util/list-mergesort.sml
+tests.sig
+test-support.sml
+test-trie.sml
+main.sml

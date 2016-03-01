@@ -1,0 +1,13 @@
+
+A persistent trie in Standard ML
+================================
+
+This is a fairly naive persistent (i.e. immutable) implementation of a
+trie structure. A trie stores a set of entries, each of which is some
+sort of vector or list, by indexing them by common prefix.
+
+Membership can be tested quickly (as it can with a hash- or
+tree-backed set), but one can also test quickly whether a prefix of a
+given entry appears in the trie, find the longest prefix of an entry
+that appears, and find all entries with a given prefix.
+

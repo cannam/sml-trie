@@ -40,5 +40,37 @@ structure TestSupport = struct
         check_lists converter
                     (ListMergeSort.sort greater a,
                      ListMergeSort.sort greater b)
-                           
+         
+    fun report_exception name msg =
+        (print ("*** Caught exception in test \"" ^ name ^ "\": " ^ msg ^ "\n");
+         false)
+          
+    fun run_test_suite (suite_name, tests) =
+        case
+            List.mapPartial
+                (fn (test_name, test) =>
+                    if (test ()
+                        handle Fail msg => report_exception test_name msg
+                             | IO.Io { name, ... } =>
+                               (*!!! can we get more info from Exception? *)
+                               report_exception test_name ("IO failure: " ^ name)
+                             | ex => report_exception test_name "Exception caught")
+                    then NONE
+                    else (print ("*** Test \"" ^ test_name ^ "\" failed\n");
+                          SOME test_name))
+                tests
+         of failed =>
+            let val n = length tests
+                val m = length failed
+            in
+                print (suite_name ^ ": " ^
+                       (Int.toString (n - m)) ^ "/" ^ (Int.toString n) ^
+                       " tests passed\n");
+                if m > 0
+                then print (suite_name ^
+                            ": Failed tests [" ^ (Int.toString m) ^ "]: " ^
+                            (String.concatWith " " failed) ^ "\n")
+                else ()
+            end
+                      
 end

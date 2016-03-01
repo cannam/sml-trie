@@ -24,16 +24,17 @@ functor ListEntryTrieFn (E : TRIE_ELEMENT)
                   | NODE of value * node Map.map
 
     type t = node
+    type trie = t
 
     val empty = LEAF NO_VALUE
 
-    fun add (NODE (v, m), x::xs) =
+    fun insert (NODE (v, m), x::xs) =
         (case Map.find (m, x) of
-             SOME n => NODE (v, Map.insert (m, x, add (n, xs)))
-           | NONE => NODE (v, Map.insert (m, x, add (empty, xs))))
-      | add (NODE (_, m), []) = NODE (VALUE, m)
-      | add (LEAF _, []) = LEAF VALUE
-      | add (LEAF v, x::xs) = NODE (v, Map.insert (Map.empty, x, add (empty, xs)))
+             SOME n => NODE (v, Map.insert (m, x, insert (n, xs)))
+           | NONE => NODE (v, Map.insert (m, x, insert (empty, xs))))
+      | insert (NODE (_, m), []) = NODE (VALUE, m)
+      | insert (LEAF _, []) = LEAF VALUE
+      | insert (LEAF v, x::xs) = NODE (v, Map.insert (Map.empty, x, insert (empty, xs)))
 
     fun remove (NODE (v, m), x::xs) =
         (case Map.find (m, x) of
@@ -127,14 +128,15 @@ structure StringTrie
 				              end)
 
     type t = CharListTrie.t
+    type trie = t
     type element = char
     type pattern = char option list
     type entry = string
 
     val empty = CharListTrie.empty
 
-    fun add (trie, s) =
-        CharListTrie.add (trie, String.explode s)
+    fun insert (trie, s) =
+        CharListTrie.insert (trie, String.explode s)
 
     fun contains (trie, s) =
         CharListTrie.contains (trie, String.explode s)
