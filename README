@@ -22,3 +22,24 @@ efficient and is also probably better suited to wide, shallow tries
 than narrow, deep ones. The structure was originally written to
 provide indexes for an RDF triple store.
 
+This library contains
+
+ * A signature TRIE for tries with arbitrary entry types
+
+ * A signature PATTERN_MATCH_TRIE extending TRIE with the capability of
+   matching sequences with wildcards in them; unlike TRIE this exposes
+   the types of the individual elements in each entry (e.g. char for a
+   trie of strings)
+
+ * A functor ListEntryTrieFn which turns a list type into a structure
+   implementing PATTERN_MATCH_TRIE (and so also TRIE)
+
+ * A structure StringTrie which uses ListEntryTrieFn to make a
+   concrete trie of strings
+
+ * Basic unit tests
+
+With the MLton compiler, just run
+
+ $ mlton test.mlb && ./test
+

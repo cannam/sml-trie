@@ -5,7 +5,9 @@ $(SML_LIB)/smlnj-lib/Util/ord-key-sig.sml
 $(SML_LIB)/smlnj-lib/Util/ord-map-sig.sml
 $(SML_LIB)/smlnj-lib/Util/redblack-map-fn.sml
 trie.sig
-trie.sml
+pattern-match-trie.sig
+list-entry-trie-fn.sml
+string-trie.sml
 $(SML_LIB)/smlnj-lib/Util/listsort-sig.sml
 $(SML_LIB)/smlnj-lib/Util/list-mergesort.sml
 tests.sig
