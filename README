@@ -4,10 +4,10 @@ A persistent trie in Standard ML
 
 This is a fairly naive immutable implementation of a trie.
 
-A trie is an ordered set container. It stores a set of entries, each
-of which is some sort of sequence (vector, list, string etc), filing
-them into a tree structure internally according to their common
-prefixes.
+A trie is an ordered set container. It stores a set of entries of a
+common type, which is some sort of sequence (vector, list, string
+etc), filing them into a tree structure internally according to their
+common prefixes.
 
 As with a hash set or tree-backed set structure, membership testing is
 generally fast. Unlike hash and tree sets, a with a trie you can also
@@ -16,28 +16,31 @@ obtain the longest such prefix, and find all entries with a given
 prefix. Like a tree-backed set but not a hash set, a trie supports
 enumerating the entries in order.
 
-This implementation is naive in that it simply uses a red-black tree
-map (from the SML/NJ library) at each node. This isn't all that memory
-efficient and is also probably better suited to wide, shallow tries
-than narrow, deep ones. The structure was originally written to
-provide indexes for an RDF triple store.
+This is a persistent or immutable implementation in the sense that add
+and remove operations return a separate trie without modifying the one
+passed in. The implementation is naive in that it simply uses a
+red-black tree map (from the SML/NJ library) at each node. This isn't
+all that memory efficient and is also probably better suited to wide,
+shallow tries than narrow, deep ones. The structure was originally
+written to provide indexes for an RDF triple store, where its
+performance seems so far to be acceptable.
 
 This library contains
 
- * A signature TRIE for tries with arbitrary entry types
+ * A signature TRIE for tries with arbitrary entry types.
 
- * A signature PATTERN_MATCH_TRIE extending TRIE with the capability of
-   matching sequences with wildcards in them; unlike TRIE this exposes
-   the types of the individual elements in each entry (e.g. char for a
-   trie of strings)
+ * A signature PATTERN_MATCH_TRIE extending TRIE with the capability
+   of matching sequences with wildcards in them. Unlike TRIE, this
+   exposes the types of the individual elements in each entry
+   (e.g. char for a trie of strings).
 
  * A functor ListEntryTrieFn which turns a list type into a structure
-   implementing PATTERN_MATCH_TRIE (and so also TRIE)
+   implementing PATTERN_MATCH_TRIE (and so also implementing TRIE).
 
  * A structure StringTrie which uses ListEntryTrieFn to make a
-   concrete trie of strings
+   concrete trie of strings.
 
- * Basic unit tests
+ * Basic unit tests.
 
 With the MLton compiler, just run
 
