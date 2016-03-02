@@ -19,7 +19,7 @@ structure TestTrie :> TESTS = struct
 
     fun sorted s = ListMergeSort.sort String.> s
 
-    fun make_test_trie () = List.foldl (fn (s, t) => T.insert (t, s))
+    fun make_test_trie () = List.foldl (fn (s, t) => T.add (t, s))
 				       T.empty
 				       strings
 

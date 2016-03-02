@@ -28,13 +28,13 @@ functor ListEntryTrieFn (E : TRIE_ELEMENT)
 
     val empty = LEAF NO_VALUE
 
-    fun insert (NODE (v, m), x::xs) =
+    fun add (NODE (v, m), x::xs) =
         (case Map.find (m, x) of
-             SOME n => NODE (v, Map.insert (m, x, insert (n, xs)))
-           | NONE => NODE (v, Map.insert (m, x, insert (empty, xs))))
-      | insert (NODE (_, m), []) = NODE (VALUE, m)
-      | insert (LEAF _, []) = LEAF VALUE
-      | insert (LEAF v, x::xs) = NODE (v, Map.insert (Map.empty, x, insert (empty, xs)))
+             SOME n => NODE (v, Map.insert (m, x, add (n, xs)))
+           | NONE => NODE (v, Map.insert (m, x, add (empty, xs))))
+      | add (NODE (_, m), []) = NODE (VALUE, m)
+      | add (LEAF _, []) = LEAF VALUE
+      | add (LEAF v, x::xs) = NODE (v, Map.insert (Map.empty, x, add (empty, xs)))
 
     fun remove (NODE (v, m), x::xs) =
         (case Map.find (m, x) of
@@ -135,8 +135,8 @@ structure StringTrie
 
     val empty = CharListTrie.empty
 
-    fun insert (trie, s) =
-        CharListTrie.insert (trie, String.explode s)
+    fun add (trie, s) =
+        CharListTrie.add (trie, String.explode s)
 
     fun contains (trie, s) =
         CharListTrie.contains (trie, String.explode s)

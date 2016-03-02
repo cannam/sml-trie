@@ -10,7 +10,7 @@ signature TRIE = sig
 
     (* Add the given entry, returning a new trie. If the entry is
        already present, the returned trie will be unchanged *)
-    val insert : t * entry -> t
+    val add : t * entry -> t
 
     (* Test whether the trie contains the given entry *)
     val contains : t * entry -> bool
@@ -26,13 +26,13 @@ signature TRIE = sig
     val enumerate : t -> entry list
 
     (* Fold over all the entries in the trie that have the given
-       prefix, in sort order. The prefix does not need to be present as
-       an entry in the trie *)
+       prefix, in sort order. The prefix itself does not need to be
+       present as an entry in the trie *)
     val foldl_prefix_match : (entry * 'a -> 'a) -> 'a -> (t * entry) -> 'a 
 
     (* Return a list of all entries in the trie that have the given
-       entry as a prefix, in sort order. The prefix does not need to
-       be present as an entry in the trie *)
+       entry as a prefix, in sort order. The prefix itself does not
+       need to be present as an entry in the trie *)
     val prefix_match : t * entry -> entry list
 
     (* Return the longest prefix of the given value that is present as
