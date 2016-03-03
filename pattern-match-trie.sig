@@ -1,4 +1,7 @@
 
+(* Copyright 2015-2016 Chris Cannam.
+   MIT/X11 licence. See the file COPYING for details. *)
+
 signature PATTERN_MATCH_TRIE = sig
 
     (* This is a trie that can do pattern matches as well as prefix

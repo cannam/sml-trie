@@ -46,3 +46,5 @@ With the MLton compiler, just run
 
  $ mlton test.mlb && ./test
 
+To use in other projects, include sml-trie.mlb from your MLB file.
+
