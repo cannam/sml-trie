@@ -46,5 +46,8 @@ With the MLton compiler, just run
 
  $ mlton test.mlb && ./test
 
-To use in other projects, include sml-trie.mlb from your MLB file.
+To use in other projects, include trie.mlb from your MLB file.
+
+Copyright 2015-2016 Chris Cannam.
+MIT/X11 licence. See the file COPYING for details.
 
