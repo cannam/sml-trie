@@ -35,21 +35,21 @@ structure StringTrie
     fun enumerate trie =
         List.map String.implode (CharListTrie.enumerate trie)
 
-    fun foldl_prefix_match f acc (trie, s) =
-        CharListTrie.foldl_prefix_match (fn (e, acc) => f (String.implode e, acc))
+    fun foldlPrefixMatch f acc (trie, s) =
+        CharListTrie.foldlPrefixMatch (fn (e, acc) => f (String.implode e, acc))
                                  acc (trie, String.explode s)
                  
-    fun prefix_match (trie, s) =
-        List.map String.implode (CharListTrie.prefix_match (trie, String.explode s))
+    fun prefixMatch (trie, s) =
+        List.map String.implode (CharListTrie.prefixMatch (trie, String.explode s))
 
-    fun prefix_of (trie, s) =
-        String.implode (CharListTrie.prefix_of (trie, String.explode s))
+    fun prefixOf (trie, s) =
+        String.implode (CharListTrie.prefixOf (trie, String.explode s))
 
-    fun foldl_pattern_match f acc (trie, p) =
-        CharListTrie.foldl_pattern_match (fn (e, acc) => f (String.implode e, acc))
+    fun foldlPatternMatch f acc (trie, p) =
+        CharListTrie.foldlPatternMatch (fn (e, acc) => f (String.implode e, acc))
 					 acc (trie, p)
                  
-    fun pattern_match (trie, p) =
-        List.map String.implode (CharListTrie.pattern_match (trie, p))
+    fun patternMatch (trie, p) =
+        List.map String.implode (CharListTrie.patternMatch (trie, p))
                  
 end

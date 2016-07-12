@@ -73,7 +73,7 @@ functor ListEntryTrieFn (E : TRIE_ELEMENT)
 
     fun enumerate trie = rev (foldl (op::) [] trie)
 
-    fun foldl_prefix_match f acc (trie, e) =
+    fun foldlPrefixMatch f acc (trie, e) =
         (* rpfx is reversed prefix built up so far (using cons) *)
         let fun fold' (acc, rpfx, NODE (v, m), x::xs) =
                 (case Map.find (m, x) of
@@ -85,9 +85,9 @@ functor ListEntryTrieFn (E : TRIE_ELEMENT)
             fold' (acc, [], trie, e)
         end
 
-    fun prefix_match (trie, e) = rev (foldl_prefix_match (op::) [] (trie, e))
+    fun prefixMatch (trie, e) = rev (foldlPrefixMatch (op::) [] (trie, e))
 
-    fun foldl_pattern_match f acc (trie, p) =
+    fun foldlPatternMatch f acc (trie, p) =
         let fun fold' (acc, pfx, NODE (v, m), (SOME x)::xs) =
                 (case Map.find (m, x) of
                     SOME sub => fold' (acc, x :: pfx, sub, xs)
@@ -104,9 +104,9 @@ functor ListEntryTrieFn (E : TRIE_ELEMENT)
             fold' (acc, [], trie, p)
         end
     
-    fun pattern_match (trie, p) = rev (foldl_pattern_match (op::) [] (trie, p))
+    fun patternMatch (trie, p) = rev (foldlPatternMatch (op::) [] (trie, p))
 
-    fun prefix_of (trie, e) =
+    fun prefixOf (trie, e) =
         let fun prefix' (best, acc, NODE (v, m), x::xs) =
                 let val best = if v = VALUE then acc else best
                 in

@@ -52,42 +52,42 @@ structure TestTrie :> TESTS = struct
 			"par")),
 	      sorted cutdown_strings)
 		  
-    fun test_prefix_match () =
+    fun test_prefixMatch () =
       let val t = make_test_trie ()
       in
-	  check_lists id (T.prefix_match (t, "pa"),
+	  check_lists id (T.prefixMatch (t, "pa"),
 			  [ "par", "parp" ])
 	  andalso
-	  check_lists id (T.prefix_match (t, "par"),
+	  check_lists id (T.prefixMatch (t, "par"),
 			  [ "par", "parp" ])
 	  andalso
-	  check_lists id (T.prefix_match (t, ""),
+	  check_lists id (T.prefixMatch (t, ""),
 			  sorted strings)
       end
 	  
-    fun test_prefix_of () =
+    fun test_prefixOf () =
       let val t = make_test_trie ()
       in
 	  check_pairs id
-		      [(T.prefix_of (t, "pa"), ""),
-		       (T.prefix_of (t, "par"), "par"),
-		       (T.prefix_of (t, "parp"), "parp"),
-		       (T.prefix_of (t, "part"), "par")]
+		      [(T.prefixOf (t, "pa"), ""),
+		       (T.prefixOf (t, "par"), "par"),
+		       (T.prefixOf (t, "parp"), "parp"),
+		       (T.prefixOf (t, "part"), "par")]
       end
 
-    fun test_pattern_match () =
+    fun test_patternMatch () =
       let val t = make_test_trie ()
       in
 	  check_lists id
-		      (T.pattern_match (t, [SOME #"p", NONE, SOME #"r"]),
+		      (T.patternMatch (t, [SOME #"p", NONE, SOME #"r"]),
 		       ["par"])
 	  andalso
 	  check_lists id
-		      (T.pattern_match (t, [SOME #"a", SOME #"l", SOME #"l"]),
+		      (T.patternMatch (t, [SOME #"a", SOME #"l", SOME #"l"]),
 		       [])
 	  andalso
 	  check_lists id
-		      (T.pattern_match (t, [SOME #"a", NONE, NONE, NONE, NONE,
+		      (T.patternMatch (t, [SOME #"a", NONE, NONE, NONE, NONE,
 					    NONE, NONE, SOME #"e"]),
 		       ["abrasive", "alliance"])
       end
@@ -96,9 +96,9 @@ structure TestTrie :> TESTS = struct
 	( "enumerate", test_enumerate ),
 	( "contains", test_contains ),
 	( "remove", test_remove ),
-	( "prefix_match", test_prefix_match ),
-	( "prefix_of", test_prefix_of ),
-	( "pattern_match", test_pattern_match )
+	( "prefixMatch", test_prefixMatch ),
+	( "prefixOf", test_prefixOf ),
+	( "patternMatch", test_patternMatch )
     ]
 
 end
