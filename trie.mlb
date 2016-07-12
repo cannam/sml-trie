@@ -1,9 +1,5 @@
 $(SML_LIB)/basis/basis.mlb
-$(SML_LIB)/smlnj-lib/Util/lib-base-sig.sml
-$(SML_LIB)/smlnj-lib/Util/lib-base.sml
-$(SML_LIB)/smlnj-lib/Util/ord-key-sig.sml
-$(SML_LIB)/smlnj-lib/Util/ord-map-sig.sml
-$(SML_LIB)/smlnj-lib/Util/redblack-map-fn.sml
+../sml-smlnj-containers/sml-smlnj-containers.mlb
 trie.sig
 pattern-match-trie.sig
 list-entry-trie-fn.sml
