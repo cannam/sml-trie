@@ -1,14 +1,18 @@
 
-(* Copyright 2015-2016 Chris Cannam.
+(* Copyright 2015-2018 Chris Cannam.
    MIT/X11 licence. See the file COPYING for details. *)
 
-structure TestTrie :> TESTS = struct
+signature TEST_TRIE_FN_ARG = sig
+    structure T : STRING_TRIE
+    val name : string
+end
+
+functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
 
     open TestSupport
 
-    structure T = StringTrie
-
-    val name = "trie"
+    structure T = ARG.T
+    val name = ARG.name
 
     val strings = [ "poot", "parp", "par",
 		    "alligator", "zebra",
@@ -103,9 +107,21 @@ structure TestTrie :> TESTS = struct
 
 end
 
+structure StringMapTrieTest = TestTrieFn(struct
+                                          structure T = StringMapTrie
+                                          val name = "string-map-trie"
+                                          end)
+structure StringArrayTrieTest = TestTrieFn(struct
+                                            structure T = StringArrayTrie
+                                            val name = "string-array-trie"
+                                            end)
+                                                    
 fun main () =
     let open TestSupport
     in
-        app run_test_suite [ ("trie", TestTrie.tests ()) ]
+        app run_test_suite [
+            (StringMapTrieTest.name, StringMapTrieTest.tests ()),
+            (StringArrayTrieTest.name, StringArrayTrieTest.tests ())
+        ]
     end
 
