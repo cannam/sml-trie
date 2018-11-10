@@ -18,12 +18,21 @@ enumerating the entries in order.
 
 This is a persistent or immutable implementation in the sense that add
 and remove operations return a separate trie without modifying the one
-passed in. The implementation is naive in that it simply uses a
-red-black tree map (from the SML/NJ library) at each node. This isn't
-all that memory efficient and is also probably better suited to wide,
-shallow tries than narrow, deep ones. The structure was originally
-written to provide indexes for an RDF triple store, where its
-performance seems so far to be acceptable.
+passed in.
+
+There are two fairly naive functor implementations included: the
+ListMapTrieFn simply uses a red-black tree map (from the SML/NJ
+library) at each node, and the ListArrayTrieFn uses an array at each
+node.
+
+ListMapTrieFn isn't all that memory efficient and is better suited to
+wide, shallow tries than narrow, deep ones. It was written to provide
+indexes for an in-memory RDF triple store, and its performance there
+seems to be acceptable.
+
+ListArrayTrieFn is better suited to narrow, deep tries where elements
+can be compactly mapped onto integer indices for array lookup
+(classically, an 8-bit char element, for a string trie).
 
 This library contains
 
@@ -34,11 +43,19 @@ This library contains
    exposes the types of the individual elements in each entry
    (e.g. char for a trie of strings).
 
- * A functor ListEntryTrieFn which turns a list type into a structure
-   implementing PATTERN_MATCH_TRIE (and so also implementing TRIE).
+ * A functor ListMapTrieFn which turns a list type into a structure
+   implementing PATTERN_MATCH_TRIE (and so also implementing TRIE),
+   provided that the list element type is comparable.
 
- * A structure StringTrie which uses ListEntryTrieFn to make a
-   concrete trie of strings.
+ * A functor ListArrayTrieFn which turns a list type into a structure
+   implementing PATTERN_MATCH_TRIE (and so also implementing TRIE),
+   provided that the list element type can be mapped compactly onto a
+   small range of integer values for indexing into an array.
+
+ * Structures StringMapTrie and StringArrayTrie which use
+   ListMapTrieFn and ListArrayTrieFn respectively to make concrete
+   string tries with different performance characteristics. The name
+   StringTrie is also provided as an alias for StringMapTrie.
 
  * Basic unit tests.
 
@@ -48,6 +65,6 @@ With the MLton compiler, just run
 
 To use in other projects, include trie.mlb from your MLB file.
 
-Copyright 2015-2016 Chris Cannam.
+Copyright 2015-2018 Chris Cannam.
 MIT/X11 licence. See the file COPYING for details.
 
