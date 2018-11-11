@@ -9,6 +9,6 @@ test.deps: test.mlb
 	${SCRIPTS}/mlb-dependencies $< > $@
 
 clean:
-	rm -f test
+	rm -f test *.deps
 
 -include *.deps

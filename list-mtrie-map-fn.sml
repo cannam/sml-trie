@@ -10,7 +10,7 @@ end
    whose element type has few values, but may be suitable for wide
    flat structures. *)
                              
-functor ListMTrieMapFn (E : MAP_TRIE_ELEMENT)
+functor ListMTrieMapFn (E : MTRIE_ELEMENT)
 	:> PATTERN_MATCH_TRIE_MAP
 	       where type element = E.t where type key = E.t list = struct
 
@@ -56,7 +56,7 @@ functor ListMTrieMapFn (E : MAP_TRIE_ELEMENT)
       | remove (LEAF _, []) = LEAF NO_VALUE
       | remove (LEAF i, x::xs) = LEAF i
 
-    fun find (NODE (i, m), x::xs) = 
+    fun find (NODE (_, m), x::xs) = 
         (case Map.find (m, x) of
             SOME sub => find (sub, xs)
           | NONE => NONE)
@@ -69,8 +69,6 @@ functor ListMTrieMapFn (E : MAP_TRIE_ELEMENT)
             SOME _ => true
           | NONE => false
 
-    fun concatMap f xx = List.concat (List.map f xx)
-
     (* rpfx is reversed prefix built up so far (using cons) *)
     fun foldli_helper f (acc, rpfx, NODE (i, m)) =
         List.foldl (fn ((e, LEAF (VALUE v)), acc) => f (rev (e :: rpfx), v, acc)
@@ -82,11 +80,11 @@ functor ListMTrieMapFn (E : MAP_TRIE_ELEMENT)
       | foldli_helper f (acc, rpfx, LEAF (VALUE v)) = f (rev rpfx, v, acc)
       | foldli_helper f (acc, rpfx, LEAF NO_VALUE) = acc
 
-    fun foldli f acc trie =
-        foldli_helper f (acc, [], trie)
-
     fun foldl f acc trie =
         foldli_helper (fn (k, v, acc) => f (v, acc)) (acc, [], trie)
+                      
+    fun foldli f acc trie =
+        foldli_helper f (acc, [], trie)
 
     fun enumerate trie =
         rev (foldli (fn (k, v, acc) => (k, v) :: acc) [] trie)
@@ -133,7 +131,7 @@ functor ListMTrieMapFn (E : MAP_TRIE_ELEMENT)
         let fun prefix' (best, acc, NODE (i, m), x::xs) =
                 let val best =
                         case i of
-                            VALUE v => acc
+                            VALUE _ => acc
                           | NO_VALUE => best
                 in
                     case Map.find (m, x) of

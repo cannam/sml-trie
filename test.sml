@@ -107,21 +107,21 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
 
 end
 
-structure StringMapTrieTest = TestTrieFn(struct
-                                          structure T = StringMapTrie
-                                          val name = "string-map-trie"
-                                          end)
-structure StringArrayTrieTest = TestTrieFn(struct
-                                            structure T = StringArrayTrie
-                                            val name = "string-array-trie"
-                                            end)
+structure StringMTrieTest = TestTrieFn(struct
+                                        structure T = StringMTrie
+                                        val name = "string-mtrie"
+                                        end)
+structure StringATrieTest = TestTrieFn(struct
+                                        structure T = StringATrie
+                                        val name = "string-atrie"
+                                        end)
                                                     
 fun main () =
     let open TestSupport
     in
         app run_test_suite [
-            (StringMapTrieTest.name, StringMapTrieTest.tests ()),
-            (StringArrayTrieTest.name, StringArrayTrieTest.tests ())
+            (StringMTrieTest.name, StringMTrieTest.tests ()),
+            (StringATrieTest.name, StringATrieTest.tests ())
         ]
     end
 

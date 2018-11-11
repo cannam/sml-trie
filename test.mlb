@@ -4,5 +4,5 @@ $(SML_LIB)/smlnj-lib/Util/listsort-sig.sml
 $(SML_LIB)/smlnj-lib/Util/list-mergesort.sml
 tests.sig
 test-support.sml
-test-trie.sml
+test.sml
 main.sml
