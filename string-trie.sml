@@ -5,7 +5,7 @@ signature STRING_TRIE = sig
     where type element = char
 end
 
-structure StringMTrie :> STRING_TRIE = TrieFn(StringMTrieMap)
-structure StringATrie :> STRING_TRIE = TrieFn(StringATrieMap)
+structure StringMTrie :> STRING_TRIE = PatternMatchTrieFn(StringMTrieMap)
+structure StringATrie :> STRING_TRIE = PatternMatchTrieFn(StringATrieMap)
 
 structure StringTrie = StringATrie

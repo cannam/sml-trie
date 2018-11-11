@@ -1,13 +1,11 @@
 
-functor TrieFn (M : PATTERN_MATCH_TRIE_MAP)
-	:> PATTERN_MATCH_TRIE
-	       where type element = M.element where type entry = M.key = struct
+functor TrieFn (M : TRIE_MAP)
+	:> TRIE
+	       where type entry = M.key where type trie = unit M.trie = struct
 
     open M
 
-    type element = M.element
     type entry = M.key
-    type pattern = element option list
 
     type trie = unit M.trie
     type t = trie
@@ -29,21 +27,5 @@ functor TrieFn (M : PATTERN_MATCH_TRIE_MAP)
 
     fun foldlPrefixMatch f acc (t, e) =
         M.foldliPrefixMatch (fn (k, v, acc) => f (k, acc)) acc (t, e)
-
-    fun patternMatch (t, p) =
-        keysOf (M.patternMatch (t, p))
-
-    fun foldlPatternMatch f acc (t, p) =
-        M.foldliPatternMatch (fn (k, v, acc) => f (k, acc)) acc (t, p)
                           
 end
-                                                                        
-functor ListMTrieFn (E : MTRIE_ELEMENT)
-        :> PATTERN_MATCH_TRIE
-               where type element = E.t where type entry = E.t list =
-    TrieFn(ListMTrieMapFn(E))
-                                                                        
-functor ListATrieFn (E : ATRIE_ELEMENT)
-        :> PATTERN_MATCH_TRIE
-               where type element = E.t where type entry = E.t list =
-    TrieFn(ListATrieMapFn(E))
