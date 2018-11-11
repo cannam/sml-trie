@@ -55,7 +55,29 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
 			     "zebra"),
 			"par")),
 	      sorted cutdown_strings)
-		  
+
+    fun test_remove_all () =
+        let val t = make_test_trie ()
+            val t0 = foldl (fn (e, t) => T.remove (t, e)) t (T.enumerate t)
+        in
+            check_lists id (T.enumerate t0, [])
+        end
+
+    fun test_isEmpty () =
+        let val e = T.empty
+            val t = make_test_trie ()
+            val e1 = foldl (fn (e, t) => T.remove (t, e)) t (T.enumerate t)
+            val e2 = foldl (fn (e, t) => T.remove (t, e)) t (rev (T.enumerate t))
+        in
+            T.isEmpty e
+            andalso
+            not (T.isEmpty t)
+            andalso
+            T.isEmpty e1
+            andalso
+            T.isEmpty e2
+        end
+          
     fun test_prefixMatch () =
       let val t = make_test_trie ()
       in
@@ -100,6 +122,8 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
 	( "enumerate", test_enumerate ),
 	( "contains", test_contains ),
 	( "remove", test_remove ),
+	( "remove all", test_remove_all ),
+	( "isEmpty", test_isEmpty ),
 	( "prefixMatch", test_prefixMatch ),
 	( "prefixOf", test_prefixOf ),
 	( "patternMatch", test_patternMatch )
@@ -107,21 +131,21 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
 
 end
 
-structure StringMapTrieTest = TestTrieFn(struct
-                                          structure T = StringMapTrie
-                                          val name = "string-map-trie"
-                                          end)
-structure StringArrayTrieTest = TestTrieFn(struct
-                                            structure T = StringArrayTrie
-                                            val name = "string-array-trie"
-                                            end)
+structure StringMTrieTest = TestTrieFn(struct
+                                        structure T = StringMTrie
+                                        val name = "string-mtrie"
+                                        end)
+structure StringATrieTest = TestTrieFn(struct
+                                        structure T = StringATrie
+                                        val name = "string-atrie"
+                                        end)
                                                     
 fun main () =
     let open TestSupport
     in
         app run_test_suite [
-            (StringMapTrieTest.name, StringMapTrieTest.tests ()),
-            (StringArrayTrieTest.name, StringArrayTrieTest.tests ())
+            (StringMTrieTest.name, StringMTrieTest.tests ()),
+            (StringATrieTest.name, StringATrieTest.tests ())
         ]
     end
 

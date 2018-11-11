@@ -1,11 +1,14 @@
 
-test:	test.mlb
-	mlton test.mlb
+SCRIPTS	:= ../sml-buildscripts
+
+test:	test.mlb test.deps
+	${SCRIPTS}/polybuild test.mlb
 	./test
 
-clean:
-	rm -f test
+test.deps: test.mlb
+	${SCRIPTS}/mlb-dependencies $< > $@
 
-test: trie.sig pattern-match-trie.sig
-test: list-map-trie-fn.sml string-trie.sml
-test: tests.sig test-support.sml test-trie.sml
+clean:
+	rm -f test *.deps
+
+-include *.deps

@@ -11,6 +11,11 @@ signature TRIE = sig
     (* Empty trie *)
     val empty : t
 
+    (** Test whether a trie is empty. Note that this could be slow, as
+        it is possible for some implementations to have substantial
+        structure but no actual data after items are removed *)
+    val isEmpty : t -> bool
+
     (* Add the given entry, returning a new trie. If the entry is
        already present, the returned trie will be unchanged *)
     val add : t * entry -> t
