@@ -36,9 +36,10 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
 
     val empty = LEAF NO_VALUE
 
-    (*!!! not right currently - we can reach an empty trie by removing all the elements from a non-empty one, but this will give us NODE (NO_VALUE, a) where a is an empty vector *)
     fun isEmpty (LEAF NO_VALUE) = true
-      | isEmpty _ = false
+      | isEmpty (LEAF _) = false
+      | isEmpty (NODE (VALUE _, _)) = false
+      | isEmpty (NODE (NO_VALUE, v)) = Vector.all isEmpty v
 
     (*!!! test for replacing value *)
     fun insert (LEAF _, [], v) = LEAF (VALUE v)
@@ -84,7 +85,7 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
     fun foldli_helper f (acc, rpfx, NODE (i, nn)) =
         Vector.foldli (fn (ix, LEAF (VALUE v), acc) =>
                           f (rev (E.invOrd ix :: rpfx), v, acc)
-                        | (_, LEAF NO_VALUE, acc) => acc (* ??? *)
+                        | (_, LEAF NO_VALUE, acc) => acc
                         | (ix, n, acc) =>
                           foldli_helper f (acc, E.invOrd ix :: rpfx, n))
                       (case i of

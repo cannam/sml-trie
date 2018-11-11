@@ -2,3 +2,4 @@ syntax: glob
 test
 *~
 *.deps
+*.orig

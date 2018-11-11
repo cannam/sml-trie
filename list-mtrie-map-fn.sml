@@ -33,9 +33,10 @@ functor ListMTrieMapFn (E : MTRIE_ELEMENT)
 
     val empty = LEAF NO_VALUE
 
-    (*!!! not right currently - we can reach an empty trie by removing all the elements from a non-empty one, but this will give us NODE (NO_VALUE, m) where m is an empty map *)
     fun isEmpty (LEAF NO_VALUE) = true
-      | isEmpty _ = false
+      | isEmpty (LEAF _) = false
+      | isEmpty (NODE (VALUE _, _)) = false
+      | isEmpty (NODE (NO_VALUE, m)) = Map.all isEmpty m
             
     (*!!! check behaviour for replacing a value - I'm not sure the red-black map does what we want *)
     fun insert (NODE (i, m), x::xs, v) =
@@ -47,7 +48,6 @@ functor ListMTrieMapFn (E : MTRIE_ELEMENT)
       | insert (LEAF i, x::xs, v) =
         NODE (i, Map.insert (Map.empty, x, insert (empty, xs, v)))
 
-    (*!!! I think this is wrong - see comment before isEmpty - need tests *)
     fun remove (NODE (i, m), x::xs) =
         (case Map.find (m, x) of
              SOME n => NODE (i, Map.insert (m, x, remove (n, xs)))
