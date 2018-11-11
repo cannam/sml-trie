@@ -1,7 +1,10 @@
 $(SML_LIB)/basis/basis.mlb
 ../sml-smlnj-containers/sml-smlnj-containers.mlb
 trie.sig
+trie-map.sig
 pattern-match-trie.sig
+pattern-match-trie-map.sig
 list-map-trie-fn.sml
+list-mtrie-map-fn.sml
 list-array-trie-fn.sml
 string-trie.sml
