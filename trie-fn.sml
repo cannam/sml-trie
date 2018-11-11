@@ -38,3 +38,12 @@ functor TrieFn (M : PATTERN_MATCH_TRIE_MAP)
                           
 end
                                                                         
+functor ListMTrieFn (E : MTRIE_ELEMENT)
+        :> PATTERN_MATCH_TRIE
+               where type element = E.t where type entry = E.t list =
+    TrieFn(ListMTrieMapFn(E))
+                                                                        
+functor ListATrieFn (E : ATRIE_ELEMENT)
+        :> PATTERN_MATCH_TRIE
+               where type element = E.t where type entry = E.t list =
+    TrieFn(ListATrieMapFn(E))
