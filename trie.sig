@@ -4,8 +4,8 @@
 
 signature TRIE = sig
 
-    type t
-    type trie = t
+    type trie
+    type t = trie
     type entry
 
     (* Empty trie *)
