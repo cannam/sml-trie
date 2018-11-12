@@ -41,7 +41,20 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
     fun isEmpty (LEAF NONE) = true
       | isEmpty (LEAF _) = false
       | isEmpty (NODE { nonempty, ... }) = nonempty = 0
-                    
+
+    fun findInNodeVec (LEAF _, _) = NONE
+      | findInNodeVec (NODE { item, base, nonempty, vec }, i) =
+        if i < base
+        then NONE
+        else if i >= base + Vector.length vec
+        then NONE
+        else let val nsub = Vector.sub (vec, i - base)
+             in
+                 if isEmpty nsub
+                 then NONE
+                 else SOME nsub
+             end
+                 
     fun updateNodeVec (LEAF item, i, v) =
         if isEmpty v
         then LEAF item
@@ -50,7 +63,7 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
                                    nonempty = 0,
                                    vec = Vector.fromList []
                                  }, i, v)
-      | updateNodeVec (NODE { item, base, nonempty, vec }, i, v) : 'a node =
+      | updateNodeVec (NODE { item, base, nonempty, vec }, i, v) =
         if i < base
         then updateNodeVec (
                 NODE { item = item,
@@ -82,29 +95,28 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
                       in
                           case nonempty of
                               0 => empty
-                            | _ => NODE {
-                                      item = item,
-                                      base = base,
-                                      nonempty = nonempty,
-                                      vec = Vector.update (vec, i - base, v)
-                                  }
+                            | _ => NODE { item = item,
+                                          base = base,
+                                          nonempty = nonempty,
+                                          vec = Vector.update (vec, i - base, v)
+                                        }
                       end
              end
 
-    fun insert (LEAF _, [], v) = LEAF (VALUE v)
-      | insert (NODE (_, m), [], v) = NODE (VALUE v, m)
+    fun insert (LEAF _, [], v) =
+        LEAF (SOME v)
+      | insert (NODE { item, base, nonempty, vec }, [], v) =
+        NODE { item = SOME v,
+               base = base,
+               nonempty = nonempty,
+               vec = vec
+             }
       | insert (n, x::xs, v) =
-        let val ix = E.ord x
+        let val i = E.ord x
         in
-            case n of
-                LEAF i => 
-                NODE (i, Vector.tabulate (E.maxOrd,
-                                          fn n => if n = ix
-                                                  then insert (empty, xs, v)
-                                                  else empty))
-              | NODE (i, nn) => 
-                NODE (i, Vector.update (nn, ix,
-                                        insert (Vector.sub (nn, ix), xs, v)))
+            case findInNodeVec (n, i) of
+                NONE => updateNodeVec (n, i, insert (empty, xs, v))
+              | SOME nsub => updateNodeVec (n, i, insert (nsub, xs, v))
         end
 
     fun remove (LEAF _, []) = LEAF NO_VALUE
