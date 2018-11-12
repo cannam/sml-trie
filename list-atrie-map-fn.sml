@@ -26,22 +26,71 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
     type key = element list
     type pattern = element option list
 
-    datatype 'a item = VALUE of 'a
-                     | NO_VALUE
-
-    datatype 'a node = LEAF of 'a item
-                     | NODE of 'a item * 'a node vector
+    datatype 'a node = LEAF of 'a option
+                     | NODE of {
+                         item : 'a option,
+                         base : int,
+                         nonempty : int,
+                         vec : 'a node vector
+                     }
 
     type 'a trie = 'a node
 
-    val empty = LEAF NO_VALUE
+    val empty = LEAF NONE
 
-    fun isEmpty (LEAF NO_VALUE) = true
+    fun isEmpty (LEAF NONE) = true
       | isEmpty (LEAF _) = false
-      | isEmpty (NODE (VALUE _, _)) = false
-      | isEmpty (NODE (NO_VALUE, v)) = Vector.all isEmpty v
+      | isEmpty (NODE { nonempty, ... }) = nonempty = 0
+                    
+    fun updateNodeVec (LEAF item, i, v) =
+        if isEmpty v
+        then LEAF item
+        else updateNodeVec (NODE { item = item,
+                                   base = 0,
+                                   nonempty = 0,
+                                   vec = Vector.fromList []
+                                 }, i, v)
+      | updateNodeVec (NODE { item, base, nonempty, vec }, i, v) : 'a node =
+        if i < base
+        then updateNodeVec (
+                NODE { item = item,
+                       base = i,
+                       nonempty = nonempty,
+                       vec = Vector.concat [
+                           Vector.tabulate (base - i, fn _ => empty),
+                           vec
+                     ]}, i, v)
+        else let val fin = base + Vector.length vec
+             in
+                 if i >= fin
+                 then updateNodeVec (
+                         NODE { item = item,
+                                base = base,
+                                nonempty = nonempty,
+                                vec = Vector.concat [
+                                    vec,
+                                    Vector.tabulate (i - fin + 1,
+                                                     fn _ => empty)
+                              ]}, i, v)
+                 else let val nonempty =
+                              case (isEmpty (Vector.sub (vec, i - base)),
+                                    isEmpty v) of
+                                  (true, true) => nonempty
+                                | (true, false) => nonempty + 1
+                                | (false, true) => nonempty - 1
+                                | (false, false) => nonempty
+                      in
+                          case nonempty of
+                              0 => empty
+                            | _ => NODE {
+                                      item = item,
+                                      base = base,
+                                      nonempty = nonempty,
+                                      vec = Vector.update (vec, i - base, v)
+                                  }
+                      end
+             end
 
-    (*!!! test for replacing value *)
     fun insert (LEAF _, [], v) = LEAF (VALUE v)
       | insert (NODE (_, m), [], v) = NODE (VALUE v, m)
       | insert (n, x::xs, v) =
