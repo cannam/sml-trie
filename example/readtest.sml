@@ -17,7 +17,6 @@ functor ReadSummariseFn (T : STRING_TRIE_MAP) = struct
             case T.find (trie, word) of
                 NONE => T.insert (trie, word, 1)
               | SOME n => T.insert (trie, word, n+1)
-        end
             
     fun loadFromLine (line, trie) =
         foldl loadFromToken trie (String.tokens Char.isSpace line)
