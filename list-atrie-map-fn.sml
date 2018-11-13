@@ -119,23 +119,31 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
               | SOME nsub => updateNodeVec (n, i, insert (nsub, xs, v))
         end
 
-    fun remove (LEAF _, []) = LEAF NO_VALUE
-      | remove (NODE (_, nn), []) = NODE (NO_VALUE, nn)
+    fun remove (LEAF _, []) = LEAF NONE
+      | remove (NODE { item, base, nonempty, vec }, []) =
+        NODE { item = NONE,
+               base = base,
+               nonempty = nonempty,
+               vec = vec
+             }
       | remove (LEAF i, x::xs) = LEAF i
-      | remove (NODE (i, nn), x::xs) =
-        let val ix = E.ord x
+      | remove (n, x::xs) =
+        let val i = E.ord x
         in
-            NODE (i, Vector.update (nn, ix, remove (Vector.sub (nn, ix), xs)))
+            case findInNodeVec (n, i) of
+                NONE => n
+              | SOME nsub => updateNodeVec (n, i, empty)
         end
 
-    fun find (LEAF (VALUE v), []) = SOME v
-      | find (NODE (VALUE v, _), []) = SOME v
-      | find (NODE (_, nn), x::xs) =
-        let val ix = E.ord x
+    fun find (LEAF item, []) = item
+      | find (NODE { item, ... }, []) = item
+      | find (n, x::xs) =
+        let val i = E.ord x
         in
-            find (Vector.sub (nn, ix), xs)
+            case findInNodeVec (n, i) of
+                NONE => NONE
+              | SOME nsub => find (nsub, xs)
         end
-      | find _ = NONE
 
     fun contains (t, k) =
         case find (t, k) of
@@ -143,18 +151,19 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
           | NONE => false
                      
     (* rpfx is reversed prefix built up so far (using cons) *)
-    fun foldli_helper f (acc, rpfx, NODE (i, nn)) =
-        Vector.foldli (fn (ix, LEAF (VALUE v), acc) =>
-                          f (rev (E.invOrd ix :: rpfx), v, acc)
-                        | (_, LEAF NO_VALUE, acc) => acc
-                        | (ix, n, acc) =>
-                          foldli_helper f (acc, E.invOrd ix :: rpfx, n))
-                      (case i of
-                           VALUE v => f (rev rpfx, v, acc)
-                         | NO_VALUE => acc)
-                      nn
-      | foldli_helper f (acc, rpfx, LEAF (VALUE v)) = f (rev rpfx, v, acc)
-      | foldli_helper f (acc, rpfx, LEAF NO_VALUE) = acc
+    fun foldli_helper f (acc, rpfx, NODE { item, base, vec, ... }) =
+        Vector.foldli
+            (fn (ix, LEAF (SOME v), acc) =>
+                f (rev (E.invOrd (base + ix) :: rpfx), v, acc)
+              | (_, LEAF NONE, acc) => acc
+              | (ix, n, acc) =>
+                foldli_helper f (acc, E.invOrd (base + ix) :: rpfx, n))
+            (case item of
+                 NONE => acc
+               | SOME v => f (rev rpfx, v, acc))
+            vec
+      | foldli_helper f (acc, rpfx, LEAF (SOME v)) = f (rev rpfx, v, acc)
+      | foldli_helper f (acc, rpfx, LEAF NONE) = acc
 
     fun foldl f acc trie =
         foldli_helper (fn (k, v, acc) => f (v, acc)) (acc, [], trie)
@@ -167,8 +176,8 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
 
     fun foldliPrefixMatch f acc (trie, e) =
         (* rpfx is reversed prefix built up so far (using cons) *)
-        let fun fold' (acc, rpfx, NODE (_, nn), x::xs) =
-                fold' (acc, x :: rpfx, Vector.sub (nn, E.ord x), xs)
+        let fun fold' (acc, rpfx, NODE { base, vec, ... }, x::xs) =
+                fold' (acc, x :: rpfx, Vector.sub (vec, E.ord x - base), xs)
               | fold' (acc, rpfx, trie, []) = foldli_helper f (acc, rpfx, trie)
               | fold' (acc, rpfx, LEAF _, _) = acc
         in
@@ -182,17 +191,18 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
         rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
     fun foldliPatternMatch f acc (trie, p) =
-        let fun fold' (acc, pfx, NODE (_, nn), (SOME x)::xs) =
-                fold' (acc, x :: pfx, Vector.sub (nn, E.ord x), xs)
-              | fold' (acc, pfx, LEAF (VALUE v), []) = f (rev pfx, v, acc)
-	      | fold' (acc, pfx, NODE (VALUE v, _), []) = f (rev pfx, v, acc)
+        let fun fold' (acc, pfx, NODE { base, vec, ... }, (SOME x)::xs) =
+                fold' (acc, x :: pfx, Vector.sub (vec, E.ord x - base), xs)
+              | fold' (acc, pfx, LEAF (SOME v), []) = f (rev pfx, v, acc)
+	      | fold' (acc, pfx, NODE { item = SOME v, ... }, []) = f (rev pfx, v, acc)
 	      | fold' (acc, pfx, _, []) = acc
               | fold' (acc, pfx, LEAF _, _) = acc
-              | fold' (acc, pfx, NODE (_, nn), NONE::xs) =
-                Vector.foldli (fn (ix, n, acc) =>
-                                  fold' (acc, E.invOrd ix :: pfx, n, xs))
-                              acc
-                              nn
+              | fold' (acc, pfx, NODE { base, vec, ... }, NONE::xs) =
+                Vector.foldli
+                    (fn (ix, n, acc) =>
+                        fold' (acc, E.invOrd (base + ix) :: pfx, n, xs))
+                    acc
+                    vec
         in
             fold' (acc, [], trie, p)
         end
@@ -201,18 +211,19 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
         rev (foldliPatternMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
 
     fun prefixOf (trie, e) =
-        let fun prefix' (best, acc, NODE (i, nn), x::xs) =
+        let fun prefix' (best, acc, NODE { item, base, vec, ... }, x::xs) =
                 let val best =
-                        case i of
-                            VALUE _ => acc
-                          | NO_VALUE => best
+                        case item of
+                            NONE => best
+                          | SOME _ => acc
                 in
-                    prefix' (best, x :: acc, Vector.sub (nn, E.ord x), xs)
+                    prefix' (best, x :: acc,
+                             Vector.sub (vec, E.ord x - base), xs)
                 end
-              | prefix' (best, acc, LEAF (VALUE _), _) = acc
-              | prefix' (best, acc, NODE (VALUE _, _), []) = acc
-              | prefix' (best, acc, LEAF (NO_VALUE), _) = best
-              | prefix' (best, acc, NODE (NO_VALUE, _), []) = best
+              | prefix' (best, acc, LEAF (SOME _), _) = acc
+              | prefix' (best, acc, NODE { item = SOME _, ... }, []) = acc
+              | prefix' (best, acc, LEAF NONE, _) = best
+              | prefix' (best, acc, NODE { item = NONE, ... }, []) = best
         in
 	    rev (prefix' ([], [], trie, e))
         end
