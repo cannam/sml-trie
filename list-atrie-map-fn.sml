@@ -132,7 +132,7 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
         in
             case findInNodeVec (n, i) of
                 NONE => n
-              | SOME nsub => updateNodeVec (n, i, empty)
+              | SOME nsub => updateNodeVec (n, i, remove (nsub, xs))
         end
 
     fun find (LEAF item, []) = item
