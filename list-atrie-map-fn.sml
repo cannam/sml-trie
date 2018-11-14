@@ -138,12 +138,9 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
     fun find (LEAF item, []) = item
       | find (NODE { item, ... }, []) = item
       | find (n, x::xs) =
-        let val i = E.ord x
-        in
-            case findInNodeVec (n, i) of
-                NONE => NONE
-              | SOME nsub => find (nsub, xs)
-        end
+        case findInNodeVec (n, E.ord x) of
+            NONE => NONE
+          | SOME nsub => find (nsub, xs)
 
     fun contains (t, k) =
         case find (t, k) of
@@ -191,18 +188,29 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
         rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
     fun foldliPatternMatch f acc (trie, p) =
-        let fun fold' (acc, pfx, NODE { base, vec, ... }, (SOME x)::xs) =
-                fold' (acc, x :: pfx, Vector.sub (vec, E.ord x - base), xs)
-              | fold' (acc, pfx, LEAF (SOME v), []) = f (rev pfx, v, acc)
-	      | fold' (acc, pfx, NODE { item = SOME v, ... }, []) = f (rev pfx, v, acc)
-	      | fold' (acc, pfx, _, []) = acc
-              | fold' (acc, pfx, LEAF _, _) = acc
-              | fold' (acc, pfx, NODE { base, vec, ... }, NONE::xs) =
-                Vector.foldli
-                    (fn (ix, n, acc) =>
-                        fold' (acc, E.invOrd (base + ix) :: pfx, n, xs))
-                    acc
-                    vec
+        let fun fold' (acc, pfx, n, p) =
+                case p of
+                    [] => 
+                    (case n of
+                         LEAF (SOME v) => f (rev pfx, v, acc)
+                       | NODE { item = SOME v, ... } => f (rev pfx, v, acc)
+                       | _ => acc)
+                  | NONE::xs =>
+                    (case n of
+                         LEAF _ => acc
+                       | NODE { base, vec, ... } =>
+                         Vector.foldli (fn (ix, n, acc) =>
+                                           fold' (acc,
+                                                  E.invOrd (base + ix) :: pfx,
+                                                  n, xs))
+                                       acc vec)
+                  | (SOME x)::xs =>
+                    (case n of
+                         LEAF _ => acc
+                       | NODE { base, vec, ... } =>
+                         case findInNodeVec (n, E.ord x) of
+                             NONE => acc
+                           | SOME nsub => fold' (acc, x :: pfx, nsub, xs))
         in
             fold' (acc, [], trie, p)
         end
@@ -211,14 +219,15 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
         rev (foldliPatternMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
 
     fun prefixOf (trie, e) =
-        let fun prefix' (best, acc, NODE { item, base, vec, ... }, x::xs) =
+        let fun prefix' (best, acc, n as NODE { item, base, vec, ... }, x::xs) =
                 let val best =
                         case item of
                             NONE => best
                           | SOME _ => acc
                 in
-                    prefix' (best, x :: acc,
-                             Vector.sub (vec, E.ord x - base), xs)
+                    case findInNodeVec (n, E.ord x) of
+                        NONE => best
+                      | SOME nsub => prefix' (best, x :: acc, nsub, xs)
                 end
               | prefix' (best, acc, LEAF (SOME _), _) = acc
               | prefix' (best, acc, NODE { item = SOME _, ... }, []) = acc
