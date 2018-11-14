@@ -11,6 +11,5 @@ structure StringATrieMap = StringTrieMapFn
                                                 val ord = Char.ord
                                                 val invOrd = Char.chr
                                                 val maxOrd = Char.maxOrd
-                                                val toString = Char.toString
                                                 end))
 
