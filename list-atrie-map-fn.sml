@@ -7,6 +7,7 @@ signature ATRIE_ELEMENT = sig
     val ord : t -> int
     val invOrd : int -> t
     val maxOrd : int
+    val toString : t -> string
 end
 
 (* Turn a type that can be compactly converted into an integer
@@ -36,6 +37,32 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
 
     type 'a trie = 'a node
 
+    fun printStructure trie =
+        let fun space depth =
+                case depth of
+                    0 => ()
+                  | _ => (print "  "; space (depth - 1))
+            fun print' depth node =
+                (space depth;
+                 case node of
+                     LEAF NONE => print "#\n"
+                   | LEAF (SOME v) => print "VALUE\n"
+                   | NODE { item, base, nonempty, vec } =>
+                     (case item of
+                          NONE => print "# "
+                        | SOME v => print "VALUE ";
+                      print ("(base " ^ (Int.toString base) ^
+                             ", nonempty " ^ (Int.toString nonempty) ^ ") [\n");
+                      Vector.appi (fn (i, nsub) =>
+                                      (space depth;
+                                       print (E.toString (E.invOrd (base + i)) ^ ":\n");
+                                       print' (depth + 1) nsub)) vec;
+                      space depth;
+                      print "]\n"))
+        in
+            print' 0 trie
+        end
+                      
     val empty = LEAF NONE
 
     fun isEmpty (LEAF NONE) = true
