@@ -90,8 +90,16 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
                                    nonempty = 0,
                                    vec = Vector.fromList []
                                  }, i, v)
-      | updateNodeVec (NODE { item, base, nonempty, vec }, i, v) =
-        if i < base
+      | updateNodeVec (n as NODE { item, base, nonempty, vec }, i, v) =
+        if nonempty = 0 andalso isEmpty v
+        then n
+        else if nonempty = 0
+        then NODE { item = item,
+                    base = i,
+                    nonempty = 1,
+                    vec = Vector.tabulate (1, fn _ => v)
+                  }
+        else if i < base
         then updateNodeVec (
                 NODE { item = item,
                        base = i,
