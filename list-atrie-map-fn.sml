@@ -39,8 +39,8 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
     val empty = LEAF NONE
 
     fun isEmpty (LEAF NONE) = true
-      | isEmpty (LEAF _) = false
-      | isEmpty (NODE { nonempty, ... }) = nonempty = 0
+      | isEmpty (NODE { nonempty = 0, ... }) = true
+      | isEmpty _ = false
 
     fun findInNodeVec (LEAF _, _) = NONE
       | findInNodeVec (NODE { item, base, nonempty, vec }, i) =
@@ -64,9 +64,9 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
                                    vec = Vector.fromList []
                                  }, i, v)
       | updateNodeVec (n as NODE { item, base, nonempty, vec }, i, v) =
-        if nonempty = 0 andalso isEmpty v
+        if isEmpty n andalso isEmpty v
         then n
-        else if nonempty = 0
+        else if isEmpty n
         then NODE { item = item,
                     base = i,
                     nonempty = 1,
