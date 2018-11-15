@@ -26,107 +26,159 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
 
     fun sorted s = ListMergeSort.sort String.> s
 
-    fun make_test_trie () = List.foldl (fn (s, t) => T.add (t, s))
-				       T.empty
-				       strings
+    fun test_trie () = List.foldl (fn (s, t) => T.add (t, s))
+				  T.empty
+				  strings
 
     fun id x = x
-				       
-    fun test_enumerate () =
-      check_lists id (T.enumerate (make_test_trie ()),
-		      sorted strings)
 
-    fun test_contains () =
-      let val t = make_test_trie ()
-      in
-	  check_pairs Bool.toString
-		      [(T.contains (t, "pa"), false),
-		       (T.contains (t, "par"), true),
-		       (T.contains (t, "parp"), true),
-		       (T.contains (t, "part"), false)]
-      end
-	  
-    fun test_remove () =
-      check_lists
-	  id (T.enumerate
-		  (T.remove
-		       (T.remove
-			    (T.remove (make_test_trie (), "zebra"),
-			     "zebra"),
-			"par")),
-	      sorted cutdown_strings)
-
-    fun test_remove_all () =
-        let val t = make_test_trie ()
-            val t0 = foldl (fn (e, t) => T.remove (t, e)) t (T.enumerate t)
-        in
-            check_lists id (T.enumerate t0, [])
-        end
-
-    fun test_isEmpty () =
-        let val e = T.empty
-            val t = make_test_trie ()
-            val e1 = foldl (fn (e, t) => T.remove (t, e)) t (T.enumerate t)
-            val e2 = foldl (fn (e, t) => T.remove (t, e)) t (rev (T.enumerate t))
-        in
-            T.isEmpty e
-            andalso
-            not (T.isEmpty t)
-            andalso
-            T.isEmpty e1
-            andalso
-            T.isEmpty e2
-        end
-          
-    fun test_prefixMatch () =
-      let val t = make_test_trie ()
-      in
-	  check_lists id (T.prefixMatch (t, "pa"),
-			  [ "par", "parp" ])
-	  andalso
-	  check_lists id (T.prefixMatch (t, "par"),
-			  [ "par", "parp" ])
-	  andalso
-	  check_lists id (T.prefixMatch (t, ""),
-			  sorted strings)
-      end
-	  
-    fun test_prefixOf () =
-      let val t = make_test_trie ()
-      in
-	  check_pairs id
-		      [(T.prefixOf (t, "pa"), ""),
-		       (T.prefixOf (t, "par"), "par"),
-		       (T.prefixOf (t, "parp"), "parp"),
-		       (T.prefixOf (t, "part"), "par")]
-      end
-
-    fun test_patternMatch () =
-      let val t = make_test_trie ()
-      in
-	  check_lists id
-		      (T.patternMatch (t, [SOME #"p", NONE, SOME #"r"]),
-		       ["par"])
-	  andalso
-	  check_lists id
-		      (T.patternMatch (t, [SOME #"a", SOME #"l", SOME #"l"]),
-		       [])
-	  andalso
-	  check_lists id
-		      (T.patternMatch (t, [SOME #"a", NONE, NONE, NONE, NONE,
-					    NONE, NONE, SOME #"e"]),
-		       ["abrasive", "alliance"])
-      end
-	  
     fun tests () = [
-	( "enumerate", test_enumerate ),
-	( "contains", test_contains ),
-	( "remove", test_remove ),
-	( "remove all", test_remove_all ),
-	( "isEmpty", test_isEmpty ),
-	( "prefixMatch", test_prefixMatch ),
-	( "prefixOf", test_prefixOf ),
-	( "patternMatch", test_patternMatch )
+	( "enumerate-empty",
+          fn () => check_lists id (T.enumerate T.empty, [])
+        ),
+        ( "enumerate",
+          fn () => check_lists id (T.enumerate (test_trie ()), sorted strings)
+        ),
+        ( "contains-empty",
+          fn () => check_pairs Bool.toString
+                               [(T.contains (T.empty, ""), false),
+                                (T.contains (T.empty, "parp"), false)]
+        ),
+        ( "contains",
+          fn () => let val t = test_trie ()
+                   in
+                       check_pairs Bool.toString
+		                   [(T.contains (t, "pa"), false),
+		                    (T.contains (t, "par"), true),
+		                    (T.contains (t, "parp"), true),
+		                    (T.contains (t, "part"), false),
+		                    (T.contains (t, "quiz"), false),
+		                    (T.contains (t, ""), false)]
+                   end
+        ),
+	( "remove-empty",
+          fn () => check_lists id (T.enumerate (T.remove (T.empty, "parp")), [])
+        ),
+        ( "remove",
+          fn () => check_lists
+	               id (T.enumerate
+		               (T.remove
+		                    (T.remove
+			                 (T.remove (test_trie (), "zebra"),
+			                  "zebra"),
+			             "par")),
+	                   sorted cutdown_strings)
+        ),
+        ( "remove-all",
+          fn () => let val t = test_trie ()
+                       val t0 = foldl (fn (e, t) => T.remove (t, e))
+                                      t (T.enumerate t)
+                   in
+                       check_lists id (T.enumerate t0, [])
+                   end
+        ),
+	( "isEmpty-empty",
+          fn () => T.isEmpty T.empty
+        ),
+        ( "isEmpty-nonempty",
+          fn () => not (T.isEmpty (test_trie ()))
+        ),
+        ( "isEmpty-after-removals",
+          fn () => let val t = test_trie ()
+                       val e1 = foldl (fn (e, t) => T.remove (t, e))
+                                      t (T.enumerate t)
+                       val e2 = foldl (fn (e, t) => T.remove (t, e))
+                                      t (rev (T.enumerate t))
+                   in
+                       T.isEmpty e1 andalso T.isEmpty e2
+                   end
+        ),
+        ( "prefixMatch-empty",
+          fn () => check_lists id (T.prefixMatch (T.empty, "parp"), [])
+        ),
+        ( "prefixMatch-matches",
+          fn () => check_lists id (T.prefixMatch (test_trie (), "pa"),
+			           [ "par", "parp" ])
+	           andalso
+	           check_lists id (T.prefixMatch (test_trie (), "par"),
+			           [ "par", "parp" ])
+        ),
+        ( "prefixMatch-no-matches",
+          fn () => check_lists id (T.prefixMatch (test_trie (), "quiz"), [ ])
+        ),
+        ( "prefixMatch-all-matches",
+          fn () => check_lists id (T.prefixMatch (test_trie (), ""),
+                                   sorted strings)
+        ),
+        ( "prefixOf-empty",
+          fn () => check_pairs id [(T.prefixOf (T.empty, "parp"), ""),
+                                   (T.prefixOf (T.empty, ""), "")
+                                  ]
+        ),
+	( "prefixOf",
+          fn () => check_pairs id [(T.prefixOf (test_trie (), "par"), "par"),
+		                   (T.prefixOf (test_trie (), "parp"), "parp"),
+		                   (T.prefixOf (test_trie (), "part"), "par")
+                                  ]
+        ),
+	( "prefixOf-no-matches",
+          fn () => check_pairs id [(T.prefixOf (test_trie (), "pa"), ""),
+		                   (T.prefixOf (test_trie (), "quiz"), "")
+                                  ]
+        ),
+        ( "patternMatch-empty",
+          fn () => check_lists id (T.patternMatch (T.empty, []), [])
+                   andalso
+                   check_lists id (T.patternMatch (T.empty, [SOME #"p"]), [])
+                   andalso
+                   check_lists id (T.patternMatch (T.empty, [NONE]), [])
+        ),
+        ( "patternMatch-nil",
+          fn () => check_lists id (T.patternMatch (test_trie (), []), [])
+        ),
+        ( "patternMatch-literal",
+          fn () => check_lists id (T.patternMatch
+                                       (test_trie (),
+                                        [SOME #"p", SOME #"a", SOME #"r"]),
+		                   ["par"])
+        ),
+        ( "patternMatch-one",
+          fn () => check_lists id (T.patternMatch
+                                       (test_trie (),
+                                        [SOME #"p", NONE, SOME #"r"]),
+		                   ["par"])
+        ),
+        ( "patternMatch-some",
+	  fn () => check_lists id (T.patternMatch
+                                       (test_trie (),
+                                        [SOME #"a", NONE, NONE, NONE, NONE,
+					 NONE, NONE, SOME #"e"]),
+		                   ["abrasive", "alliance"])
+        ),
+        ( "patternMatch-no-literal",
+          fn () => check_lists id (T.patternMatch
+                                       (test_trie (),
+                                        [SOME #"a", SOME #"l", SOME #"l"]),
+		                   [])
+        ),
+        ( "patternMatch-none",
+          fn () => check_lists id (T.patternMatch
+                                       (test_trie (),
+                                        [SOME #"q", NONE]),
+		                   [])
+                   andalso
+                   check_lists id (T.patternMatch
+                                       (test_trie (),
+                                        [NONE, SOME #"q"]),
+		                   [])
+        ),
+        ( "patternMatch-overlong",
+          fn () => check_lists id (T.patternMatch
+                                       (test_trie (),
+                                        [NONE, NONE, NONE, NONE, NONE,
+                                         NONE, NONE, NONE, NONE, NONE]),
+		                   [])
+        )
     ]
 
 end
