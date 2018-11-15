@@ -33,33 +33,37 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
                          vec : 'a node option vector
                      }
 
-    type 'a trie = 'a node
+    type 'a trie = 'a node option
                       
-    val empty = NODE { item = NONE,
-                       base = 0,
-                       nonempty = 0,
-                       vec = Vector.fromList []
-                     }
-
-    fun isEmpty (NODE { nonempty = 0, ... }) = true
+    val empty = NONE
+                    
+    fun isEmpty NONE = true
+      | isEmpty (SOME (NODE { nonempty = 0, ... })) = true
       | isEmpty _ = false
 
     fun findInNodeVec (NODE { item, base, nonempty, vec }, i) =
-        if i < base
-        then NONE
-        else if i >= base + Vector.length vec
+        if i < base orelse i >= base + Vector.length vec
         then NONE
         else Vector.sub (vec, i - base)
 
+    fun removeFromNodeVec (n as NODE { item, base, nonempty, vec }, i) =
+        case findInNodeVec (n, i) of
+            NONE => n
+          | SOME _ => NODE { item = item,
+                             base = base,
+                             nonempty = nonempty - 1,
+                             vec = Vector.update (vec, i - base, NONE)
+                           }
+                        
     fun updateNodeVec (n as NODE { item, base, nonempty, vec }, i, v) =
-        if isEmpty n andalso isEmpty v
-        then n
-        else if isEmpty n
-        then NODE { item = item,
-                    base = i,
-                    nonempty = 1,
-                    vec = Vector.tabulate (1, fn _ => SOME v)
-                  }
+        if nonempty = 0
+        then (case v of
+                  NONE => n
+                | v => NODE { item = item,
+                              base = i,
+                              nonempty = 1,
+                              vec = Vector.tabulate (1, fn _ => v)
+                            })
         else if i < base
         then updateNodeVec (
                 NODE { item = item,
@@ -89,51 +93,61 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
                                 | (NONE, false) => nonempty
                       in
                           case nonempty of
-                              0 => empty
+                              0 => NODE {
+                                      item = item,
+                                      base = base,
+                                      nonempty = nonempty,
+                                      vec = vec
+                                  }
                             | _ => NODE { item = item,
                                           base = base,
                                           nonempty = nonempty,
-                                          vec = Vector.update (vec, i - base,
-                                                               if isEmpty v
-                                                               then NONE
-                                                               else SOME v)
+                                          vec = Vector.update (vec, i - base, v)
                                         }
                       end
              end
 
-    fun insert (NODE { item, base, nonempty, vec }, [], v) =
-        NODE { item = SOME v,
-               base = base,
-               nonempty = nonempty,
-               vec = vec
-             }
-      | insert (n, x::xs, v) =
+    fun insert (NONE, xx, v) =
+        insert (SOME (NODE { item = NONE,
+                             base = 0,
+                             nonempty = 0,
+                             vec = Vector.fromList []
+                     }), xx, v)
+      | insert (SOME (NODE { item, base, nonempty, vec }), [], v) =
+        SOME (NODE { item = SOME v,
+                     base = base,
+                     nonempty = nonempty,
+                     vec = vec
+                   })
+      | insert (SOME n, x::xs, v) =
         let val i = E.ord x
         in
             case findInNodeVec (n, i) of
-                NONE => updateNodeVec (n, i, insert (empty, xs, v))
-              | SOME nsub => updateNodeVec (n, i, insert (nsub, xs, v))
+                NONE => SOME (updateNodeVec (n, i, insert (empty, xs, v)))
+              | nsub => SOME (updateNodeVec (n, i, insert (nsub, xs, v)))
         end
 
-    fun remove (NODE { item, base, nonempty, vec }, []) =
-        NODE { item = NONE,
-               base = base,
-               nonempty = nonempty,
-               vec = vec
-             }
-      | remove (n, x::xs) =
+    fun remove (NONE, _) = NONE
+      | remove (SOME (NODE { item, base, nonempty, vec }), []) =
+        SOME (NODE { item = NONE,
+                     base = base,
+                     nonempty = nonempty,
+                     vec = vec
+                   })
+      | remove (SOME n, x::xs) =
         let val i = E.ord x
         in
             case findInNodeVec (n, i) of
-                NONE => n
-              | SOME nsub => updateNodeVec (n, i, remove (nsub, xs))
+                NONE => SOME n
+              | nsub => SOME (updateNodeVec (n, i, remove (nsub, xs)))
         end
 
-    fun find (NODE { item, ... }, []) = item
-      | find (n, x::xs) =
+    fun find (NONE, _) = NONE
+      | find (SOME (NODE { item, ... }), []) = item
+      | find (SOME n, x::xs) =
         case findInNodeVec (n, E.ord x) of
             NONE => NONE
-          | SOME nsub => find (nsub, xs)
+          | nsub => find (nsub, xs)
 
     fun contains (t, k) =
         case find (t, k) of
@@ -151,24 +165,27 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
                | SOME v => f (rev rpfx, v, acc))
             vec
 
-    fun foldl f acc trie =
-        foldli_helper (fn (k, v, acc) => f (v, acc)) (acc, [], trie)
+    fun foldl f acc NONE = acc
+      | foldl f acc (SOME node) = 
+        foldli_helper (fn (k, v, acc) => f (v, acc)) (acc, [], node)
                       
-    fun foldli f acc trie =
-        foldli_helper f (acc, [], trie)
+    fun foldli f acc NONE = acc
+      | foldli f acc (SOME node) = 
+        foldli_helper f (acc, [], node)
 
     fun enumerate trie =
         rev (foldli (fn (k, v, acc) => (k, v) :: acc) [] trie)
 
-    fun foldliPrefixMatch f acc (trie, e) =
+    fun foldliPrefixMatch f acc (NONE, e) = acc
+      | foldliPrefixMatch f acc (SOME node, e) = 
         (* rpfx is reversed prefix built up so far (using cons) *)
-        let fun fold' (acc, rpfx, trie, []) = foldli_helper f (acc, rpfx, trie)
+        let fun fold' (acc, rpfx, n, []) = foldli_helper f (acc, rpfx, n)
               | fold' (acc, rpfx, NODE { base, vec, ... }, x::xs) =
                 case Vector.sub (vec, E.ord x - base) of
                     NONE => acc
                   | SOME nsub => fold' (acc, x :: rpfx, nsub, xs)
         in
-            fold' (acc, [], trie, e)
+            fold' (acc, [], node, e)
         end
 
     fun foldlPrefixMatch f acc (trie, e) =
@@ -177,7 +194,8 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
     fun prefixMatch (trie, e) =
         rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
-    fun foldliPatternMatch f acc (trie, p) =
+    fun foldliPatternMatch f acc (NONE, p) = acc
+      | foldliPatternMatch f acc (SOME node, p) = 
         let fun fold' (acc, pfx, n, p) =
                 case p of
                     [] => 
@@ -200,13 +218,14 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
                              NONE => acc
                            | SOME nsub => fold' (acc, x :: pfx, nsub, xs))
         in
-            fold' (acc, [], trie, p)
+            fold' (acc, [], node, p)
         end
     
     fun patternMatch (trie, p) =
         rev (foldliPatternMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
 
-    fun prefixOf (trie, e) =
+    fun prefixOf (NONE, e) = []
+      | prefixOf (SOME node, e) = 
         let fun prefix' (best, acc, n as NODE { item, base, vec, ... }, x::xs) =
                 let val best =
                         case item of
@@ -220,7 +239,7 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
               | prefix' (best, acc, NODE { item = SOME _, ... }, []) = acc
               | prefix' (best, acc, NODE { item = NONE, ... }, []) = best
         in
-	    rev (prefix' ([], [], trie, e))
+	    rev (prefix' ([], [], node, e))
         end
 
 end
