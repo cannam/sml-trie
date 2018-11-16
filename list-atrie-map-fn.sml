@@ -36,9 +36,24 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
     type 'a trie = 'a node option
                       
     val empty = NONE
+
+    fun indent level = String.concat (List.tabulate (level, fn _ => "  "))
                     
+    fun dump' level NONE = indent level ^ "no-node"
+      | dump' level (SOME (NODE { item, nonempty, base, vec })) =
+        indent level ^
+        (case item of NONE => "node" | _ => "VALUE") ^
+        " (nonempty = " ^ Int.toString nonempty ^
+        ", base = " ^ Int.toString base ^
+        ", len = " ^ Int.toString (Vector.length vec) ^
+        ": [\n" ^ (String.concatWith (",\n" ^ indent level)
+                                     (map (dump' (level + 1))
+                                          (Vector.foldr (op::) [] vec))) ^
+        "\n" ^ indent level ^ "])"
+
+    fun dump (t : 'a trie) = dump' 0 t
+                                  
     fun isEmpty NONE = true
-      | isEmpty (SOME (NODE { nonempty = 0, ... })) = true
       | isEmpty _ = false
 
     fun findInNodeVec (NODE { item, base, nonempty, vec }, i) =
@@ -48,21 +63,24 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
 
     fun removeFromNodeVec (n as NODE { item, base, nonempty, vec }, i) =
         case findInNodeVec (n, i) of
-            NONE => n
-          | SOME _ => NODE { item = item,
-                             base = base,
-                             nonempty = nonempty - 1,
-                             vec = Vector.update (vec, i - base, NONE)
-                           }
+            NONE => SOME n
+          | SOME _ => case (item, nonempty) of
+                          (NONE, 1) => NONE
+                        | _ => SOME (NODE { item = item,
+                                            base = base,
+                                            nonempty = nonempty - 1,
+                                            vec = Vector.update
+                                                      (vec, i - base, NONE)
+                                          })
                         
     fun updateNodeVec (n as NODE { item, base, nonempty, vec }, i, v) =
         if nonempty = 0
-        then (case v of
-                  NONE => n
-                | v => NODE { item = item,
-                              base = i,
-                              nonempty = 1,
-                              vec = Vector.tabulate (1, fn _ => v)
+        then case v of
+                  NONE => SOME n
+                | v => SOME (NODE { item = item,
+                                    base = i,
+                                    nonempty = 1,
+                                    vec = Vector.tabulate (1, fn _ => v)
                             })
         else if i < base
         then updateNodeVec (
@@ -73,46 +91,51 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
                            Vector.tabulate (base - i, fn _ => NONE),
                            vec
                      ]}, i, v)
-        else let val fin = base + Vector.length vec
+        else if i >= base + Vector.length vec
+        then updateNodeVec (
+                NODE { item = item,
+                       base = base,
+                       nonempty = nonempty,
+                       vec = Vector.concat [
+                           vec,
+                           Vector.tabulate (i - base - Vector.length vec + 1,
+                                            fn _ => NONE)
+                     ]}, i, v)
+        else let val nonempty' =
+                     case (Vector.sub (vec, i - base), v) of
+                         (SOME _, SOME _) => nonempty
+                       | (SOME _, NONE) => nonempty - 1
+                       | (NONE, SOME _) => nonempty + 1
+                       | (NONE, NONE) => nonempty
              in
-                 if i >= fin
-                 then updateNodeVec (
-                         NODE { item = item,
-                                base = base,
-                                nonempty = nonempty,
-                                vec = Vector.concat [
-                                    vec,
-                                    Vector.tabulate (i - fin + 1, fn _ => NONE)
-                              ]}, i, v)
-                 else let val nonempty =
-                              case (Vector.sub (vec, i - base),
-                                    isEmpty v) of
-                                  (SOME _, true) => nonempty
-                                | (SOME _, false) => nonempty + 1
-                                | (NONE, true) => nonempty - 1
-                                | (NONE, false) => nonempty
-                      in
-                          case nonempty of
-                              0 => NODE {
-                                      item = item,
-                                      base = base,
-                                      nonempty = nonempty,
-                                      vec = vec
-                                  }
-                            | _ => NODE { item = item,
-                                          base = base,
-                                          nonempty = nonempty,
-                                          vec = Vector.update (vec, i - base, v)
-                                        }
-                      end
+                 case nonempty' of
+                     0 => (case item of
+                               NONE => NONE
+                             | _ => SOME (NODE { item = item,
+                                                 base = base,
+                                                 nonempty = 0,
+                                                 vec = vec
+                                         })
+                          )
+                   | _ => SOME (NODE { item = item,
+                                       base = base,
+                                       nonempty = nonempty',
+                                       vec = Vector.update (vec, i - base, v)
+                               })
              end
 
-    fun insert (NONE, xx, v) =
-        insert (SOME (NODE { item = NONE,
-                             base = 0,
-                             nonempty = 0,
-                             vec = Vector.fromList []
-                     }), xx, v)
+    fun insert (NONE, [], v) =
+        SOME (NODE { item = SOME v,
+                     base = 0,
+                     nonempty = 0,
+                     vec = Vector.fromList []
+             })
+      | insert (NONE, x::xs, v) =
+        SOME (NODE { item = NONE,
+                     base = E.ord x,
+                     nonempty = 1,
+                     vec = Vector.fromList [ insert (NONE, xs, v) ]
+             })
       | insert (SOME (NODE { item, base, nonempty, vec }), [], v) =
         SOME (NODE { item = SOME v,
                      base = base,
@@ -121,27 +144,25 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
                    })
       | insert (SOME n, x::xs, v) =
         let val i = E.ord x
-        in
-            case findInNodeVec (n, i) of
-                NONE => SOME (updateNodeVec (n, i, insert (empty, xs, v)))
-              | nsub => SOME (updateNodeVec (n, i, insert (nsub, xs, v)))
+        in updateNodeVec (n, i, insert (findInNodeVec (n, i), xs, v))
         end
-
+            
     fun remove (NONE, _) = NONE
+      | remove (SOME (NODE { item, base, nonempty = 0, vec }), []) = NONE
       | remove (SOME (NODE { item, base, nonempty, vec }), []) =
-        SOME (NODE { item = NONE,
-                     base = base,
-                     nonempty = nonempty,
-                     vec = vec
-                   })
-      | remove (SOME n, x::xs) =
-        let val i = E.ord x
-        in
-            case findInNodeVec (n, i) of
-                NONE => SOME n
-              | nsub => SOME (updateNodeVec (n, i, remove (nsub, xs)))
-        end
-
+        SOME (NODE {
+                   item = NONE,
+                   base = base,
+                   nonempty = nonempty,
+                   vec = vec
+             })
+      | remove (SOME (n as NODE { item, base, nonempty, vec }), x::xs) =
+        case findInNodeVec (n, E.ord x) of
+            NONE => SOME n
+          | nsub => case remove (nsub, xs) of
+                        NONE => removeFromNodeVec (n, E.ord x)
+                      | nsub => updateNodeVec (n, E.ord x, nsub)
+                                     
     fun find (NONE, _) = NONE
       | find (SOME (NODE { item, ... }), []) = item
       | find (SOME n, x::xs) =
