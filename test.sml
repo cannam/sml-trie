@@ -48,7 +48,8 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
           fn () => let val t = test_trie ()
                    in
                        check_pairs Bool.toString
-		                   [(T.contains (t, "pa"), false),
+		                   [(T.contains (t, "aaa"), false),
+		                    (T.contains (t, "pa"), false),
 		                    (T.contains (t, "par"), true),
 		                    (T.contains (t, "parp"), true),
 		                    (T.contains (t, "part"), false),
@@ -105,6 +106,10 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
         ),
         ( "prefixMatch-no-matches",
           fn () => check_lists id (T.prefixMatch (test_trie (), "quiz"), [ ])
+                   andalso
+                   check_lists id (T.prefixMatch (test_trie (), "aaa"), [ ])
+                   andalso
+                   check_lists id (T.prefixMatch (test_trie (), "zzz"), [ ])
         ),
         ( "prefixMatch-all-matches",
           fn () => check_lists id (T.prefixMatch (test_trie (), ""),
@@ -122,7 +127,8 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
                                   ]
         ),
 	( "prefixOf-no-matches",
-          fn () => check_pairs id [(T.prefixOf (test_trie (), "pa"), ""),
+          fn () => check_pairs id [(T.prefixOf (test_trie (), "AAA"), ""),
+		                   (T.prefixOf (test_trie (), "pa"), ""),
 		                   (T.prefixOf (test_trie (), "quiz"), "")
                                   ]
         ),
@@ -170,6 +176,11 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
                    check_lists id (T.patternMatch
                                        (test_trie (),
                                         [NONE, SOME #"q"]),
+		                   [])
+                   andalso
+                   check_lists id (T.patternMatch
+                                       (test_trie (),
+                                        [NONE, SOME #"A"]),
 		                   [])
         ),
         ( "patternMatch-overlong",
