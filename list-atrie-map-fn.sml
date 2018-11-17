@@ -63,20 +63,8 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
         then NO_NODE
         else Vector.sub (vec, i - base)
 
-    fun removeFromNode (NO_NODE, i) = NO_NODE
-      | removeFromNode (n as NODE { item, base, nonempty, vec }, i) =
-        case findInNode (n, i) of
-            NO_NODE => n
-          | NODE _ => case (item, nonempty) of
-                          (NONE, 1) => NO_NODE
-                        | _ => NODE { item = item,
-                                      base = base,
-                                      nonempty = nonempty - 1,
-                                      vec = Vector.update
-                                                (vec, i - base, NO_NODE)
-                                    }
-                        
-    fun updateNode (NO_NODE, i, v) =
+    fun updateNode (NO_NODE, i, NO_NODE) = NO_NODE
+      | updateNode (NO_NODE, i, v) =
         updateNode (NODE { item = NONE,
                               base = 0,
                               nonempty = 0,
@@ -139,17 +127,17 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
                nonempty = 0,
                vec = Vector.fromList []
              }
-      | insert (NO_NODE, x::xs, v) =
-        NODE { item = NONE,
-               base = E.ord x,
-               nonempty = 1,
-               vec = Vector.fromList [ insert (NO_NODE, xs, v) ]
-             }
       | insert (NODE { item, base, nonempty, vec }, [], v) =
         NODE { item = SOME v,
                base = base,
                nonempty = nonempty,
                vec = vec
+             }
+      | insert (NO_NODE, x::xs, v) =
+        NODE { item = NONE,
+               base = E.ord x,
+               nonempty = 1,
+               vec = Vector.fromList [ insert (NO_NODE, xs, v) ]
              }
       | insert (n, x::xs, v) =
         let val i = E.ord x
