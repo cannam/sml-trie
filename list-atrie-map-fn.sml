@@ -198,9 +198,8 @@ functor ListATrieMapFn (E : ATRIE_ELEMENT)
         (* rpfx is reversed prefix built up so far (using cons) *)
         let fun fold' (acc, rpfx, n, []) = foldli_helper f (acc, rpfx, n)
               | fold' (acc, rpfx, NO_NODE, x::xs) = acc
-              | fold' (acc, rpfx, NODE { base, vec, ... }, x::xs) =
-                (*!!! this looks wrong - can't E.ord x be out of range? Test *)
-                case Vector.sub (vec, E.ord x - base) of
+              | fold' (acc, rpfx, n, x::xs) =
+                case findInNode (n, E.ord x) of
                     NO_NODE => acc
                   | nsub => fold' (acc, x :: rpfx, nsub, xs)
         in
