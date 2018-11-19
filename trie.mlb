@@ -6,6 +6,7 @@ pattern-match-trie-map.sig
 pattern-match-trie.sig
 list-mtrie-map-fn.sml
 list-atrie-map-fn.sml
+list-btrie-map-fn.sml
 trie-fn.sml
 pattern-match-trie-fn.sml
 string-trie-map-fn.sml

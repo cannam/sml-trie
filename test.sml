@@ -202,13 +202,18 @@ structure StringATrieTest = TestTrieFn(struct
                                         structure T = StringATrie
                                         val name = "string-atrie"
                                         end)
+structure StringBTrieTest = TestTrieFn(struct
+                                        structure T = StringBTrie
+                                        val name = "string-btrie"
+                                        end)
                                                     
 fun main () =
     let open TestSupport
     in
         app run_test_suite [
             (StringMTrieTest.name, StringMTrieTest.tests ()),
-            (StringATrieTest.name, StringATrieTest.tests ())
+            (StringATrieTest.name, StringATrieTest.tests ()),
+            (StringBTrieTest.name, StringBTrieTest.tests ())
         ]
     end
 
