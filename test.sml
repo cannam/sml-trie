@@ -194,6 +194,75 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
 
 end
 
+structure BitMappedVectorTest :> TESTS = struct
+
+    open TestSupport
+
+    structure V = BitMappedVector
+    val name = "bit-mapped-vector"
+
+    fun id x = x
+                   
+    fun tests () = [
+        ( "new",
+          fn () => check Int.toString (V.length (V.new 4), 4)
+                   andalso
+                   check Int.toString (V.length (V.new 0), 0)
+        ),
+        ( "isEmpty",
+          fn () => check Bool.toString (V.isEmpty (V.new 4), true)
+        ),
+        ( "update",
+          fn () => check Bool.toString
+                         (V.isEmpty (V.update (V.new 4, 2, "hello")),
+                          false)
+        ),
+        ( "contains",
+          fn () => check_pairs
+                       Bool.toString
+                       [(V.contains (V.new 4, 2), false),
+                        (V.contains (V.update (V.new 4, 2, "hello"), 2), true)]
+        ),
+        ( "find",
+          fn () => V.find (V.new 4, 2) = NONE
+                   andalso
+                   V.find (V.update (V.new 4, 2, "hello"), 2) = SOME "hello"
+        ),
+        ( "tabulate-empty",
+          fn () => check Bool.toString
+                         (V.isEmpty (V.tabulate (0, fn _ => NONE)), true)
+        ),
+        ( "tabulate-length",
+          fn () => let val v = V.tabulate
+                                   (4,
+                                    fn 0 => SOME "hello" | 1 => NONE
+                                     | 2 => SOME "world" | _ => NONE)
+                   in
+                       check Int.toString (V.length v, 4)
+                   end
+        ),
+        ( "tabulate-contents",
+          fn () => let val v = V.tabulate
+                                   (4,
+                                    fn 0 => SOME "hello" | 1 => NONE
+                                     | 2 => SOME "world" | _ => NONE)
+                   in
+                       check_pairs id [(V.sub (v, 0), "hello"),
+                                       (V.sub (v, 2), "world")]
+                       andalso
+                       V.find (v, 1) = NONE
+                       andalso
+                       V.find (v, 3) = NONE
+                   end
+        ),
+        ( "enumerate-empty",
+          fn () => check Int.toString
+                         (List.length (V.enumerate (V.new 0)), 0)
+        )
+    ]
+                       
+end
+                                                           
 structure StringMTrieTest = TestTrieFn(struct
                                         structure T = StringMTrie
                                         val name = "string-mtrie"
@@ -213,7 +282,8 @@ fun main () =
         app run_test_suite [
             (StringMTrieTest.name, StringMTrieTest.tests ()),
             (StringATrieTest.name, StringATrieTest.tests ()),
-            (StringBTrieTest.name, StringBTrieTest.tests ())
+            (StringBTrieTest.name, StringBTrieTest.tests ()),
+            (BitMappedVectorTest.name, BitMappedVectorTest.tests ())
         ]
     end
 

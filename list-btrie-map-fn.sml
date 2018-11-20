@@ -9,6 +9,8 @@ signature BTRIE_ELEMENT = sig
     val maxOrd : int
 end
 
+structure BitMappedVector = struct
+
     structure BitVector = struct
     local
         fun unitCount n = ((n + 31) div 32)
@@ -23,18 +25,35 @@ end
 
         fun length ((n, _) : vector) : int =
             n
+
+        fun tabulate (n : int, f : int -> bool) : vector =
+            let fun makeUnit (base, i, unit) =
+                    if i = 31 orelse base + i = n
+                    then unit
+                    else
+                        let val b = f (base + i)
+                            val updated = if b
+                                          then Word32.orb (unit, bitMask i)
+                                          else unit
+                        in
+                            makeUnit (base, i + 1, updated)
+                        end
+            in
+                (n, Vector.tabulate
+                        (unitCount n, fn i => makeUnit (i * 32, 0, 0w0)))
+            end
                 
         fun sub ((n, vec) : vector, i : int) : bool =
             if i >= n then raise Subscript
             else
                 let val unit = Vector.sub (vec, unitFor i)
                     val bit = Word32.andb (unit, bitMask i)
-                     (*!!!??? : *)
+                 (*!!!??? : *)
 (*                    val _ = print ("bit = " ^ Word32.toString bit ^ "\n") *)
                 in
                     bit <> 0w0
                 end
-
+                    
         fun update ((n, vec) : vector, i : int, b : bool) : vector =
             if i >= n then raise Subscript
             else 
@@ -51,15 +70,16 @@ end
         fun foldli (f : (int * bool * 'a -> 'a))
                    (acc : 'a) ((n, vec) : vector) : 'a =
             let fun fold' (bit, ix, unit, acc) =
-                    if bit = 0w0 orelse ix = n
-                    then acc
-                    else fold' (Word32.<< (bit, 0w1), ix + 1, unit,
-                                f (ix, Word32.andb (unit, bit) <> 0w0, acc))
+                  if bit = 0w0 orelse ix = n
+                  then acc
+                  else fold' (Word32.<< (bit, 0w1), ix + 1, unit,
+                              f (ix, Word32.andb (unit, bit) <> 0w0, acc))
             in
-                Vector.foldli (fn (i, w, acc) => fold' (0w1, i * 32, w, acc))
+                Vector.foldli (fn (i, w, acc) =>
+                                  fold' (0w1, i * 32, w, acc))
                               acc vec
             end
-                    
+                
         (* population count: return number of 1s in the first i bits
            of the vector *)
         fun popcount ((n, vec) : vector, i : int) : int =
@@ -85,96 +105,122 @@ end
                                                 then w
                                                 else Word32.andb
                                                          (w, bitMask i - 0w1)))
-                                0w0
-                                vec
+                                0w0 vec
             in
                 Word32.toInt count
             end
     end
     end
 
-    structure BitMappedVector = struct
-        type 'a vector = BitVector.vector * 'a vector
+    type 'a vector = BitVector.vector * 'a vector
 
-        fun new (n : int) : 'a vector =
-            (BitVector.new n, Vector.fromList [])
+    fun new (n : int) : 'a vector =
+        (BitVector.new n, Vector.fromList [])
 
-        fun isEmpty ((_, v) : 'a vector) : bool =
-            Vector.length v = 0
-                
-        fun contains ((b, _) : 'a vector, i : int) : bool =
-            BitVector.sub (b, i)
-                           
-        fun find ((b, v) : 'a vector, i : int) : 'a option =
+    fun length ((b, _) : 'a vector) : int =
+        BitVector.length b
+            
+    fun isEmpty ((_, v) : 'a vector) : bool =
+        Vector.length v = 0
+
+    fun tabulate (n : int, f : int -> 'a option) : 'a vector =
+        let val expanded = Vector.tabulate (n, f)
+        in
+            (BitVector.tabulate
+                 (n, fn i => Option.isSome (Vector.sub (expanded, i))),
+             Vector.fromList
+                 (List.concat
+                      (List.tabulate
+                           (n, fn i => case Vector.sub (expanded, i) of
+                                           NONE => []
+                                         | SOME x => [x]))))
+        end
+
+    fun contains ((b, _) : 'a vector, i : int) : bool =
+        BitVector.sub (b, i)
+                       
+    fun find ((b, v) : 'a vector, i : int) : 'a option =
+        if BitVector.sub (b, i)
+        then let val ix = BitVector.popcount (b, i)
+             in
+                 SOME (Vector.sub (v, ix))
+             end
+        else NONE
+
+    fun sub (vec : 'a vector, i : int) : 'a =
+        case find (vec, i) of
+            NONE => raise Subscript
+          | SOME x => x
+
+    fun enumerate (vec as (b, v) : 'a vector) : 'a option list =
+        rev
+            (BitVector.foldli 
+                 (fn (i, b, acc) =>
+                     (if b
+                      then SOME (sub (vec, i))
+                      else NONE)
+                         :: acc)
+                 [] b)
+            
+    fun modify ((b, v) : 'a vector, i : int, xo : 'a option) : 'a vector =
+        let val pc = BitVector.popcount (b, i)
+        in
             if BitVector.sub (b, i)
-            then let val ix = BitVector.popcount (b, i)
-                 in
-                     SOME (Vector.sub (v, ix))
-                 end
-            else NONE
+            then case xo of
+                     NONE =>
+                     (BitVector.update (b, i, false),
+                      Vector.tabulate (Vector.length v - 1,
+                                       fn j => if j < pc
+                                               then Vector.sub (v, j)
+                                               else Vector.sub (v, j + 1)))
+                   | SOME x =>
+                     (b, Vector.update (v, pc, x))
+            else case xo of
+                     NONE =>
+                     (b, v)
+                   | SOME x =>
+                     (BitVector.update (b, i, true),
+                      Vector.tabulate (Vector.length v + 1,
+                                       fn j => if j < pc
+                                               then Vector.sub (v, j)
+                                               else if j > pc
+                                               then Vector.sub (v, j - 1)
+                                               else x))
+        end
 
-        fun sub (vec : 'a vector, i : int) : 'a =
-            case find (vec, i) of
-                NONE => raise Subscript
-              | SOME x => x
+    fun update (vec, i, x) =
+        modify (vec, i, SOME x)
 
-        fun modify ((b, v) : 'a vector, i : int, xo : 'a option) : 'a vector =
-            let val pc = BitVector.popcount (b, i)
-            in
-                if BitVector.sub (b, i)
-                then case xo of
-                         NONE =>
-                         (BitVector.update (b, i, false),
-                          Vector.tabulate (Vector.length v - 1,
-                                           fn j => if j < pc
-                                                   then Vector.sub (v, j)
-                                                   else Vector.sub (v, j + 1)))
-                       | SOME x =>
-                         (b, Vector.update (v, pc, x))
-                else case xo of
-                         NONE =>
-                         (b, v)
-                       | SOME x =>
-                         (BitVector.update (b, i, true),
-                          Vector.tabulate (Vector.length v + 1,
-                                           fn j => if j < pc
-                                                   then Vector.sub (v, j)
-                                                   else if j > pc
-                                                   then Vector.sub (v, j - 1)
-                                                   else x))
-            end
+    fun erase (vec, i) =
+        modify (vec, i, NONE)
 
-        fun update (vec, i, x) =
-            modify (vec, i, SOME x)
+    fun foldli (f : (int * 'a * 'b -> 'b))
+               (acc : 'b) ((b, v) : 'a vector) : 'b =
+        case BitVector.foldli
+                 (fn (i, bit, (ix, acc)) =>
+                     if bit
+                     then (ix+1, f (i, Vector.sub (v, ix), acc))
+                     else (ix, acc))
+                 (0, acc) b of
+            (ix, acc) => acc
 
-        fun erase (vec, i) =
-            modify (vec, i, NONE)
-
-        fun foldli (f : (int * 'a * 'b -> 'b))
-                   (acc : 'b) ((b, v) : 'a vector) : 'b =
-            case BitVector.foldli
-                     (fn (i, bit, (ix, acc)) =>
-                         if bit
-                         then (ix+1, f (i, Vector.sub (v, ix), acc))
-                         else (ix, acc))
-                     (0, acc) b of
-                (ix, acc) => acc
-
-        fun foldl (f : ('a * 'b -> 'b))
-                  (acc : 'b) (vec : 'a vector) : 'b =
-            foldli (fn (_, x, acc) => f (x, acc)) acc vec
-    end
+    fun foldl (f : ('a * 'b -> 'b))
+              (acc : 'b) (vec : 'a vector) : 'b =
+        foldli (fn (_, x, acc) => f (x, acc)) acc vec
+end
 
 functor ListBTrieMapFn (E : ATRIE_ELEMENT)
 	:> PATTERN_MATCH_TRIE_MAP
 	       where type element = E.t where type key = E.t list = struct
 
+    structure V = BitMappedVector
+                                                         
     type element = E.t
     type key = element list
     type pattern = element option list
                                
     datatype 'a node = NO_NODE
-                     | NODE of 'a option * 'a node BitMappedVector.vector
+                     | NODE of 'a option * 'a node V.vector
 
     type 'a trie = 'a node
                       
@@ -189,7 +235,7 @@ functor ListBTrieMapFn (E : ATRIE_ELEMENT)
         " [\n" ^ (String.concatWith
                       (",\n" ^ indent level)
                       (map (dump' (level + 1))
-                           (rev (BitMappedVector.foldl (op::) [] vec)))) ^
+                           (rev (V.foldl (op::) [] vec)))) ^
         "\n" ^ indent level ^ "])"
 
     fun dump (t : 'a trie) = dump' 0 t
@@ -198,48 +244,45 @@ functor ListBTrieMapFn (E : ATRIE_ELEMENT)
       | isEmpty _ = false
 
     fun insert (NO_NODE, [], v) =
-        NODE (SOME v, BitMappedVector.new E.maxOrd)
+        NODE (SOME v, V.new E.maxOrd)
       | insert (NODE (item, vec), [], v) =
         NODE (SOME v, vec)
       | insert (NO_NODE, x::xs, v) =
-        NODE (NONE, BitMappedVector.update
-                        (BitMappedVector.new E.maxOrd,
-                         E.ord x, insert (NO_NODE, xs, v)))
+        NODE (NONE, V.update (V.new E.maxOrd,
+                              E.ord x, insert (NO_NODE, xs, v)))
       | insert (NODE (item, vec), x::xs, v) =
         let val i = E.ord x
-        in case BitMappedVector.find (vec, i) of
+        in case V.find (vec, i) of
                NONE =>
-               NODE (item, BitMappedVector.update
-                               (vec, i, insert (NO_NODE, xs, v)))
+               NODE (item, V.update (vec, i, insert (NO_NODE, xs, v)))
              | SOME nsub =>
-               NODE (item, BitMappedVector.update
-                               (vec, i, insert (nsub, xs, v)))
+               NODE (item, V.update (vec, i, insert (nsub, xs, v)))
         end
             
     fun remove (NO_NODE, _) = NO_NODE
       | remove (NODE (item, vec), []) =
-        if BitMappedVector.isEmpty vec
+        if V.isEmpty vec
         then NO_NODE
         else NODE (NONE, vec)
       | remove (n as NODE (item, vec), x::xs) =
         let val i = E.ord x
         in
-            case BitMappedVector.find (vec, i) of
+            case V.find (vec, i) of
                 NONE => n
               | SOME nsub =>
                 case remove (nsub, xs) of
                     NODE rn =>
-                    NODE (item, BitMappedVector.update (vec, i, NODE rn))
+                    NODE (item, V.update (vec, i, NODE rn))
                   | NO_NODE =>
                     case item of
                         NONE => NO_NODE
-                      | _ => NODE (item, BitMappedVector.erase (vec, i))
+                      | _ => NODE (item, V.erase (vec, i))
         end
 
     fun find (NO_NODE, _) = NONE
       | find (NODE (item, _), []) = item
       | find (NODE (item, vec), x::xs) =
-        case BitMappedVector.find (vec, E.ord x) of
+        case V.find (vec, E.ord x) of
             NONE => NONE
           | SOME nsub => find (nsub, xs)
 
@@ -251,14 +294,13 @@ functor ListBTrieMapFn (E : ATRIE_ELEMENT)
     (* rpfx is reversed prefix built up so far (using cons) *)
     fun foldli_helper f (acc, rpfx, NO_NODE) = acc
       | foldli_helper f (acc, rpfx, NODE (item, vec)) =
-        BitMappedVector.foldli
-            (fn (ix, NO_NODE, acc) => acc
-              | (ix, n, acc) =>
-                foldli_helper f (acc, E.invOrd ix :: rpfx, n))
-            (case item of
-                 NONE => acc
-               | SOME v => f (rev rpfx, v, acc))
-            vec
+        V.foldli (fn (ix, NO_NODE, acc) => acc
+                   | (ix, n, acc) =>
+                     foldli_helper f (acc, E.invOrd ix :: rpfx, n))
+                 (case item of
+                      NONE => acc
+                    | SOME v => f (rev rpfx, v, acc))
+                 vec
 
     fun foldl f acc NO_NODE = acc
       | foldl f acc n = 
@@ -277,7 +319,7 @@ functor ListBTrieMapFn (E : ATRIE_ELEMENT)
         let fun fold' (acc, rpfx, n, []) = foldli_helper f (acc, rpfx, n)
               | fold' (acc, rpfx, NO_NODE, x::xs) = acc
               | fold' (acc, rpfx, NODE (item, vec), x::xs) =
-                case BitMappedVector.find (vec, E.ord x) of
+                case V.find (vec, E.ord x) of
                     NONE => acc
                   | SOME nsub => fold' (acc, x :: rpfx, nsub, xs)
         in
@@ -303,16 +345,15 @@ functor ListBTrieMapFn (E : ATRIE_ELEMENT)
                     (case n of
                          NO_NODE => acc
                        | NODE (_, vec) =>
-                         BitMappedVector.foldli
-                             (fn (ix, NO_NODE, acc) => acc
-                               | (ix, n, acc) =>
-                                 fold' (acc, E.invOrd ix :: pfx, n, xs))
-                             acc vec)
+                         V.foldli (fn (ix, NO_NODE, acc) => acc
+                                    | (ix, n, acc) =>
+                                      fold' (acc, E.invOrd ix :: pfx, n, xs))
+                                  acc vec)
                   | (SOME x)::xs =>
                     case n of
                         NO_NODE => acc
                       | NODE (_, vec) => 
-                        case BitMappedVector.find (vec, E.ord x) of
+                        case V.find (vec, E.ord x) of
                             NONE => acc
                           | SOME nsub => fold' (acc, x :: pfx, nsub, xs)
         in
@@ -332,7 +373,7 @@ functor ListBTrieMapFn (E : ATRIE_ELEMENT)
                 in
                     prefix' (best,
                              x :: acc,
-                             case BitMappedVector.find (vec, E.ord x) of
+                             case V.find (vec, E.ord x) of
                                  NONE => NO_NODE
                                | SOME nsub => nsub,
                              xs)

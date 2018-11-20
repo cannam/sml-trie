@@ -8,8 +8,8 @@ structure TestSupport = struct
     type test_suite = string * test list
 
     fun report converter (obtained, expected) =
-        print ("--- Expected " ^ (converter expected)
-               ^ "\n--- Obtained " ^ (converter obtained) ^ "\n")
+        print ("--- Expected: " ^ (converter expected)
+               ^ "\n--- Obtained: " ^ (converter obtained) ^ "\n")
                                     
     fun check converter (a, b) =
         if a = b then true
