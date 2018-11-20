@@ -37,16 +37,21 @@ functor ListMTrieMapFn (E : MTRIE_ELEMENT)
       | isEmpty (LEAF _) = false
       | isEmpty (NODE (VALUE _, _)) = false
       | isEmpty (NODE (NO_VALUE, m)) = Map.all isEmpty m
-            
-    fun insert (NODE (i, m), x::xs, v) =
-        (case Map.find (m, x) of
-             SOME n => NODE (i, Map.insert (m, x, insert (n, xs, v)))
-           | NONE => NODE (i, Map.insert (m, x, insert (empty, xs, v))))
-      | insert (NODE (_, m), [], v) = NODE (VALUE v, m)
-      | insert (LEAF _, [], v) = LEAF (VALUE v)
-      | insert (LEAF i, x::xs, v) =
-        NODE (i, Map.insert (Map.empty, x, insert (empty, xs, v)))
 
+    fun update (NODE (i, m), x::xs, f) =
+        (case Map.find (m, x) of
+             SOME n => NODE (i, Map.insert (m, x, update (n, xs, f)))
+           | NONE => NODE (i, Map.insert (m, x, update (empty, xs, f))))
+      | update (NODE (VALUE v, m), [], f) = NODE (VALUE (f (SOME v)), m)
+      | update (NODE (NO_VALUE, m), [], f) = NODE (VALUE (f NONE), m)
+      | update (LEAF (VALUE v), [], f) = LEAF (VALUE (f (SOME v)))
+      | update (LEAF NO_VALUE, [], f) = LEAF (VALUE (f NONE))
+      | update (LEAF i, x::xs, f) =
+        NODE (i, Map.insert (Map.empty, x, update (empty, xs, f)))
+
+    fun insert (n, k, v : 'a) : 'a trie =
+        update (n, k, fn _ => v)
+        
     fun remove (NODE (i, m), x::xs) =
         (case Map.find (m, x) of
              SOME n => NODE (i, Map.insert (m, x, remove (n, xs)))

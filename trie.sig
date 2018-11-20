@@ -49,6 +49,8 @@ signature TRIE = sig
        prefix, in sort order. The prefix itself does not need to be
        present as an entry in the trie *)
     val foldlPrefixMatch : (entry * 'a -> 'a) -> 'a -> (t * entry) -> 'a 
-    
+
+  (*!!! + union / intersection / merge *)
+                                                                          
 end
 

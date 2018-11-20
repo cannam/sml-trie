@@ -208,7 +208,7 @@ structure BitMappedVectorTest :> TESTS = struct
     open TestSupport
 
     structure V = BitMappedVector
-    val name = "bit-mapped-vector"
+    val name = "bitmapped-vector"
 
     fun id x = x
 

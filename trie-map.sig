@@ -15,12 +15,22 @@ signature TRIE_MAP = sig
         already present, its value will be updated in the new trie *)
     val insert : 'a trie * key * 'a -> 'a trie
 
-    (** Test whether the trie contains the given key *)
-    val contains : 'a trie * key -> bool
+    (** Update a key-value pair in the trie, returning a new trie. The
+        function argument should map from the previous value
+        associated with the key (or NONE if it was absent before) to
+        the new value. Thus update (t, k, f) is equivalent to insert
+        (t, k, f (find (t, k)) except that it may be quicker. Note
+        that this cannot remove anything from the trie *)
+(*!!! later
+    val update : 'a trie * key * ('a option -> 'a) -> 'a trie
+*)
 
     (** Return the trie with the given key removed. If the key is
         not present, the returned trie will be unchanged *)
     val remove : 'a trie * key -> 'a trie
+                                          
+    (** Test whether the trie contains the given key *)
+    val contains : 'a trie * key -> bool
 
     (** Look for a key and return its corresponding value, or NONE if
         the key is not present in the trie *)
