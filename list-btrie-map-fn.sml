@@ -337,29 +337,19 @@ functor ListBTrieMapFn (E : ATRIE_ELEMENT)
         rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
     fun foldliPatternMatch f acc (NO_NODE, p) = acc
-      | foldliPatternMatch f acc (node, p) = 
-        let fun fold' (acc, pfx, n, p) =
-                case p of
-                    [] => 
-                    (case n of
-                         NO_NODE => acc
-                       | NODE (NONE, _) => acc
-                       | NODE (SOME v, _) => f (rev pfx, v, acc))
-                  | NONE::xs =>
-                    (case n of
-                         NO_NODE => acc
-                       | NODE (_, vec) =>
-                         V.foldli (fn (ix, NO_NODE, acc) => acc
-                                    | (ix, n, acc) =>
-                                      fold' (acc, E.invOrd ix :: pfx, n, xs))
-                                  acc vec)
-                  | (SOME x)::xs =>
-                    case n of
-                        NO_NODE => acc
-                      | NODE (_, vec) => 
-                        case V.find (vec, E.ord x) of
-                            NONE => acc
-                          | SOME nsub => fold' (acc, x :: pfx, nsub, xs)
+      | foldliPatternMatch f acc (node, p) =
+        let fun fold' (acc, pfx, NO_NODE, _) = acc
+              | fold' (acc, pfx, NODE (NONE, _), []) = acc
+              | fold' (acc, pfx, NODE (SOME v, _), []) = f (rev pfx, v, acc)
+              | fold' (acc, pfx, NODE (_, vec), NONE::xs) =
+                V.foldli (fn (ix, NO_NODE, acc) => acc
+                           | (ix, n, acc) =>
+                             fold' (acc, E.invOrd ix :: pfx, n, xs))
+                         acc vec
+              | fold' (acc, pfx, NODE (_, vec), (SOME x)::xs) =
+                case V.find (vec, E.ord x) of
+                    NONE => acc
+                  | SOME nsub => fold' (acc, x :: pfx, nsub, xs)
         in
             fold' (acc, [], node, p)
         end

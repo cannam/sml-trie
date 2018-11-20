@@ -38,7 +38,6 @@ functor ListMTrieMapFn (E : MTRIE_ELEMENT)
       | isEmpty (NODE (VALUE _, _)) = false
       | isEmpty (NODE (NO_VALUE, m)) = Map.all isEmpty m
             
-    (*!!! check behaviour for replacing a value - I'm not sure the red-black map does what we want *)
     fun insert (NODE (i, m), x::xs, v) =
         (case Map.find (m, x) of
              SOME n => NODE (i, Map.insert (m, x, insert (n, xs, v)))
