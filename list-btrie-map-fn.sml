@@ -98,10 +98,10 @@ structure BitMappedVector = struct
                     end
                 val iy = unitFor i
                 val count = Vector.foldli
-                                (fn (i, w, acc) =>
-                                    acc + pc32 (if i > iy
+                                (fn (j, w, acc) =>
+                                    acc + pc32 (if j > iy
                                                 then 0w0
-                                                else if i < iy
+                                                else if j < iy
                                                 then w
                                                 else Word32.andb
                                                          (w, bitMask i - 0w1)))
@@ -271,12 +271,16 @@ functor ListBTrieMapFn (E : ATRIE_ELEMENT)
                 NONE => n
               | SOME nsub =>
                 case remove (nsub, xs) of
-                    NODE rn =>
-                    NODE (item, V.update (vec, i, NODE rn))
+                    NODE rn => NODE (item, V.update (vec, i, NODE rn))
                   | NO_NODE =>
-                    case item of
-                        NONE => NO_NODE
-                      | _ => NODE (item, V.erase (vec, i))
+                    let val vv = V.erase (vec, i)
+                    in
+                        case item of
+                            SOME _ => NODE (item, vv)
+                          | NONE => if V.isEmpty vv
+                                    then NO_NODE
+                                    else NODE (item, vv)
+                    end
         end
 
     fun find (NO_NODE, _) = NONE

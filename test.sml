@@ -60,7 +60,16 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
 	( "remove-empty",
           fn () => check_lists id (T.enumerate (T.remove (T.empty, "parp")), [])
         ),
-        ( "remove",
+        ( "remove-one",
+          fn () => check Int.toString
+	                 (List.length
+                              (T.enumerate
+                                   (T.remove (test_trie (), "zebra"))),
+                          List.length
+                              (T.enumerate
+                                   (test_trie ())) - 1)
+        ),
+        ( "remove-many",
           fn () => check_lists
 	               id (T.enumerate
 		               (T.remove
@@ -202,6 +211,9 @@ structure BitMappedVectorTest :> TESTS = struct
     val name = "bit-mapped-vector"
 
     fun id x = x
+
+    fun stringOptToString NONE = "<none>"
+      | stringOptToString (SOME s) = s
                    
     fun tests () = [
         ( "new",
@@ -209,10 +221,10 @@ structure BitMappedVectorTest :> TESTS = struct
                    andalso
                    check Int.toString (V.length (V.new 0), 0)
         ),
-        ( "isEmpty",
+        ( "isEmpty-empty",
           fn () => check Bool.toString (V.isEmpty (V.new 4), true)
         ),
-        ( "update",
+        ( "isEmpty-nonempty",
           fn () => check Bool.toString
                          (V.isEmpty (V.update (V.new 4, 2, "hello")),
                           false)
@@ -258,6 +270,64 @@ structure BitMappedVectorTest :> TESTS = struct
         ( "enumerate-empty",
           fn () => check Int.toString
                          (List.length (V.enumerate (V.new 0)), 0)
+                   andalso
+                   check_lists stringOptToString
+                               (V.enumerate (V.new 3),
+                                [ NONE, NONE, NONE ])
+        ),
+        ( "enumerate",
+          fn () => let val v = V.tabulate
+                                   (4,
+                                    fn 0 => SOME "hello" | 1 => NONE
+                                     | 2 => SOME "world" | _ => NONE)
+                   in check_lists (fn NONE => "*" | SOME s => s)
+                                  (V.enumerate v,
+                                   [ SOME "hello", NONE,
+                                     SOME "world", NONE ])
+                   end
+        ),
+        ( "update",
+          fn () => let val v = V.new 4
+                   in
+                       check_lists stringOptToString
+                                   (V.enumerate (V.update (v, 0, "0")),
+                                    [ SOME "0", NONE, NONE, NONE ])
+                       andalso
+                       check_lists stringOptToString
+                                   (V.enumerate
+                                        (V.update
+                                             (V.update
+                                                  (V.update (v, 2, "2"),
+                                                   1, "1"),
+                                              3, "3")),
+                                    [ NONE, SOME "1", SOME "2", SOME "3" ])
+                   end
+        ),
+        ( "erase-empty",
+          fn () => let val v = V.new 4
+                   in
+                       check_lists stringOptToString
+                                   (V.enumerate (V.erase (v, 2)),
+                                    [ NONE, NONE, NONE, NONE ])
+                   end
+        ),
+        ( "erase",
+          fn () => let val v = V.tabulate
+                                   (4,
+                                    fn 0 => SOME "hello" | 1 => NONE
+                                     | 2 => SOME "world" | _ => NONE)
+                   in
+                       check_lists stringOptToString
+                                   (V.enumerate (V.erase (v, 2)),
+                                    [ SOME "hello", NONE, NONE, NONE ])
+                       andalso
+                       check_lists stringOptToString
+                                   (V.enumerate (V.erase (v, 0)),
+                                    [ NONE, NONE, SOME "world", NONE ])
+                       andalso
+                       check Bool.toString
+                             (V.isEmpty (V.erase (V.erase (v, 0), 2)), true)
+                   end
         )
     ]
                        
@@ -282,8 +352,8 @@ fun main () =
         app run_test_suite [
             (StringMTrieTest.name, StringMTrieTest.tests ()),
             (StringATrieTest.name, StringATrieTest.tests ()),
-            (StringBTrieTest.name, StringBTrieTest.tests ()),
-            (BitMappedVectorTest.name, BitMappedVectorTest.tests ())
+            (BitMappedVectorTest.name, BitMappedVectorTest.tests ()),
+            (StringBTrieTest.name, StringBTrieTest.tests ())
         ]
     end
 
