@@ -1,4 +1,7 @@
 
+(* Copyright 2018 Chris Cannam.
+   MIT/X11 licence. See the file COPYING for details. *)
+
 structure BitMappedVector = struct
 
     structure BitVector = struct

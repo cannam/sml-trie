@@ -1,4 +1,7 @@
 
+(* Copyright 2015-2018 Chris Cannam.
+   MIT/X11 licence. See the file COPYING for details. *)
+
 functor PatternMatchTrieFn (M : PATTERN_MATCH_TRIE_MAP)
         :> PATTERN_MATCH_TRIE
                where type element = M.element where type entry = M.key where type trie = unit M.trie = struct
@@ -30,3 +33,8 @@ functor ListATrieFn (E : ATRIE_ELEMENT)
         :> PATTERN_MATCH_TRIE
                where type element = E.t where type entry = E.t list =
     PatternMatchTrieFn(ListATrieMapFn(E))
+                                                                        
+functor ListBTrieFn (E : BTRIE_ELEMENT)
+        :> PATTERN_MATCH_TRIE
+               where type element = E.t where type entry = E.t list =
+    PatternMatchTrieFn(ListBTrieMapFn(E))

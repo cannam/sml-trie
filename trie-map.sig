@@ -1,3 +1,7 @@
+
+(* Copyright 2015-2018 Chris Cannam.
+   MIT/X11 licence. See the file COPYING for details. *)
+
 signature TRIE_MAP = sig
 
     (*!!! how far should this match ORD_MAP? *)

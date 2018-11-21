@@ -2,28 +2,28 @@
 A persistent trie in Standard ML
 ================================
 
-This is a straightforward immutable implementation of a trie.
+This is an immutable trie container implementation in Standard ML.
 
 A trie is an ordered container. It stores a set of entries of a common
-type, which is some sort of sequence (vector, list, string etc),
-filing them into a tree structure internally according to their common
-prefixes.
+entry type, which is some sort of sequence (vector, list, string etc),
+storing them in a tree structure according to their common prefixes,
+branching where they diverge.
 
-As with a hash set or tree-backed set structure, membership testing is
-generally fast. Unlike hash and tree sets, with a trie you can also
-quickly test whether any prefix of a given entry appears in the trie,
-obtain the longest such prefix, and find all entries with a given
-prefix. Like a tree-backed set but not a hash set, a trie supports
-enumerating the entries in order.
+A trie can also support a map container, in which each entry (or key)
+has an associated value rather than simply being present or absent. A
+plain trie can also be expressed as a trie map whose "value" is of a
+valueless (unit) type.
 
-A trie can also support a map structure, in which each entry (key) has
-an associated value rather than simply being present or absent. A
-set-type trie can (and is, in this library) be implemented as a map
-from entry to unit type.
+As with a hash map or typical tree-map structure, membership testing
+is generally fast. Unlike them, with a trie you can also quickly test
+whether any prefix of a given entry appears in the trie, obtain the
+longest such prefix, and find all entries with a given prefix. Like a
+tree-backed container but not a hash table, a trie is ordered, and can
+be enumerated in the sort order of the entry type.
 
-This library provides a persistent or immutable trie, in the sense
-that add and remove operations return a separate trie without
-modifying the one passed in.
+This library provides persistent or immutable trie containers, in the
+sense that all updates return a separate trie, without modifying the
+one passed in, but internally sharing any unmodified parts with it.
 
 The main signatures are:
 
@@ -42,25 +42,37 @@ The main signatures are:
    extending TRIE_MAP with the capability of matching sequences with
    wildcards in them, like PATTERN_MATCH_TRIE
 
-There are two core trie implementations provided, both of which
-implement trie-maps:
+There are three core trie implementations provided, all implementing
+trie-maps:
 
  * ListMTrieMapFn (list-mtrie-map-fn.sml) - a functor that takes a
    comparable element type and implements a PATTERN_MATCH_TRIE_MAP in
    which the entry type is a list of that element. The implementation
-   simply uses a red-black tree map (from the SML/NJ library) at each
-   node. This is not very memory-efficient and is better suited to
-   wide, shallow trie structures than narrow, deep ones. Insertion and
-   enumeration are relatively cheap.
+   uses a red-black tree map (from the SML/NJ library) at every trie
+   node. This is better suited to wide, shallow trie structures than
+   narrow, deep ones, but can be surprisingly efficient in both time
+   and space. Insertion and enumeration are relatively cheap and
+   lookup is relatively more expensive.
 
  * ListATrieMapFn (list-atrie-map-fn.sml) - a functor that takes an
    element type that can be mapped compactly onto a small integer
    range, and implements a PATTERN_MATCH_TRIE_MAP in which the entry
    type is a list of that element. The implementation uses an array
-   (actually a vector) at each node. This is better suited to narrow,
-   deep structures with more lookups than insertions, but note that it
-   does not use any kind of compression on the arrays, so memory usage
-   can still be high.
+   (or rather a vector) at each node, extending the vector to span the
+   range of inserted values. This is better suited than ListMTrieMapFn
+   to narrow, deep structures, such as string tries; but note that
+   memory usage can be very high if elements can map to very distant
+   integers. For example, a trie whose entries were lists of Unicode
+   codepoints would be prohibitively expensive in comparison with a
+   trie of lists of ASCII characters. Lookups are relatively cheap and
+   insertion is relatively more expensive.
+
+ * ListBTrieMapFn (list-btrie-map-fn.sml) - a functor that takes an
+   element type that can be mapped compactly onto a small integer
+   range, and implements a PATTERN_MATCH_TRIE_MAP in which the entry
+   type is a list of that element. The implementation uses a
+   bitmap-compressed semi-sparse array at each node. This is best
+   suited to entries whose elements map sparsely into a small range.
 
 These functors provide set-type trie structures:
 
@@ -69,19 +81,19 @@ These functors provide set-type trie structures:
  * PatternMatchTrieFn (pattern-match-trie-fn.sml) - a functor that
    turns a PATTERN_MATCH_TRIE_MAP into a PATTERN_MATCH_TRIE
 
- * ListMTrieFn, ListATrieFn (pattern-match-trie-fn.sml) - shorthands
-   that turn an element type directly into a trie set (the set
-   equivalents of ListMTrieMapFn and ListATrieMapFn)
+ * ListMTrieFn, ListATrieFn, ListBTrieFn (pattern-match-trie-fn.sml) -
+   shorthands that turn an element type directly into a trie set (the
+   set equivalents of *TrieMapFn)
 
 And there are specialisations for string entries:
 
- * StringMTrieMap, StringATrieMap (string-trie-map.sml) - trie-maps
+ * StringMTrieMap, StringATrieMap, StringBTrieMap
+   (string-trie-map.sml) - trie-maps with string key type
+
+ * StringMTrie, StringATrie, StringBTrie (string-trie.sml) - trie sets
    with string key type
 
- * StringMTrie, StringATrie (string-trie.sml) - trie sets with string
-   key type
-
- * StringTrie - alias for StringATrie
+ * StringTrieMap, StringTrie - aliases for StringATrieMap, StringATrie
 
 Basic unit tests are provided. With the MLton compiler, run
 

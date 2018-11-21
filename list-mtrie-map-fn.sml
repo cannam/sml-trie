@@ -1,4 +1,7 @@
 
+(* Copyright 2015-2018 Chris Cannam.
+   MIT/X11 licence. See the file COPYING for details. *)
+
 signature MTRIE_ELEMENT = sig
     type t
     val compare : t * t -> order

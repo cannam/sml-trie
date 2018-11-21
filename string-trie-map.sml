@@ -1,4 +1,7 @@
 
+(* Copyright 2015-2018 Chris Cannam.
+   MIT/X11 licence. See the file COPYING for details. *)
+
 structure StringMTrieMap = StringTrieMapFn
                                (ListMTrieMapFn(struct
 				                type t = char
@@ -20,5 +23,5 @@ structure StringBTrieMap = StringTrieMapFn
                                                 val maxOrd = Char.maxOrd
                                                 end))
 
-structure StringTrieMap = StringMTrieMap
+structure StringTrieMap = StringATrieMap
 

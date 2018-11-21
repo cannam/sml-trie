@@ -1,4 +1,7 @@
 
+(* Copyright 2015-2018 Chris Cannam.
+   MIT/X11 licence. See the file COPYING for details. *)
+
 functor TrieFn (M : TRIE_MAP)
 	:> TRIE
 	       where type entry = M.key where type trie = unit M.trie = struct

@@ -1,4 +1,7 @@
 
+(* Copyright 2018 Chris Cannam.
+   MIT/X11 licence. See the file COPYING for details. *)
+
 (* Read words from a text file and count occurrences using a trie
    map. At the end, list the words found, and for each word, also
    print any other words that started with it along with their
