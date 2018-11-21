@@ -10,7 +10,6 @@ structure StringATrieMap = StringTrieMapFn
 				                type t = char
                                                 val ord = Char.ord
                                                 val invOrd = Char.chr
-                                                val maxOrd = Char.maxOrd
                                                 end))
 
 structure StringBTrieMap = StringTrieMapFn
@@ -20,4 +19,6 @@ structure StringBTrieMap = StringTrieMapFn
                                                 val invOrd = Char.chr
                                                 val maxOrd = Char.maxOrd
                                                 end))
+
+structure StringTrieMap = StringMTrieMap
 

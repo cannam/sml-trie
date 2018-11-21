@@ -51,7 +51,7 @@ functor ReadSummariseFn (T : STRING_TRIE_MAP) = struct
         end
 end
 
-structure ReadSummarise = ReadSummariseFn(StringBTrieMap)
+structure ReadSummarise = ReadSummariseFn(StringTrieMap)
                                                   
 fun usage () =
     let open TextIO
