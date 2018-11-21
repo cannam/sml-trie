@@ -12,7 +12,7 @@ end
 signature ELEMENT_MAP = sig
     type key
     type 'a map
-    val new : int -> 'a map
+    val new : unit -> 'a map
     val isEmpty : 'a map -> bool
     val find : 'a map * key -> 'a option
     val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a map -> 'b
@@ -29,7 +29,7 @@ functor ElementBMapFn (E : BTRIE_ELEMENT)
     type key = E.t
     type 'a map = 'a V.vector
 
-    val new = V.new
+    fun new () = V.new E.maxOrd
     val isEmpty = V.isEmpty
     fun find (v, k) = V.find (v, E.ord k)
     fun foldli f = V.foldli (fn (i, x, acc) => f (E.invOrd i, x, acc))
@@ -67,10 +67,10 @@ functor ElementAMapFn (E : ATRIE_ELEMENT)
                                vec : 'a option vector
                              }
 
-    fun new n = MAP { base = 0,
-                      nonempty = 0,
-                      vec = Vector.fromList []
-                    }
+    fun new () = MAP { base = 0,
+                       nonempty = 0,
+                       vec = Vector.fromList []
+                     }
 
     fun isEmpty (MAP { nonempty = 0, ... }) = true
       | isEmpty _ = false
@@ -157,44 +157,44 @@ functor ListBTrieMapFn (E : BTRIE_ELEMENT)
     type 'a trie = 'a node
                       
     val empty = NO_NODE
-
-    (*!!! this is the one reference to E that is currently preventing us from parameterising by ELEMENT_MAP instead of BTRIE_ELEMENT - review *)
-    fun emptyMap () = M.new E.maxOrd
                                                          
     fun isEmpty NO_NODE = true
       | isEmpty _ = false
 
-    fun insert (NO_NODE, [], v) =
-        NODE (SOME v, emptyMap ())
-      | insert (NODE (item, vec), [], v) =
-        NODE (SOME v, vec)
-      | insert (NO_NODE, x::xs, v) =
-        NODE (NONE, M.update (emptyMap (), x, insert (NO_NODE, xs, v)))
-      | insert (NODE (item, vec), x::xs, v) =
-        case M.find (vec, x) of
-            NONE => NODE (item, M.update (vec, x, insert (NO_NODE, xs, v)))
-          | SOME nsub => NODE (item, M.update (vec, x, insert (nsub, xs, v)))
-            
-    fun remove (NO_NODE, _) = NO_NODE
-      | remove (NODE (item, vec), []) =
-        if M.isEmpty vec
-        then NO_NODE
-        else NODE (NONE, vec)
-      | remove (n as NODE (item, vec), x::xs) =
-        case M.find (vec, x) of
-            NONE => n
-          | SOME nsub =>
-            case remove (nsub, xs) of
-                NODE rn => NODE (item, M.update (vec, x, NODE rn))
-              | NO_NODE =>
-                let val vv = M.remove (vec, x)
-                in
-                    case item of
-                        SOME _ => NODE (item, vv)
-                      | NONE => if M.isEmpty vv
-                                then NO_NODE
-                                else NODE (item, vv)
-                end
+    fun insert (n, xx, v) =
+        case (n, xx) of
+            (NO_NODE, []) => NODE (SOME v, M.new ())
+          | (NO_NODE, x::xs) => NODE (NONE, M.update (M.new (), x,
+                                                      insert (NO_NODE, xs, v)))
+          | (NODE (item, vec), []) => NODE (SOME v, vec)
+          | (NODE (item, vec), x::xs) => 
+            case M.find (vec, x) of
+                NONE =>
+                NODE (item, M.update (vec, x, insert (NO_NODE, xs, v)))
+              | SOME nsub =>
+                NODE (item, M.update (vec, x, insert (nsub, xs, v)))
+
+    fun remove (n, xx) =
+        case (n, xx) of
+            (NO_NODE, _) => NO_NODE
+          | (NODE (item, vec), []) => if M.isEmpty vec
+                                      then NO_NODE
+                                      else NODE (NONE, vec)
+          | (n as NODE (item, vec), x::xs) =>
+            case M.find (vec, x) of
+                NONE => n
+              | SOME nsub =>
+                case remove (nsub, xs) of
+                    NODE rn => NODE (item, M.update (vec, x, NODE rn))
+                  | NO_NODE =>
+                    let val vv = M.remove (vec, x)
+                    in
+                        case item of
+                            SOME _ => NODE (item, vv)
+                          | NONE => if M.isEmpty vv
+                                    then NO_NODE
+                                    else NODE (item, vv)
+                    end
 
     fun find (NO_NODE, _) = NONE
       | find (NODE (item, _), []) = item
