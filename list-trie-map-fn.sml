@@ -31,18 +31,21 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     fun isEmpty NO_NODE = true
       | isEmpty _ = false
 
-    fun insert (n, xx, v) =
+    fun update (n, xx, f) =
         case (n, xx) of
-            (NO_NODE, []) => NODE (SOME v, M.new ())
+            (NO_NODE, []) => NODE (SOME (f NONE), M.new ())
           | (NO_NODE, x::xs) => NODE (NONE, M.update (M.new (), x,
-                                                      insert (NO_NODE, xs, v)))
-          | (NODE (item, vec), []) => NODE (SOME v, vec)
+                                                      update (NO_NODE, xs, f)))
+          | (NODE (item, vec), []) => NODE (SOME (f item), vec)
           | (NODE (item, vec), x::xs) => 
             case M.find (vec, x) of
                 NONE =>
-                NODE (item, M.update (vec, x, insert (NO_NODE, xs, v)))
+                NODE (item, M.update (vec, x, update (NO_NODE, xs, f)))
               | SOME nsub =>
-                NODE (item, M.update (vec, x, insert (nsub, xs, v)))
+                NODE (item, M.update (vec, x, update (nsub, xs, f)))
+
+    fun insert (n, xx, v) =
+        update (n, xx, fn _ => v)
 
     fun remove (n, xx) =
         case (n, xx) of

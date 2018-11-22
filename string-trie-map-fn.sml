@@ -25,6 +25,9 @@ functor StringTrieMapFn (T : CHAR_LIST_TRIE_MAP) :> STRING_TRIE_MAP = struct
 
     val isEmpty = T.isEmpty
 
+    fun update (trie, s, f) =
+        T.update (trie, String.explode s, f)
+                      
     fun insert (trie, s, v) =
         T.insert (trie, String.explode s, v)
 

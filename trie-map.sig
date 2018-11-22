@@ -24,10 +24,8 @@ signature TRIE_MAP = sig
         associated with the key (or NONE if it was absent before) to
         the new value. Thus update (t, k, f) is equivalent to insert
         (t, k, f (find (t, k)) except that it may be quicker. Note
-        that this cannot remove anything from the trie *)
-(*!!! later
+        that this cannot be used to remove anything from the trie *)
     val update : 'a trie * key * ('a option -> 'a) -> 'a trie
-*)
 
     (** Return the trie with the given key removed. If the key is
         not present, the returned trie will be unchanged *)

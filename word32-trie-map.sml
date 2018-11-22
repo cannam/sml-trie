@@ -42,6 +42,9 @@ structure Word32TrieMap
 
     val isEmpty = T.isEmpty
 
+    fun update (trie, h, f) =
+        T.update (trie, explode h, f)
+                      
     fun insert (trie, h, v) =
         T.insert (trie, explode h, v)
 
