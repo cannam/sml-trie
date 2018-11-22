@@ -9,6 +9,7 @@ list-mtrie-map-fn.sml
 list-atrie-map-fn.sml
 bitmapped-vector.sml
 list-btrie-map-fn.sml
+word32-trie-map.sml
 trie-fn.sml
 pattern-match-trie-fn.sml
 string-trie-map-fn.sml

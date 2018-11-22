@@ -5,7 +5,7 @@ test:	test.mlb test.deps
 	${SCRIPTS}/polybuild test.mlb
 	./test
 
-test.deps: test.mlb
+test.deps: test.mlb trie.mlb
 	${SCRIPTS}/mlb-dependencies $< > $@
 
 clean:
