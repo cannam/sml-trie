@@ -23,5 +23,5 @@ structure StringBTrieMap = StringTrieMapFn
                                                 val maxOrd = Char.maxOrd
                                                 end))
 
-structure StringTrieMap = StringATrieMap
+structure StringTrieMap = StringMTrieMap
 
