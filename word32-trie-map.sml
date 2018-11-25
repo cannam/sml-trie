@@ -56,6 +56,9 @@ structure Word32TrieMap
 
     fun find (trie, h) =
         T.find (trie, explode h)
+
+    fun lookup (trie, h) =
+        T.lookup (trie, explode h)
                  
     fun foldl f acc trie =
         T.foldl f acc trie

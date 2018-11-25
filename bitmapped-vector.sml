@@ -195,7 +195,10 @@ structure BitMappedVector = struct
                  (0, acc) b of
             (ix, acc) => acc
 
+    (* foldl is simpler than foldli, as it doesn't need to look at the
+       bitmap at all *)
     fun foldl (f : ('a * 'b -> 'b))
-              (acc : 'b) (vec : 'a vector) : 'b =
-        foldli (fn (_, x, acc) => f (x, acc)) acc vec
+              (acc : 'b) ((_, v) : 'a vector) : 'b =
+        Vector.foldl f acc v
+
 end

@@ -12,9 +12,9 @@ list-btrie-map-fn.sml
 word32-trie-map.sml
 trie-fn.sml
 pattern-match-trie-fn.sml
+persistent-hash-map.sig
+persistent-hash-map-fn.sml
 string-trie-map-fn.sml
 string-trie-map.sml
 string-trie.sml
-persistent-hash-map.sig
-persistent-hash-map-fn.sml
-
+string-hash-map.sml

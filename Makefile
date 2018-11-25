@@ -6,7 +6,7 @@ test:	test.mlb test.deps
 	./test
 
 test.deps: test.mlb trie.mlb
-	${SCRIPTS}/mlb-dependencies $< > $@
+	${SCRIPTS}/mlb-dependencies $^ > $@
 
 clean:
 	rm -f test *.deps

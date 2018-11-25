@@ -37,7 +37,11 @@ signature TRIE_MAP = sig
     (** Look for a key and return its corresponding value, or NONE if
         the key is not present in the trie *)
     val find : 'a trie * key -> 'a option
-                                     
+
+    (** Look for a key and return its corresponding value, raising
+        Subscript if the key is not present in the trie *)
+    val lookup : 'a trie * key -> 'a
+                                   
     (** Fold over all the values in the trie, in sort order *)
     val foldl : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b
 

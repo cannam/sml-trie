@@ -76,6 +76,11 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
             NONE => NONE
           | SOME nsub => find (nsub, xs)
 
+    fun lookup (t, k) =
+        case find (t, k) of
+            NONE => raise Subscript
+          | SOME v => v
+                              
     fun contains (t, k) =
         case find (t, k) of
             SOME _ => true

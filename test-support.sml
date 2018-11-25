@@ -7,6 +7,8 @@ structure TestSupport = struct
     type test = string * (unit -> bool)
     type test_suite = string * test list
 
+    fun id x = x
+                                    
     fun report converter (obtained, expected) =
         print ("--- Expected: " ^ (converter expected)
                ^ "\n--- Obtained: " ^ (converter obtained) ^ "\n")

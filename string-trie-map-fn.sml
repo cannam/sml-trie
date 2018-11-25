@@ -39,6 +39,9 @@ functor StringTrieMapFn (T : CHAR_LIST_TRIE_MAP) :> STRING_TRIE_MAP = struct
 
     fun find (trie, s) =
         T.find (trie, String.explode s)
+
+    fun lookup (trie, s) =
+        T.lookup (trie, String.explode s)
                  
     fun foldl f acc trie =
         T.foldl f acc trie

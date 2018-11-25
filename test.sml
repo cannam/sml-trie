@@ -30,8 +30,6 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
 				  T.empty
 				  strings
 
-    fun id x = x
-
     fun tests () = [
 	( "enumerate-empty",
           fn () => check_lists id (T.enumerate T.empty, [])
@@ -210,8 +208,6 @@ structure BitMappedVectorTest :> TESTS = struct
     structure V = BitMappedVector
     val name = "bitmapped-vector"
 
-    fun id x = x
-
     fun stringOptToString NONE = "<none>"
       | stringOptToString (SOME s) = s
                    
@@ -332,7 +328,141 @@ structure BitMappedVectorTest :> TESTS = struct
     ]
                        
 end
-                                                           
+
+structure HashMapTest :> TESTS = struct
+
+    (* Simple string hash that depends only on the string length, so
+       that we can engineer collisions easily *)
+    structure K :> HASH_KEY where type hash_key = string = struct
+        fun hashString s = Word32.fromInt (String.size s * String.size s);
+        type hash_key = string
+        val hashVal = hashString
+        val sameKey = op=
+    end
+
+    structure M :> PERSISTENT_HASH_MAP where type hash_key = string =
+        PersistentHashMapFn(K)
+
+    open TestSupport
+
+    val name = "hash-map"
+
+    fun test_map () = M.insert
+                          (M.insert
+                               (M.insert
+                                    (M.empty, "squid", "octopus"),
+                                "doughnut", "croissant"),
+                           "dog", "wolf")
+                   
+    fun tests () = [
+        ( "empty",
+          fn () => M.isEmpty M.empty
+                   andalso
+                   not (M.contains (M.empty, "parp"))
+                   andalso
+                   M.enumerate M.empty = []
+        ),
+        ( "insert-simple",
+          fn () => check Int.toString
+                         (M.lookup (M.insert (M.empty, "poot", 5), "poot"), 5)
+                   andalso
+                   not (M.contains (M.insert (M.empty, "poot", 5), "parp"))
+        ),
+        ( "insert-multiple",
+          fn () =>
+             let val m = test_map ()
+             in
+                 check_pairs id
+                             [(M.lookup (m, "squid"), "octopus"),
+                              (M.lookup (m, "doughnut"), "croissant"),
+                              (M.lookup (m, "dog"), "wolf")]
+             end
+        ),
+        ( "insert-colliding",
+          fn () =>
+             let val m = test_map ()
+                 val m = M.insert (m, "cat", "leopard")
+                 val m = M.insert (m, "bread", "pizza")
+                 val m = M.insert (m, "apple", "bilberry")
+             in
+                 check_pairs id
+                             [(M.lookup (m, "squid"), "octopus"),
+                              (M.lookup (m, "doughnut"), "croissant"),
+                              (M.lookup (m, "dog"), "wolf"),
+                              (M.lookup (m, "bread"), "pizza"),
+                              (M.lookup (m, "apple"), "bilberry"),
+                              (M.lookup (m, "cat"), "leopard")]
+             end
+        ),
+        ( "insert-duplicate",
+          fn () =>
+             let val m = test_map ()
+                 val m = M.insert (m, "squid", "octopus")
+             in
+                 check_sets (fn (k, v) => k ^ ":" ^ v)
+                            (fn ((k, v), (k', v')) => k ^ v > k' ^ v')
+                            (M.enumerate m,
+                             [("squid", "octopus"),
+                              ("doughnut", "croissant"),
+                              ("dog", "wolf")])
+             end
+        ),                 
+        ( "remove-only",
+          fn () => M.isEmpty (M.remove (M.insert (M.empty, "poot", 5), "poot"))
+        ),
+        ( "remove-empty",
+          fn () => M.isEmpty (M.remove (M.empty, "poot"))
+        ),
+        ( "remove-absent",
+          fn () => M.enumerate (M.remove (M.insert (M.empty, "poot", 5), "pop"))
+                   = [ ("poot", 5) ]
+        ),
+        ( "remove-one",
+          fn () =>
+             let val m = test_map ()
+                 val m = M.remove (m, "doughnut")
+             in
+                 check_pairs id
+                             [(M.lookup (m, "squid"), "octopus"),
+                              (M.lookup (m, "dog"), "wolf")]
+                 andalso
+                 M.find (m, "doughnut") = NONE
+             end
+        ),
+        ( "isEmpty-after-removals",
+          fn () => let val m = test_map ()
+                       val e1 = foldl (fn ((k, v), m) => M.remove (m, k))
+                                      m (M.enumerate m)
+                       val e2 = foldl (fn ((k, v), m) => M.remove (m, k))
+                                      m (rev (M.enumerate m))
+                   in
+                       M.isEmpty e1 andalso M.isEmpty e2
+                   end
+        ),                                             
+        ( "remove-colliding",
+          fn () =>
+             let val m = test_map ()
+                 val m = M.insert (m, "cat", "leopard")
+                 val m = M.insert (m, "bread", "pizza")
+                 val m = M.insert (m, "apple", "bilberry")
+                 val m = M.remove (m, "squid")
+                 val m = M.remove (m, "dog")
+             in
+                 check_pairs id
+                             [(M.lookup (m, "doughnut"), "croissant"),
+                              (M.lookup (m, "bread"), "pizza"),
+                              (M.lookup (m, "apple"), "bilberry"),
+                              (M.lookup (m, "cat"), "leopard")]
+                 andalso
+                 M.find (m, "squid") = NONE
+                 andalso
+                 M.find (m, "dog") = NONE
+             end
+        )
+    ]
+                       
+end
+                                             
 structure StringMTrieTest = TestTrieFn(struct
                                         structure T = StringMTrie
                                         val name = "string-mtrie"
@@ -353,7 +483,8 @@ fun main () =
             (StringMTrieTest.name, StringMTrieTest.tests ()),
             (StringATrieTest.name, StringATrieTest.tests ()),
             (BitMappedVectorTest.name, BitMappedVectorTest.tests ()),
-            (StringBTrieTest.name, StringBTrieTest.tests ())
+            (StringBTrieTest.name, StringBTrieTest.tests ()),
+            (HashMapTest.name, HashMapTest.tests ())
         ]
     end
 

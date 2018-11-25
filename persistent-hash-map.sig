@@ -39,7 +39,11 @@ signature PERSISTENT_HASH_MAP = sig
     (** Look for a key and return its corresponding value, or NONE if
         the key is not present in the hash map *)
     val find : 'a hash_map * hash_key -> 'a option
-                                     
+
+    (** Look for a key and return its corresponding value, raising
+        Subscript if the key is not present in the hash map *)
+    val lookup : 'a hash_map * hash_key -> 'a
+                                            
     (** Fold over all the values in the hash map, in sort order *)
     val foldl : ('a * 'b -> 'b) -> 'b -> 'a hash_map -> 'b
 
@@ -49,4 +53,6 @@ signature PERSISTENT_HASH_MAP = sig
     (** Return a list of all key-value pairs in the hash map, in sort order *)
     val enumerate : 'a hash_map -> (hash_key * 'a) list
 
+(*!!! + tabulate, union/intersection etc *)
+                                                   
 end                   
