@@ -1,8 +1,8 @@
 
 structure Rand = struct (* based on SML/NJ library *)
 
-    val a = 48271
-    val m = 2147483647  (* 2^31 - 1 *)
+    val a : Int32.int = 48271
+    val m : Int32.int = 2147483647  (* 2^31 - 1 *)
     val q = m div a
     val r = m mod a
 
@@ -20,15 +20,15 @@ structure Rand = struct (* based on SML/NJ library *)
             fn () => (seed := random (!seed); !seed)
           end
 
-    fun range (i,j) = 
+    fun range (i : int, j : int) : Int32.int -> int =
           if j < i 
             then raise Fail "j < i"
           else if j = i then fn _ => i
           else let 
-            val R = j - i
+            val R = Int32.fromInt (j - i)
             in
-              if R = m then fn s => s
-              else fn s => i + (s mod (R+1))
+              if R = m then fn s => Int32.toInt s
+              else fn s => (i + Int32.toInt (s mod (R+1)))
             end
 end
 
@@ -57,9 +57,11 @@ fun randomStrings len n =
 structure Timing = struct
 
     fun timed_call f =
-        let val start = Time.now ()
+        let val _ = print "about to start\n"
+            val start = Time.now ()
             val result = f ()
             val finish = Time.now ()
+            val _ = print "finished\n"
 	in (Time.-(finish, start), result)
 	end
 
@@ -94,6 +96,7 @@ fun shuffle vec =
                   
 fun testInserts nkeys =
     let val keys = randomStrings 50 nkeys
+        val _ = print "have keys\n"
         val name = Int.toString nkeys ^ " insertions"
     in
         Timing.time (fn () => Vector.foldl (fn (k, m) => M.insert (m, k, 1))
