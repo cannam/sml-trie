@@ -12,13 +12,16 @@ structure Word32TrieMap
        remaining 2-bit chunk - it is a coincidence that the map range
        spans 32 values and the key is 32 bits *)
 
-    (*!!! though perhaps we should just use 30 bits *)
+    val bitsPerNode = 5
+    val bitsPerNodeW = Word.fromInt bitsPerNode
+    val valuesPerNode = Word.toInt (Word.<< (0w1, bitsPerNodeW))
+    val nodeMask = Word32.fromInt (valuesPerNode - 1)
                    
     structure T = ListTrieMapFn(BTrieNodeMapFn(struct
                                                 type t = int
                                                 fun ord x = x
                                                 fun invOrd x = x
-                                                val maxOrd = 32
+                                                val maxOrd = valuesPerNode
                                                 end))
                                
     type 'a trie = 'a T.trie
@@ -27,8 +30,8 @@ structure Word32TrieMap
         let fun explode' (w, n) =
                 if n <= 0
                 then []
-                else Word32.toIntX (Word32.andb (w, 0wx1f)) ::
-                     explode' (Word32.>> (w, 0w5), n - 5)
+                else Word32.toIntX (Word32.andb (w, nodeMask)) ::
+                     explode' (Word32.>> (w, bitsPerNodeW), n - bitsPerNode)
         in
             explode' (w, 32)
         end
@@ -36,7 +39,8 @@ structure Word32TrieMap
     fun implode bb =
         case bb of
             [] => 0w0
-          | b::bb => Word32.orb (Word32.<< (implode bb, 0w5), Word32.fromInt b)
+          | b::bb => Word32.orb (Word32.<< (implode bb, bitsPerNodeW),
+                                 Word32.fromInt b)
 
     val empty = T.empty
 
