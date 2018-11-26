@@ -12,7 +12,8 @@ functor PersistentHashMapFn (Key : HASH_KEY)
     structure T = Word32TrieMap
 
     type 'a hash_value = hash_key * 'a
-    type 'a hash_entry = 'a hash_value list
+    datatype 'a hash_entry = ONE of 'a hash_value
+                           | MANY of 'a hash_value list
     type 'a hash_map = 'a hash_entry T.trie
 
     val empty = T.empty
@@ -22,20 +23,23 @@ functor PersistentHashMapFn (Key : HASH_KEY)
     fun addToEntry (h : hash, k : hash_key, v : 'a)
                    (e : 'a hash_entry option) : 'a hash_entry =
         case e of
-            NONE => [(k, v)]
-          | SOME entry =>
+            NONE => ONE (k, v)
+          | SOME (ONE (k', v')) => if Key.sameKey (k', k)
+                                   then ONE (k', v)
+                                   else MANY [(k, v), (k', v')]
+          | SOME (MANY values) => 
             case List.foldr (fn ((k', v'), (acc, found)) =>
                                 if Key.sameKey (k', k)
                                 then ((k', v) :: acc, true)
                                 else ((k', v') :: acc, found))
                             ([], false)
-                            entry of
-                (acc, false) => (k, v) :: acc
-              | (acc, true) => acc
+                            values of
+                (acc, false) => MANY ((k, v) :: acc)
+              | (acc, true) => MANY acc
 
-    fun removeFromEntry (h : hash, k : hash_key)
-                        (entry : 'a hash_entry) : 'a hash_entry =
-        List.filter (fn (k', _) => not (Key.sameKey (k', k))) entry
+    fun removeFromValues (h : hash, k : hash_key)
+                         (values : 'a hash_value list) : 'a hash_value list =
+        List.filter (fn (k', _) => not (Key.sameKey (k', k))) values
                                    
     fun insert (m, k, v) =
         let val h = Key.hashVal k
@@ -48,20 +52,27 @@ functor PersistentHashMapFn (Key : HASH_KEY)
         in
             case T.find (m, h) of
                 NONE => m
-              | SOME [v] => T.remove (m, h)
-              | SOME entry => T.insert (m, h, removeFromEntry (h, k) entry)
+              | SOME (ONE (k', _)) =>
+                if Key.sameKey (k', k)
+                then T.remove (m, h)
+                else m
+              | SOME (MANY values) =>
+                case removeFromValues (h, k) values of
+                    [] => T.remove (m, h)
+                  | [value] => T.insert (m, h, ONE value)
+                  | values => T.insert (m, h, MANY values)
         end
-
+            
     fun find (m, k) =
         let val h = Key.hashVal k
         in
             case T.find (m, h) of
                 NONE => NONE
-              | SOME [(k', v)] => if Key.sameKey (k', k)
-                                  then SOME v
-                                  else NONE
-              | SOME entry =>
-                case List.find (fn (k', v) => Key.sameKey (k', k)) entry of
+              | SOME (ONE (k', v)) => if Key.sameKey (k', k)
+                                      then SOME v
+                                      else NONE
+              | SOME (MANY values) =>
+                case List.find (fn (k', v) => Key.sameKey (k', k)) values of
                     NONE => NONE
                   | SOME (_, v) => SOME v
         end
@@ -78,12 +89,20 @@ functor PersistentHashMapFn (Key : HASH_KEY)
 
     fun foldl f acc m =
         T.foldl (fn (entry, acc) =>
-                    List.foldl (fn ((k, v), acc) => f (v, acc)) acc entry)
+                    case entry of
+                        ONE (k, v) => f (v, acc)
+                      | MANY values => 
+                        List.foldl (fn ((k, v), acc) =>
+                                       f (v, acc)) acc values)
                 acc m
 
     fun foldli f acc m =
         T.foldl (fn (entry, acc) =>
-                    List.foldl (fn ((k, v), acc) => f (k, v, acc)) acc entry)
+                    case entry of
+                        ONE (k, v) => f (k, v, acc)
+                      | MANY values => 
+                        List.foldl (fn ((k, v), acc) =>
+                                       f (k, v, acc)) acc values)
                 acc m
 
     fun enumerate m =
