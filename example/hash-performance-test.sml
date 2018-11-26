@@ -112,8 +112,10 @@ functor TestImmutableFn (Arg : TEST_IMMUTABLE_ARG) = struct
 
     structure M = Arg.Map
 
+    val name = Arg.name
+                      
     fun nameFor n label =
-        Arg.name ^ ": " ^ Int.toString n ^ " " ^ label
+        name ^ ": " ^ Int.toString n ^ " " ^ label
                       
     fun testInserts keys =
         let val nkeys = Vector.length keys
@@ -373,8 +375,10 @@ functor TestMutableFn (Arg : TEST_MUTABLE_ARG) = struct
 
     structure M = Arg.Map
 
+    val name = Arg.name
+                   
     fun nameFor n label =
-        Arg.name ^ ": " ^ Int.toString n ^ " " ^ label
+        name ^ ": " ^ Int.toString n ^ " " ^ label
                       
     fun testInserts keys =
         let val nkeys = Vector.length keys
@@ -545,33 +549,53 @@ structure TestStringHashTable = TestMutableFn
                                       val distinctKeys = distinctStrings
                                       val name = "string mutable hash table"
                                       end)
-                                
+    
+val tests = [
+    (TestIntHashMap.name, TestIntHashMap.testAll),
+    (TestIntRBMap.name, TestIntRBMap.testAll),
+    (TestIntHashTable.name, TestIntHashTable.testAll),
+    (TestStringHashMap.name, TestStringHashMap.testAll),
+    (TestStringRBMap.name, TestStringRBMap.testAll),
+    (TestStringMTrieMap.name, TestStringMTrieMap.testAll),
+    (TestStringATrieMap.name, TestStringATrieMap.testAll),
+    (TestStringHashTable.name, TestStringHashTable.testAll)
+]
+        
+fun runAllTests n =
+    List.app (fn (tname, t) => (print (tname ^ ":\n"); t n)) tests
+
+fun runATest name n =
+    List.app (fn (tname, t) => if tname = name
+                               then t n
+                               else ()) tests
+                                    
 fun usage () =
     let open TextIO
     in
         output (stdErr,
                 "\nUsage:\n" ^
                 "    hash-performance-test <n>\n" ^
+                "    hash-performance-test <n> <test-name>\n" ^
                 "\n" ^
-                "where <n> is the number of items to insert/delete\n\n");
+                "<n>         - size of test; number of items to insert/delete\n" ^
+                "<test-name> - name of single test suite to run (default is to run them all)\n\n" ^
+                "Recognised test names are:\n" ^
+                (String.concatWith
+                     "; " (map (fn (name, _) => "\"" ^ name ^ "\"") tests)) ^
+                "\n\n");
         raise Fail "Incorrect arguments specified"
     end
-
-fun runTests n =
-    (TestIntHashMap.testAll n;
-     TestIntRBMap.testAll n;
-     TestIntHashTable.testAll n;
-     TestStringHashMap.testAll n;
-     TestStringRBMap.testAll n;
-(*     TestStringMTrieMap.testAll n;
-     TestStringATrieMap.testAll n; *)
-     TestStringHashTable.testAll n)
-        
+     
 fun handleArgs args =
     case args of
-        [nstr] => (case Int.fromString nstr of
-                       NONE => usage ()
-                     | SOME n => runTests n)
+        [nstr] =>
+        (case Int.fromString nstr of
+             NONE => usage ()
+           | SOME n => runAllTests n)
+      | [nstr, testname] =>
+        (case Int.fromString nstr of
+             NONE => usage ()
+           | SOME n => runATest testname n)
       | _ => usage ()
            
 fun main () =
