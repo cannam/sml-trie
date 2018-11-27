@@ -446,7 +446,11 @@ structure HashMapTest :> TESTS = struct
                  val m = M.insert (m, "bread", "pizza")
                  val m = M.insert (m, "apple", "bilberry")
                  val m = M.remove (m, "squid")
+                 (* not in map - collides with multiple keys that are: *)
+                 val m = M.remove (m, "table")
                  val m = M.remove (m, "dog")
+                 (* not in map - collides with one key (doughnut) that is: *)
+                 val m = M.remove (m, "semolina")
              in
                  check_pairs id
                              [(M.lookup (m, "doughnut"), "croissant"),
