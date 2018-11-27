@@ -8,6 +8,7 @@ signature LIST_TRIE_NODE_MAP = sig
     val new : unit -> 'a map
     val isEmpty : 'a map -> bool
     val find : 'a map * key -> 'a option
+    val foldl : ('a * 'b -> 'b) -> 'b -> 'a map -> 'b
     val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a map -> 'b
     val update : 'a map * key * 'a -> 'a map
     val remove : 'a map * key -> 'a map
@@ -87,6 +88,19 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         case find (t, k) of
             SOME _ => true
           | NONE => false
+
+    fun foldl f acc n =
+        let fun fold' (acc, LEAF NONE) = acc
+              | fold' (acc, LEAF (SOME v)) = f (v, acc)
+              | fold' (acc, NODE (item, map)) =
+                M.foldl (fn (n, acc) => fold' (acc, n))
+                        (case item of
+                             NONE => acc
+                           | SOME v => f (v, acc))
+                        map
+        in
+            fold' (acc, n)
+        end
                      
     (* rpfx is reversed prefix built up so far (using cons) *)
     fun foldli_helper f (acc, rpfx, LEAF NONE) = acc
@@ -97,9 +111,6 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
                       NONE => acc
                     | SOME v => f (rev rpfx, v, acc))
                  map
-
-    fun foldl f acc n = 
-        foldli_helper (fn (k, v, acc) => f (v, acc)) (acc, [], n)
                       
     fun foldli f acc n = 
         foldli_helper f (acc, [], n)
@@ -126,18 +137,18 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
     fun foldliPatternMatch f acc (node, p) =
-        let fun fold' (acc, pfx, LEAF NONE, _) = acc
-              | fold' (acc, pfx, LEAF (SOME v), []) = f (rev pfx, v, acc)
-              | fold' (acc, pfx, LEAF (SOME _), _) = acc
-              | fold' (acc, pfx, NODE (NONE, _), []) = acc
-              | fold' (acc, pfx, NODE (SOME v, _), []) = f (rev pfx, v, acc)
-              | fold' (acc, pfx, NODE (_, map), NONE::xs) =
-                M.foldli (fn (x, n, acc) => fold' (acc, x :: pfx, n, xs))
+        let fun fold' (acc, rpfx, LEAF NONE, _) = acc
+              | fold' (acc, rpfx, LEAF (SOME v), []) = f (rev rpfx, v, acc)
+              | fold' (acc, rpfx, LEAF (SOME _), _) = acc
+              | fold' (acc, rpfx, NODE (NONE, _), []) = acc
+              | fold' (acc, rpfx, NODE (SOME v, _), []) = f (rev rpfx, v, acc)
+              | fold' (acc, rpfx, NODE (_, map), NONE::xs) =
+                M.foldli (fn (x, n, acc) => fold' (acc, x :: rpfx, n, xs))
                          acc map
-              | fold' (acc, pfx, NODE (_, map), (SOME x)::xs) =
+              | fold' (acc, rpfx, NODE (_, map), (SOME x)::xs) =
                 case M.find (map, x) of
                     NONE => acc
-                  | SOME nsub => fold' (acc, x :: pfx, nsub, xs)
+                  | SOME nsub => fold' (acc, x :: rpfx, nsub, xs)
         in
             fold' (acc, [], node, p)
         end
