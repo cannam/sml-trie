@@ -23,7 +23,7 @@ functor BTrieNodeMapFn (E : BTRIE_ELEMENT)
     fun find (v, k) = V.find (v, E.ord k)
     fun foldli f = V.foldli (fn (i, x, acc) => f (E.invOrd i, x, acc))
     fun update (v, k, x) = V.update (v, E.ord k, x)
-    fun remove (v, k) = V.erase (v, E.ord k)
+    fun remove (v, k) = V.remove (v, E.ord k)
                                 
 end
                                           

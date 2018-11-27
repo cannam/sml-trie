@@ -2,6 +2,21 @@
 (* Copyright 2015-2018 Chris Cannam.
    MIT/X11 licence. See the file COPYING for details. *)
 
+structure Word32NodeMap
+          :> LIST_TRIE_NODE_MAP
+                 where type key = int = struct
+
+    structure V = BitMappedVector32
+
+    type key = int
+    type 'a map = 'a V.vector
+
+    open V
+             
+    fun new () = V.new 32
+                       
+end
+                      
 structure Word32TrieMap
           :> TRIE_MAP
                  where type key = Word32.word = struct
@@ -17,12 +32,7 @@ structure Word32TrieMap
     val valuesPerNode = Word.toInt (Word.<< (0w1, bitsPerNodeW))
     val nodeMask = Word32.fromInt (valuesPerNode - 1)
                    
-    structure T = ListTrieMapFn(BTrieNodeMapFn(struct
-                                                type t = int
-                                                fun ord x = x
-                                                fun invOrd x = x
-                                                val maxOrd = valuesPerNode
-                                                end))
+    structure T = ListTrieMapFn(Word32NodeMap)
                                
     type 'a trie = 'a T.trie
 

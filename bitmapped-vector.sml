@@ -11,6 +11,7 @@ signature BIT_VECTOR = sig
     val update : vector * int * bool -> vector
     val foldli : (int * bool * 'a -> 'a) -> 'a -> vector -> 'a
     val popcount : vector * int -> int
+    exception UnsupportedLength
 end
 
 structure BitWord32 :> BIT_VECTOR = struct
@@ -38,28 +39,32 @@ structure BitWord32 :> BIT_VECTOR = struct
     in
 
     type vector = Word32.word
+    exception UnsupportedLength
 
     fun new n = if n = 32
                 then 0w0
-                else raise Fail "Size must be 32"
+                else raise UnsupportedLength
 
     fun length _ = 32
                            
     fun tabulate (n : int, f : int -> bool) : Word32.word =
-        let fun tabulate' (i, w) =
-            if i = n
-            then w
-            else
-                let val b = f i
-                    val updated = if b
-                                  then orb (w, bitMask i)
-                                  else w
-                in
-                    tabulate' (Int.+ (i, 1), updated)
-                end
-        in
-            tabulate' (0, 0w0)
-        end
+        if (Int.> (n, 32))
+        then raise UnsupportedLength
+        else
+            let fun tabulate' (i, w) =
+                    if i = n
+                    then w
+                    else
+                        let val b = f i
+                            val updated = if b
+                                          then orb (w, bitMask i)
+                                          else w
+                        in
+                            tabulate' (Int.+ (i, 1), updated)
+                        end
+            in
+                tabulate' (0, 0w0)
+            end
 
     fun sub (w : Word32.word, i : int) : bool =
         andb (w, bitMask i) <> 0w0
@@ -101,6 +106,7 @@ structure BitVector :> BIT_VECTOR = struct
                                                       
     in
         type vector = int * BitWord32.vector vector
+        exception UnsupportedLength
 
         fun new n : vector =
             (n, Vector.tabulate (wordCount n, fn _ => BitWord32.new 32))
@@ -250,7 +256,7 @@ functor BitMappedVectorFn (V : BIT_VECTOR) = struct
     fun update (vec, i, x) =
         modify (vec, i, SOME x)
 
-    fun erase (vec, i) =
+    fun remove (vec, i) =
         modify (vec, i, NONE)
 
     fun foldli (f : (int * 'a * 'b -> 'b))
@@ -272,3 +278,5 @@ functor BitMappedVectorFn (V : BIT_VECTOR) = struct
 end
 
 structure BitMappedVector = BitMappedVectorFn(BitVector)
+structure BitMappedVector32 = BitMappedVectorFn(BitWord32)
+                                               

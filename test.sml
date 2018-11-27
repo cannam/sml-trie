@@ -299,30 +299,30 @@ structure BitMappedVectorTest :> TESTS = struct
                                     [ NONE, SOME "1", SOME "2", SOME "3" ])
                    end
         ),
-        ( "erase-empty",
+        ( "remove-empty",
           fn () => let val v = V.new 4
                    in
                        check_lists stringOptToString
-                                   (V.enumerate (V.erase (v, 2)),
+                                   (V.enumerate (V.remove (v, 2)),
                                     [ NONE, NONE, NONE, NONE ])
                    end
         ),
-        ( "erase",
+        ( "remove",
           fn () => let val v = V.tabulate
                                    (4,
                                     fn 0 => SOME "hello" | 1 => NONE
                                      | 2 => SOME "world" | _ => NONE)
                    in
                        check_lists stringOptToString
-                                   (V.enumerate (V.erase (v, 2)),
+                                   (V.enumerate (V.remove (v, 2)),
                                     [ SOME "hello", NONE, NONE, NONE ])
                        andalso
                        check_lists stringOptToString
-                                   (V.enumerate (V.erase (v, 0)),
+                                   (V.enumerate (V.remove (v, 0)),
                                     [ NONE, NONE, SOME "world", NONE ])
                        andalso
                        check Bool.toString
-                             (V.isEmpty (V.erase (V.erase (v, 0), 2)), true)
+                             (V.isEmpty (V.remove (V.remove (v, 0), 2)), true)
                    end
         )
     ]
