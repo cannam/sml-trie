@@ -23,11 +23,14 @@ structure Word32TrieMap
 
     type key = Word32.word
 
-    (* 32-bit word gets split up into 5-bit chunks, each 0-31, and a
-       remaining 2-bit chunk - it is a coincidence that the map range
-       spans 32 values and the key is 32 bits *)
+    (* The 32-bit word key gets split up into 5-bit chunks (and one
+       remaining 2-bit chunk). 5 bits represent the range 0-31, thus
+       fitting neatly in the 32-bit compression bitmap we have
+       available through Word32NodeMap. It is coincidence that this
+       happens to be the same as the key size *)
 
-    val bitsPerNode = 5
+    val bitsPerNode = 5 (* This cannot be > 5, since we are using a
+                           32-bit bitmap for 32 slots in our vector *)
     val bitsPerNodeW = Word.fromInt bitsPerNode
     val valuesPerNode = Word.toInt (Word.<< (0w1, bitsPerNodeW))
     val nodeMask = Word32.fromInt (valuesPerNode - 1)
