@@ -2,7 +2,18 @@
 (* Copyright 2018 Chris Cannam.
    MIT/X11 licence. See the file COPYING for details. *)
 
-structure BitWord32 = struct
+signature BIT_VECTOR = sig
+    type vector
+    val new : int -> vector
+    val length : vector -> int
+    val tabulate : int * (int -> bool) -> vector
+    val sub : vector * int -> bool
+    val update : vector * int * bool -> vector
+    val foldli : (int * bool * 'a -> 'a) -> 'a -> vector -> 'a
+    val popcount : vector * int -> int
+end
+
+structure BitWord32 :> BIT_VECTOR = struct
 
     local
         fun bitMask i : Word32.word =
@@ -26,10 +37,14 @@ structure BitWord32 = struct
             end
     in
 
-    type t = Word32.word
+    type vector = Word32.word
 
-    fun new () = 0w0
-    
+    fun new n = if n = 32
+                then 0w0
+                else raise Fail "Size must be 32"
+
+    fun length _ = 32
+                           
     fun tabulate (n : int, f : int -> bool) : Word32.word =
         let fun tabulate' (i, w) =
             if i = n
@@ -75,7 +90,7 @@ structure BitWord32 = struct
     end
 end
 
-structure BitVector = struct
+structure BitVector :> BIT_VECTOR = struct
     local
         fun wordCount n = ((n + 31) div 32)
         fun wordFor i = (i div 32)
@@ -85,10 +100,10 @@ structure BitVector = struct
                                end
                                                       
     in
-        type vector = int * BitWord32.t vector
+        type vector = int * BitWord32.vector vector
 
         fun new n : vector =
-            (n, Vector.tabulate (wordCount n, fn _ => BitWord32.new ()))
+            (n, Vector.tabulate (wordCount n, fn _ => BitWord32.new 32))
 
         fun length ((n, _) : vector) : int =
             n
@@ -154,121 +169,15 @@ structure BitVector = struct
     end
 end
 
-structure BitMappedVector32 = struct
+functor BitMappedVectorFn (V : BIT_VECTOR) = struct
 
-    type 'a vector = BitWord32.t * 'a vector
+    type 'a vector = V.vector * 'a vector
 
-    val fixedLength = 32
-                                      
-    fun new () : 'a vector =
-        (BitWord32.new (), Vector.fromList [])
+    fun new n : 'a vector =
+        (V.new n, Vector.fromList [])
 
     fun length ((b, _) : 'a vector) : int =
-        fixedLength
-            
-    fun isEmpty ((_, v) : 'a vector) : bool =
-        Vector.length v = 0
-
-    fun tabulate (f : int -> 'a option) : 'a vector =
-        let val expanded = Vector.tabulate (fixedLength, f)
-        in
-            (BitWord32.tabulate
-                 (fixedLength,
-                  fn i => Option.isSome (Vector.sub (expanded, i))),
-             Vector.fromList
-                 (List.concat
-                      (List.tabulate
-                           (fixedLength,
-                            fn i => case Vector.sub (expanded, i) of
-                                        NONE => []
-                                      | SOME x => [x]))))
-        end
-
-    fun contains ((b, _) : 'a vector, i : int) : bool =
-        BitWord32.sub (b, i)
-                       
-    fun find ((b, v) : 'a vector, i : int) : 'a option =
-        if BitWord32.sub (b, i)
-        then let val ix = BitWord32.popcount (b, i)
-             in
-                 SOME (Vector.sub (v, ix))
-             end
-        else NONE
-
-    fun sub (vec : 'a vector, i : int) : 'a =
-        case find (vec, i) of
-            NONE => raise Subscript
-          | SOME x => x
-
-    fun enumerate (vec as (b, v) : 'a vector) : 'a option list =
-        rev
-            (BitWord32.foldli 
-                 (fn (i, b, acc) =>
-                     (if b
-                      then SOME (sub (vec, i))
-                      else NONE)
-                         :: acc)
-                 [] b)
-            
-    fun modify ((b, v) : 'a vector, i : int, xo : 'a option) : 'a vector =
-        let val pc = BitWord32.popcount (b, i)
-        in
-            if BitWord32.sub (b, i)
-            then case xo of
-                     NONE =>
-                     (BitWord32.update (b, i, false),
-                      Vector.tabulate (Vector.length v - 1,
-                                       fn j => if j < pc
-                                               then Vector.sub (v, j)
-                                               else Vector.sub (v, j + 1)))
-                   | SOME x =>
-                     (b, Vector.update (v, pc, x))
-            else case xo of
-                     NONE =>
-                     (b, v)
-                   | SOME x =>
-                     (BitWord32.update (b, i, true),
-                      Vector.tabulate (Vector.length v + 1,
-                                       fn j => if j < pc
-                                               then Vector.sub (v, j)
-                                               else if j > pc
-                                               then Vector.sub (v, j - 1)
-                                               else x))
-        end
-
-    fun update (vec, i, x) =
-        modify (vec, i, SOME x)
-
-    fun erase (vec, i) =
-        modify (vec, i, NONE)
-
-    fun foldli (f : (int * 'a * 'b -> 'b))
-               (acc : 'b) ((b, v) : 'a vector) : 'b =
-        case BitWord32.foldli
-                 (fn (i, bit, (ix, acc)) =>
-                     if bit
-                     then (ix+1, f (i, Vector.sub (v, ix), acc))
-                     else (ix, acc))
-                 (0, acc) b of
-            (ix, acc) => acc
-
-    (* foldl is simpler than foldli, as it doesn't need to look at the
-       bitmap at all *)
-    fun foldl (f : ('a * 'b -> 'b))
-              (acc : 'b) ((_, v) : 'a vector) : 'b =
-        Vector.foldl f acc v
-
-end
-
-structure BitMappedVector = struct
-
-    type 'a vector = BitVector.vector * 'a vector
-
-    fun new (n : int) : 'a vector =
-        (BitVector.new n, Vector.fromList [])
-
-    fun length ((b, _) : 'a vector) : int =
-        BitVector.length b
+        V.length b
             
     fun isEmpty ((_, v) : 'a vector) : bool =
         Vector.length v = 0
@@ -276,7 +185,7 @@ structure BitMappedVector = struct
     fun tabulate (n : int, f : int -> 'a option) : 'a vector =
         let val expanded = Vector.tabulate (n, f)
         in
-            (BitVector.tabulate
+            (V.tabulate
                  (n, fn i => Option.isSome (Vector.sub (expanded, i))),
              Vector.fromList
                  (List.concat
@@ -287,11 +196,11 @@ structure BitMappedVector = struct
         end
 
     fun contains ((b, _) : 'a vector, i : int) : bool =
-        BitVector.sub (b, i)
+        V.sub (b, i)
                        
     fun find ((b, v) : 'a vector, i : int) : 'a option =
-        if BitVector.sub (b, i)
-        then let val ix = BitVector.popcount (b, i)
+        if V.sub (b, i)
+        then let val ix = V.popcount (b, i)
              in
                  SOME (Vector.sub (v, ix))
              end
@@ -304,7 +213,7 @@ structure BitMappedVector = struct
 
     fun enumerate (vec as (b, v) : 'a vector) : 'a option list =
         rev
-            (BitVector.foldli 
+            (V.foldli 
                  (fn (i, b, acc) =>
                      (if b
                       then SOME (sub (vec, i))
@@ -313,12 +222,12 @@ structure BitMappedVector = struct
                  [] b)
             
     fun modify ((b, v) : 'a vector, i : int, xo : 'a option) : 'a vector =
-        let val pc = BitVector.popcount (b, i)
+        let val pc = V.popcount (b, i)
         in
-            if BitVector.sub (b, i)
+            if V.sub (b, i)
             then case xo of
                      NONE =>
-                     (BitVector.update (b, i, false),
+                     (V.update (b, i, false),
                       Vector.tabulate (Vector.length v - 1,
                                        fn j => if j < pc
                                                then Vector.sub (v, j)
@@ -329,7 +238,7 @@ structure BitMappedVector = struct
                      NONE =>
                      (b, v)
                    | SOME x =>
-                     (BitVector.update (b, i, true),
+                     (V.update (b, i, true),
                       Vector.tabulate (Vector.length v + 1,
                                        fn j => if j < pc
                                                then Vector.sub (v, j)
@@ -346,7 +255,7 @@ structure BitMappedVector = struct
 
     fun foldli (f : (int * 'a * 'b -> 'b))
                (acc : 'b) ((b, v) : 'a vector) : 'b =
-        case BitVector.foldli
+        case V.foldli
                  (fn (i, bit, (ix, acc)) =>
                      if bit
                      then (ix+1, f (i, Vector.sub (v, ix), acc))
@@ -361,3 +270,5 @@ structure BitMappedVector = struct
         Vector.foldl f acc v
 
 end
+
+structure BitMappedVector = BitMappedVectorFn(BitVector)
