@@ -2,106 +2,159 @@
 (* Copyright 2018 Chris Cannam.
    MIT/X11 licence. See the file COPYING for details. *)
 
-structure BitMappedVector = struct
+structure BitWord32 = struct
 
-    structure BitVector = struct
     local
-        fun unitCount n = ((n + 31) div 32)
-        fun unitFor i = (i div 32)      
         fun bitMask i : Word32.word =
-            (Word32.<< (Word32.fromInt 1, Word.andb(Word.fromInt i, 0w31)))
+            Word32.<< (0w1, Word.andb (Word.fromInt i, 0w31))
+
+        open Word32
+
+        (* 32-bit population-count, Bagwell 2001 *)
+        fun pc32 w =
+            let open Word32
+                val sk5 = 0wx55555555
+                val sk3 = 0wx33333333
+                val skf0 = 0wxf0f0f0f
+                val skff = 0wxff00ff
+                val w = w - (andb (>> (w, 0w1), sk5))
+                val w = andb (w, sk3) + (andb (>> (w, 0w2), sk3))
+                val w = andb (w, skf0) + (andb (>> (w, 0w4), skf0))
+                val w = w + >> (w, 0w8)
+            in
+                andb (w + >> (w, 0w16), 0wx3f)
+            end
     in
-        type vector = int * Word32.word vector
+
+    type t = Word32.word
+
+    fun new () = 0w0
+    
+    fun tabulate (n : int, f : int -> bool) : Word32.word =
+        let fun tabulate' (i, w) =
+            if i = n
+            then w
+            else
+                let val b = f i
+                    val updated = if b
+                                  then orb (w, bitMask i)
+                                  else w
+                in
+                    tabulate' (Int.+ (i, 1), updated)
+                end
+        in
+            tabulate' (0, 0w0)
+        end
+
+    fun sub (w : Word32.word, i : int) : bool =
+        andb (w, bitMask i) <> 0w0
+
+    fun update (w : Word32.word, i : int, b : bool) : Word32.word =
+        if b
+        then orb (w, bitMask i)
+        else andb (w, notb (bitMask i))
+
+    fun foldli (f : int * bool * 'a -> 'a)
+               (acc : 'a)
+               (w : Word32.word) : 'a =
+        let fun fold' (0w0, w, i, acc) = acc
+              | fold' (bit, w, i, acc) =
+                fold' (<< (bit, 0w1), w, Int.+ (i, 1),
+                       f (i, andb (w, bit) <> 0w0, acc))
+        in
+            fold' (0w1, w, 0, acc)
+        end
+                  
+    (* return number of 1s in the first i bits of the word *)
+    fun popcount (w : Word32.word, i : int) : int =
+        Word32.toInt
+            (pc32 (if Int.<(i, 32)
+                   then andb (w, bitMask i - 0w1)
+                   else w))
+
+    end
+end
+
+structure BitVector = struct
+    local
+        fun wordCount n = ((n + 31) div 32)
+        fun wordFor i = (i div 32)
+        fun bitInWord (iw, i) = (i - iw * 32)
+        fun bitsUsed (iw, n) = let val bn = bitInWord (iw, n)
+                               in if bn > 32 then 32 else bn
+                               end
+                                                      
+    in
+        type vector = int * BitWord32.t vector
 
         fun new n : vector =
-            (n, Vector.tabulate (unitCount n, fn _ => 0w0))
+            (n, Vector.tabulate (wordCount n, fn _ => BitWord32.new ()))
 
         fun length ((n, _) : vector) : int =
             n
 
         fun tabulate (n : int, f : int -> bool) : vector =
-            let fun makeUnit (base, i, unit) =
-                    if i = 31 orelse base + i = n
-                    then unit
-                    else
-                        let val b = f (base + i)
-                            val updated = if b
-                                          then Word32.orb (unit, bitMask i)
-                                          else unit
-                        in
-                            makeUnit (base, i + 1, updated)
-                        end
-            in
-                (n, Vector.tabulate
-                        (unitCount n, fn i => makeUnit (i * 32, 0, 0w0)))
-            end
+            (n, Vector.tabulate
+                    (wordCount n,
+                     fn iw => BitWord32.tabulate (bitsUsed (iw, n),
+                                                  fn ib => f (iw * 32 + ib))))
                 
         fun sub ((n, vec) : vector, i : int) : bool =
-            if i >= n then raise Subscript
+            if i >= n
+            then raise Subscript
             else
-                let val unit = Vector.sub (vec, unitFor i)
-                    val bit = Word32.andb (unit, bitMask i)
+                let val iw = wordFor i
                 in
-                    bit <> 0w0
+                    BitWord32.sub (Vector.sub (vec, iw), bitInWord (iw, i))
                 end
                     
         fun update ((n, vec) : vector, i : int, b : bool) : vector =
-            if i >= n then raise Subscript
+            if i >= n
+            then raise Subscript
             else 
-                let val iy = unitFor i
-                    val unit = Vector.sub (vec, iy)
+                let val iw = wordFor i
                 in
                     (n, Vector.update
-                            (vec, iy,
-                             if b
-                             then Word32.orb (unit, bitMask i)
-                             else Word32.andb (unit, Word32.notb (bitMask i))))
+                            (vec, iw,
+                             BitWord32.update (Vector.sub (vec, iw),
+                                               bitInWord (iw, i),
+                                               b)))
                 end
 
         fun foldli (f : (int * bool * 'a -> 'a))
-                   (acc : 'a) ((n, vec) : vector) : 'a =
-            let fun fold' (bit, ix, unit, acc) =
-                  if bit = 0w0 orelse ix = n
-                  then acc
-                  else fold' (Word32.<< (bit, 0w1), ix + 1, unit,
-                              f (ix, Word32.andb (unit, bit) <> 0w0, acc))
-            in
-                Vector.foldli (fn (i, w, acc) =>
-                                  fold' (0w1, i * 32, w, acc))
-                              acc vec
-            end
+                   (acc : 'a)
+                   ((n, vec) : vector) : 'a =
+            Vector.foldli (fn (iw, w, acc) =>
+                              BitWord32.foldli (fn (ib, b, acc) =>
+                                                   let val i = iw * 32 + ib
+                                                   in
+                                                       if i >= n
+                                                       then acc
+                                                       else f (i, b, acc)
+                                                   end)
+                                               acc
+                                               w)
+                          acc
+                          vec
                 
         (* population count: return number of 1s in the first i bits
            of the vector *)
         fun popcount ((n, vec) : vector, i : int) : int =
-            let fun pc32 w =
-                    let open Word32
-                        val sk5 = 0wx55555555
-                        val sk3 = 0wx33333333
-                        val skf0 = 0wxf0f0f0f
-                        val skff = 0wxff00ff
-                        val w = w - (andb (>> (w, 0w1), sk5))
-                        val w = andb (w, sk3) + (andb (>> (w, 0w2), sk3))
-                        val w = andb (w, skf0) + (andb (>> (w, 0w4), skf0))
-                        val w = w + >> (w, 0w8)
-                    in
-                        andb (w + >> (w, 0w16), 0wx3f)
-                    end
-                val iy = unitFor i
-                val count = Vector.foldli
-                                (fn (j, w, acc) =>
-                                    acc + pc32 (if j > iy
-                                                then 0w0
-                                                else if j < iy
-                                                then w
-                                                else Word32.andb
-                                                         (w, bitMask i - 0w1)))
-                                0w0 vec
+            let val iw = wordFor i
             in
-                Word32.toInt count
+                Vector.foldli
+                    (fn (j, w, acc) =>
+                        if j > iw
+                        then acc
+                        else if j < iw
+                        then acc + BitWord32.popcount (w, 32)
+                        else acc + BitWord32.popcount (w, bitInWord (j, i)))
+                    0 vec
             end
     end
-    end
+end
+
+structure BitMappedVector = struct
 
     type 'a vector = BitVector.vector * 'a vector
 
