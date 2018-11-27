@@ -184,10 +184,13 @@ functor BitMappedVectorFn (V : BIT_VECTOR) = struct
 
     fun length ((b, _) : 'a vector) : int =
         V.length b
-            
-    fun isEmpty ((_, v) : 'a vector) : bool =
-        Vector.length v = 0
 
+    fun population ((_, v) : 'a vector) : int =
+        Vector.length v
+            
+    fun isEmpty (vec : 'a vector) : bool =
+        population vec = 0
+                              
     fun tabulate (n : int, f : int -> 'a option) : 'a vector =
         let val expanded = Vector.tabulate (n, f)
         in
