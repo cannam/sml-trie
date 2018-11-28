@@ -27,20 +27,20 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
     fun sorted s = ListMergeSort.sort String.> s
 
     fun test_trie () = List.foldl (fn (s, t) => T.add (t, s))
-				  T.empty
+				  (T.new ())
 				  strings
 
     fun tests () = [
 	( "enumerate-empty",
-          fn () => check_lists id (T.enumerate T.empty, [])
+          fn () => check_lists id (T.enumerate (T.new ()), [])
         ),
         ( "enumerate",
           fn () => check_lists id (T.enumerate (test_trie ()), sorted strings)
         ),
         ( "contains-empty",
           fn () => check_pairs Bool.toString
-                               [(T.contains (T.empty, ""), false),
-                                (T.contains (T.empty, "parp"), false)]
+                               [(T.contains (T.new (), ""), false),
+                                (T.contains (T.new (), "parp"), false)]
         ),
         ( "contains",
           fn () => let val t = test_trie ()
@@ -56,7 +56,7 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
                    end
         ),
 	( "remove-empty",
-          fn () => check_lists id (T.enumerate (T.remove (T.empty, "parp")), [])
+          fn () => check_lists id (T.enumerate (T.remove (T.new (), "parp")), [])
         ),
         ( "remove-one",
           fn () => check Int.toString
@@ -86,7 +86,7 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
                    end
         ),
 	( "isEmpty-empty",
-          fn () => T.isEmpty T.empty
+          fn () => T.isEmpty (T.new ())
         ),
         ( "isEmpty-nonempty",
           fn () => not (T.isEmpty (test_trie ()))
@@ -102,7 +102,7 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
                    end
         ),
         ( "prefixMatch-empty",
-          fn () => check_lists id (T.prefixMatch (T.empty, "parp"), [])
+          fn () => check_lists id (T.prefixMatch (T.new (), "parp"), [])
         ),
         ( "prefixMatch-matches",
           fn () => check_lists id (T.prefixMatch (test_trie (), "pa"),
@@ -123,8 +123,8 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
                                    sorted strings)
         ),
         ( "prefixOf-empty",
-          fn () => check_pairs id [(T.prefixOf (T.empty, "parp"), ""),
-                                   (T.prefixOf (T.empty, ""), "")
+          fn () => check_pairs id [(T.prefixOf (T.new (), "parp"), ""),
+                                   (T.prefixOf (T.new (), ""), "")
                                   ]
         ),
 	( "prefixOf",
@@ -140,11 +140,11 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
                                   ]
         ),
         ( "patternMatch-empty",
-          fn () => check_lists id (T.patternMatch (T.empty, []), [])
+          fn () => check_lists id (T.patternMatch (T.new (), []), [])
                    andalso
-                   check_lists id (T.patternMatch (T.empty, [SOME #"p"]), [])
+                   check_lists id (T.patternMatch (T.new (), [SOME #"p"]), [])
                    andalso
-                   check_lists id (T.patternMatch (T.empty, [NONE]), [])
+                   check_lists id (T.patternMatch (T.new (), [NONE]), [])
         ),
         ( "patternMatch-nil",
           fn () => check_lists id (T.patternMatch (test_trie (), []), [])
@@ -350,23 +350,23 @@ structure HashMapTest :> TESTS = struct
     fun test_map () = M.insert
                           (M.insert
                                (M.insert
-                                    (M.empty, "squid", "octopus"),
+                                    (M.new (), "squid", "octopus"),
                                 "doughnut", "croissant"),
                            "dog", "wolf")
                    
     fun tests () = [
         ( "empty",
-          fn () => M.isEmpty M.empty
+          fn () => M.isEmpty (M.new ())
                    andalso
-                   not (M.contains (M.empty, "parp"))
+                   not (M.contains (M.new (), "parp"))
                    andalso
-                   M.enumerate M.empty = []
+                   M.enumerate (M.new ()) = []
         ),
         ( "insert-simple",
           fn () => check Int.toString
-                         (M.lookup (M.insert (M.empty, "poot", 5), "poot"), 5)
+                         (M.lookup (M.insert (M.new (), "poot", 5), "poot"), 5)
                    andalso
-                   not (M.contains (M.insert (M.empty, "poot", 5), "parp"))
+                   not (M.contains (M.insert (M.new (), "poot", 5), "parp"))
         ),
         ( "insert-multiple",
           fn () =>
@@ -408,13 +408,13 @@ structure HashMapTest :> TESTS = struct
              end
         ),                 
         ( "remove-only",
-          fn () => M.isEmpty (M.remove (M.insert (M.empty, "poot", 5), "poot"))
+          fn () => M.isEmpty (M.remove (M.insert (M.new (), "poot", 5), "poot"))
         ),
         ( "remove-empty",
-          fn () => M.isEmpty (M.remove (M.empty, "poot"))
+          fn () => M.isEmpty (M.remove (M.new (), "poot"))
         ),
         ( "remove-absent",
-          fn () => M.enumerate (M.remove (M.insert (M.empty, "poot", 5), "pop"))
+          fn () => M.enumerate (M.remove (M.insert (M.new (), "poot", 5), "pop"))
                    = [ ("poot", 5) ]
         ),
         ( "remove-one",

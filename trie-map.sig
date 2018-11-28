@@ -9,8 +9,8 @@ signature TRIE_MAP = sig
     type 'a trie
     type key
 
-    (** Empty trie *)
-    val empty : 'a trie
+    (** Create an empty trie *)
+    val new : unit -> 'a trie
 
     (** Test whether a trie is empty *)
     val isEmpty : 'a trie -> bool

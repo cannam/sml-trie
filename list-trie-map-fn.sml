@@ -27,7 +27,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
 
     type 'a trie = 'a node
 
-    val empty = NODE (NONE, M.new ())
+    fun new () = NODE (NONE, M.new ())
 
     fun isEmpty (NODE (NONE, m)) = M.isEmpty m
       | isEmpty _ = false
@@ -56,27 +56,28 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
 
     fun remove (n, xx) =
         case (n, xx) of
-            (LEAF _, []) => LEAF NONE
+            (LEAF _, []) => NODE (NONE, M.new ())
           | (LEAF item, _) => LEAF item
-          | (NODE (item, map), []) => if M.isEmpty map
-                                      then LEAF NONE
-                                      else NODE (NONE, map)
+          | (NODE (item, map), []) => NODE (NONE, map)
           | (n as NODE (item, map), x::xs) =>
             case M.find (map, x) of
                 NONE => n
               | SOME nsub =>
-                case remove (nsub, xs) of
-                    LEAF NONE =>
-                    let val map' = M.remove (map, x)
-                    in
-                        if M.isEmpty map'
-                        then LEAF item
-                        else NODE (item, map')
-                    end
-                  | other => NODE (item, M.update (map, x, other))
+                let val nsub' = remove (nsub, xs)
+                in
+                    if isEmpty nsub'
+                    then let val map' = M.remove (map, x)
+                         in
+                             if M.isEmpty map'
+                             then case item of
+                                      NONE => NODE (item, map')
+                                    | SOME item => LEAF item
+                             else NODE (item, map')
+                         end
+                    else NODE (item, M.update (map, x, nsub'))
+                end
 
-    fun find (LEAF NONE, _) = NONE
-      | find (LEAF item, []) = item
+    fun find (LEAF item, []) = SOME item
       | find (LEAF _, _) = NONE
       | find (NODE (item, _), []) = item
       | find (NODE (item, map), x::xs) =
@@ -95,8 +96,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
           | NONE => false
 
     fun foldl f acc n =
-        let fun fold' (acc, LEAF NONE) = acc
-              | fold' (acc, LEAF (SOME v)) = f (v, acc)
+        let fun fold' (acc, LEAF v) = f (v, acc)
               | fold' (acc, NODE (item, map)) =
                 M.foldl (fn (n, acc) => fold' (acc, n))
                         (case item of
@@ -108,8 +108,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         end
                      
     (* rpfx is reversed prefix built up so far (using cons) *)
-    fun foldli_helper f (acc, rpfx, LEAF NONE) = acc
-      | foldli_helper f (acc, rpfx, LEAF (SOME v)) = f (rev rpfx, v, acc)
+    fun foldli_helper f (acc, rpfx, LEAF v) = f (rev rpfx, v, acc)
       | foldli_helper f (acc, rpfx, NODE (item, map)) =
         M.foldli (fn (x, n, acc) => foldli_helper f (acc, x :: rpfx, n))
                  (case item of
@@ -142,9 +141,8 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
     fun foldliPatternMatch f acc (node, p) =
-        let fun fold' (acc, rpfx, LEAF NONE, _) = acc
-              | fold' (acc, rpfx, LEAF (SOME v), []) = f (rev rpfx, v, acc)
-              | fold' (acc, rpfx, LEAF (SOME _), _) = acc
+        let fun fold' (acc, rpfx, LEAF v, []) = f (rev rpfx, v, acc)
+              | fold' (acc, rpfx, LEAF _, _) = acc
               | fold' (acc, rpfx, NODE (NONE, _), []) = acc
               | fold' (acc, rpfx, NODE (SOME v, _), []) = f (rev rpfx, v, acc)
               | fold' (acc, rpfx, NODE (_, map), NONE::xs) =
@@ -170,14 +168,13 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
                     prefix' (best,
                              x :: acc,
                              case M.find (map, x) of
-                                 NONE => LEAF NONE
+                                 NONE => NODE (NONE, M.new ())
                                | SOME nsub => nsub,
                              xs)
                 end
               | prefix' (best, acc, NODE (SOME _, _), []) = acc
               | prefix' (best, acc, NODE (NONE, _), []) = best
-              | prefix' (best, acc, LEAF (SOME _), _) = acc
-              | prefix' (best, acc, LEAF NONE, _) = best
+              | prefix' (best, acc, LEAF _, _) = acc
         in
 	    rev (prefix' ([], [], node, e))
         end
