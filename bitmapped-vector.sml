@@ -141,7 +141,7 @@ structure BitVector :> BIT_VECTOR = struct
                                                bitInWord (iw, i),
                                                b)))
                 end
-
+                    
         fun foldli (f : (int * bool * 'a -> 'a))
                    (acc : 'a)
                    ((n, vec) : vector) : 'a =

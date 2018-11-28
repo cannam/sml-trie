@@ -22,29 +22,34 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     type key = element list
     type pattern = element option list
 
-    datatype 'a node = LEAF of 'a option
+    datatype 'a node = LEAF of 'a
                      | NODE of 'a option * 'a node M.map
 
     type 'a trie = 'a node
-                      
-    val empty = LEAF NONE
-                                                         
-    fun isEmpty (LEAF NONE) = true
+
+    val empty = NODE (NONE, M.new ())
+
+    fun isEmpty (NODE (NONE, m)) = M.isEmpty m
       | isEmpty _ = false
 
     fun update (n, xx, f) =
         case (n, xx) of
-            (LEAF item, []) => LEAF (SOME (f item))
-          | (LEAF item, x::xs) => NODE (item, M.update
-                                                  (M.new (), x,
-                                                   update (LEAF NONE, xs, f)))
+            (LEAF item, []) => LEAF (f (SOME item))
+          | (LEAF item, x::xs) => update (NODE (SOME item, M.new ()), x::xs, f)
           | (NODE (item, map), []) => NODE (SOME (f item), map)
+          | (NODE (item, map), [x]) =>
+            (case M.find (map, x) of
+                 NONE =>
+                 NODE (item, M.update (map, x, LEAF (f NONE)))
+               | SOME nsub =>
+                 NODE (item, M.update (map, x, update (nsub, [], f))))
           | (NODE (item, map), x::xs) => 
-            case M.find (map, x) of
-                NONE =>
-                NODE (item, M.update (map, x, update (LEAF NONE, xs, f)))
-              | SOME nsub =>
-                NODE (item, M.update (map, x, update (nsub, xs, f)))
+            (case M.find (map, x) of
+                 NONE =>
+                 NODE (item, M.update (map, x,
+                                       update (NODE (NONE, M.new ()), xs, f)))
+               | SOME nsub =>
+                 NODE (item, M.update (map, x, update (nsub, xs, f))))
 
     fun insert (n, xx, v) =
         update (n, xx, fn _ => v)
