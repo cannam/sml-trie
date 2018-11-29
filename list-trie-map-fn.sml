@@ -21,61 +21,53 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     type element = M.key
     type key = element list
     type pattern = element option list
-
-    datatype 'a node = LEAF of 'a option
-                     | NODE of 'a option * 'a node M.map
+                               
+    datatype 'a node = NODE of 'a option * 'a node M.map
 
     type 'a trie = 'a node
                       
-    val empty = LEAF NONE
+    fun new () =
+        NODE (NONE, M.new ())
                                                          
-    fun isEmpty (LEAF NONE) = true
+    fun isEmpty (NODE (NONE, m)) = M.isEmpty m
       | isEmpty _ = false
 
     fun update (n, xx, f) =
         case (n, xx) of
-            (LEAF item, []) => LEAF (SOME (f item))
-          | (LEAF item, x::xs) => NODE (item, M.update
-                                                  (M.new (), x,
-                                                   update (LEAF NONE, xs, f)))
-          | (NODE (item, map), []) => NODE (SOME (f item), map)
-          | (NODE (item, map), x::xs) => 
-            case M.find (map, x) of
+            (NODE (item, vec), []) => NODE (SOME (f item), vec)
+          | (NODE (item, vec), x::xs) => 
+            case M.find (vec, x) of
                 NONE =>
-                NODE (item, M.update (map, x, update (LEAF NONE, xs, f)))
+                NODE (item, M.update (vec, x, update (new (), xs, f)))
               | SOME nsub =>
-                NODE (item, M.update (map, x, update (nsub, xs, f)))
+                NODE (item, M.update (vec, x, update (nsub, xs, f)))
 
     fun insert (n, xx, v) =
         update (n, xx, fn _ => v)
 
     fun remove (n, xx) =
         case (n, xx) of
-            (LEAF _, []) => LEAF NONE
-          | (LEAF item, _) => LEAF item
-          | (NODE (item, map), []) => if M.isEmpty map
-                                      then LEAF NONE
-                                      else NODE (NONE, map)
-          | (n as NODE (item, map), x::xs) =>
-            case M.find (map, x) of
+            (NODE (item, vec), []) => NODE (NONE, vec)
+          | (n as NODE (item, vec), x::xs) =>
+            case M.find (vec, x) of
                 NONE => n
               | SOME nsub =>
-                case remove (nsub, xs) of
-                    LEAF NONE =>
-                    let val map' = M.remove (map, x)
-                    in
-                        if M.isEmpty map'
-                        then LEAF item
-                        else NODE (item, map')
-                    end
-                  | other => NODE (item, M.update (map, x, other))
+                let val nsub' = remove (nsub, xs)
+                in
+                    if isEmpty nsub'
+                    then 
+                        let val vv = M.remove (vec, x)
+                        in
+                            case item of
+                                SOME _ => NODE (item, vv)
+                              | NONE => NODE (item, vv)
+                        end
+                    else NODE (item, M.update (vec, x, nsub'))
+                end
 
-    fun find (LEAF NONE, _) = NONE
-      | find (LEAF item, []) = item
-      | find (LEAF _, _) = NONE
-      | find (NODE (item, _), []) = item
-      | find (NODE (item, map), x::xs) =
-        case M.find (map, x) of
+    fun find (NODE (item, _), []) = item
+      | find (NODE (item, vec), x::xs) =
+        case M.find (vec, x) of
             NONE => NONE
           | SOME nsub => find (nsub, xs)
 
@@ -88,11 +80,9 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         case find (t, k) of
             SOME _ => true
           | NONE => false
-
+             
     fun foldl f acc n =
-        let fun fold' (acc, LEAF NONE) = acc
-              | fold' (acc, LEAF (SOME v)) = f (v, acc)
-              | fold' (acc, NODE (item, map)) =
+        let fun fold' (acc, NODE (item, map)) =
                 M.foldl (fn (n, acc) => fold' (acc, n))
                         (case item of
                              NONE => acc
@@ -101,16 +91,14 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         in
             fold' (acc, n)
         end
-                     
+
     (* rpfx is reversed prefix built up so far (using cons) *)
-    fun foldli_helper f (acc, rpfx, LEAF NONE) = acc
-      | foldli_helper f (acc, rpfx, LEAF (SOME v)) = f (rev rpfx, v, acc)
-      | foldli_helper f (acc, rpfx, NODE (item, map)) =
+    fun foldli_helper f (acc, rpfx, NODE (item, vec)) =
         M.foldli (fn (x, n, acc) => foldli_helper f (acc, x :: rpfx, n))
                  (case item of
                       NONE => acc
                     | SOME v => f (rev rpfx, v, acc))
-                 map
+                 vec
                       
     fun foldli f acc n = 
         foldli_helper f (acc, [], n)
@@ -121,9 +109,8 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     fun foldliPrefixMatch f acc (node, e) = 
         (* rpfx is reversed prefix built up so far (using cons) *)
         let fun fold' (acc, rpfx, n, []) = foldli_helper f (acc, rpfx, n)
-              | fold' (acc, rpfx, LEAF _, x::xs) = acc
-              | fold' (acc, rpfx, NODE (item, map), x::xs) =
-                case M.find (map, x) of
+              | fold' (acc, rpfx, NODE (item, vec), x::xs) =
+                case M.find (vec, x) of
                     NONE => acc
                   | SOME nsub => fold' (acc, x :: rpfx, nsub, xs)
         in
@@ -137,16 +124,13 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
     fun foldliPatternMatch f acc (node, p) =
-        let fun fold' (acc, rpfx, LEAF NONE, _) = acc
-              | fold' (acc, rpfx, LEAF (SOME v), []) = f (rev rpfx, v, acc)
-              | fold' (acc, rpfx, LEAF (SOME _), _) = acc
-              | fold' (acc, rpfx, NODE (NONE, _), []) = acc
+        let fun fold' (acc, rpfx, NODE (NONE, _), []) = acc
               | fold' (acc, rpfx, NODE (SOME v, _), []) = f (rev rpfx, v, acc)
-              | fold' (acc, rpfx, NODE (_, map), NONE::xs) =
+              | fold' (acc, rpfx, NODE (_, vec), NONE::xs) =
                 M.foldli (fn (x, n, acc) => fold' (acc, x :: rpfx, n, xs))
-                         acc map
-              | fold' (acc, rpfx, NODE (_, map), (SOME x)::xs) =
-                case M.find (map, x) of
+                         acc vec
+              | fold' (acc, rpfx, NODE (_, vec), (SOME x)::xs) =
+                case M.find (vec, x) of
                     NONE => acc
                   | SOME nsub => fold' (acc, x :: rpfx, nsub, xs)
         in
@@ -157,22 +141,20 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         rev (foldliPatternMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
 
     fun prefixOf (node, e) = 
-        let fun prefix' (best, acc, n as NODE (item, map), x::xs) =
+        let fun prefix' (best, acc, n as NODE (item, vec), x::xs) =
                 let val best = case item of
                                    NONE => best
                                  | SOME _ => acc
                 in
                     prefix' (best,
                              x :: acc,
-                             case M.find (map, x) of
-                                 NONE => LEAF NONE
+                             case M.find (vec, x) of
+                                 NONE => new ()
                                | SOME nsub => nsub,
                              xs)
                 end
               | prefix' (best, acc, NODE (SOME _, _), []) = acc
               | prefix' (best, acc, NODE (NONE, _), []) = best
-              | prefix' (best, acc, LEAF (SOME _), _) = acc
-              | prefix' (best, acc, LEAF NONE, _) = best
         in
 	    rev (prefix' ([], [], node, e))
         end

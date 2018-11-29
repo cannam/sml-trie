@@ -113,7 +113,7 @@ val numberOfRuns = 3
 signature IMMUTABLE_MAP = sig
     type 'a map
     type key
-    val empty : 'a map
+    val new : unit -> 'a map
     val insert : 'a map * key * 'a -> 'a map
     val remove : 'a map * key -> 'a map
     val find : 'a map * key -> 'a option
@@ -145,7 +145,7 @@ functor TestImmutableFn (Arg : TEST_IMMUTABLE_ARG) = struct
         in
             Timing.benchmark
                 (fn () => Vector.foldl (fn (k, m) => M.insert (m, k, 1))
-                                       M.empty keys,
+                                       (M.new ()) keys,
                  name, numberOfRuns, nkeys)
         end
     
@@ -288,6 +288,7 @@ structure TestStringRBMap = TestImmutableFn
                                   structure Map = struct
                                       open StringRBMap
                                       type key = Key.ord_key
+                                      fun new () = empty
                                       val enumerate = listItemsi
                                       val remove' = remove
                                       fun remove (m, k) = #1 (remove' (m, k))
@@ -370,6 +371,7 @@ structure TestIntRBMap = TestImmutableFn
                                   structure Map = struct
                                       open IntRBMap
                                       type key = Key.ord_key
+                                      fun new () = empty
                                       val enumerate = listItemsi
                                       val remove' = remove
                                       fun remove (m, k) = #1 (remove' (m, k))

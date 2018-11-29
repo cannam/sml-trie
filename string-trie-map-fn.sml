@@ -21,7 +21,7 @@ functor StringTrieMapFn (T : CHAR_LIST_TRIE_MAP) :> STRING_TRIE_MAP = struct
     type pattern = element option list
     type key = string
 
-    val empty = T.empty
+    val new = T.new
 
     val isEmpty = T.isEmpty
 
