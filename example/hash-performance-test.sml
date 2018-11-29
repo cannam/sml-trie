@@ -60,14 +60,34 @@ structure Timing = struct
 	in (Time.-(finish, start), result)
 	end
 
-    fun time (f, name) =
-        let val (time, result) = timed_call f
-            val secs = Time.toReal time
+    fun benchmark_with_setup (setup, f, name, nruns, count) =
+        let val (time, result) =
+                List.foldl (fn (_, (t', r')) =>
+                               let val s = setup ()
+                                   val start = Time.now ()
+                                   val result = f s;
+                                   val finish = Time.now ()
+                                   val time = Time.-(finish, start)
+                               in
+                                   (Time.+(t', time), SOME result)
+                               end)
+                           (Time.zeroTime, NONE)
+                           (List.tabulate (nruns, fn x => x))
+	    val secs = Time.toReal time
         in
-            print (name ^ ": " ^ (Real.toString secs) ^ " sec\n");
-            result
+            print (name ^ " | " ^ (Int.toString nruns) ^ " | " ^
+                   (Int.toString count) ^ " | " ^
+                   (Real.toString (secs / Real.fromInt nruns)) ^ " | " ^
+                   (Int.toString (Real.floor (Real.fromInt
+                                                  (nruns * count) / secs)))
+                   ^ "\n");
+            case result of
+                SOME r => r
+              | NONE => raise Fail "no result!?"
         end
 
+    fun benchmark (f, name, nruns, count) =
+        benchmark_with_setup (fn () => (), f, name, nruns, count)
 end
 
 fun shuffle vec =
@@ -88,6 +108,8 @@ fun shuffle vec =
         Array.vector arr
     end
 
+val numberOfRuns = 3
+        
 signature IMMUTABLE_MAP = sig
     type 'a map
     type key
@@ -115,15 +137,16 @@ functor TestImmutableFn (Arg : TEST_IMMUTABLE_ARG) = struct
     val name = Arg.name
                       
     fun nameFor n label =
-        name ^ ": " ^ Int.toString n ^ " " ^ label
+        name ^ " | " ^ label
                       
     fun testInserts keys =
         let val nkeys = Vector.length keys
-            val name = nameFor nkeys "insertions"
+            val name = nameFor nkeys "inserts"
         in
-            Timing.time (fn () => Vector.foldl (fn (k, m) => M.insert (m, k, 1))
-                                               (M.new ()) keys,
-                         name)
+            Timing.benchmark
+                (fn () => Vector.foldl (fn (k, m) => M.insert (m, k, 1))
+                                       (M.new ()) keys,
+                 name, numberOfRuns, nkeys)
         end
     
     fun testDeletes keys m =
@@ -131,9 +154,10 @@ functor TestImmutableFn (Arg : TEST_IMMUTABLE_ARG) = struct
             val shuffled = shuffle keys
             val name = nameFor nkeys "deletes"
         in
-            Timing.time (fn () => Vector.foldl (fn (k, m) => M.remove (m, k))
-                                               m shuffled,
-                         name)
+            Timing.benchmark
+                (fn () => Vector.foldl (fn (k, m) => M.remove (m, k))
+                                       m shuffled,
+                 name, numberOfRuns, nkeys)
         end
     
     fun testReads keys m =
@@ -141,12 +165,13 @@ functor TestImmutableFn (Arg : TEST_IMMUTABLE_ARG) = struct
             val shuffled = shuffle keys
             val name = nameFor nkeys "reads"
             val n = 
-                Timing.time (fn () => Vector.foldl (fn (k, tot) =>
-                                                       case M.find (m, k) of
-                                                           NONE => tot
-                                                         | SOME x => tot + x)
-                                                   0 shuffled,
-                             name)
+                Timing.benchmark
+                    (fn () => Vector.foldl (fn (k, tot) =>
+                                               case M.find (m, k) of
+                                                   NONE => tot
+                                                 | SOME x => tot + x)
+                                           0 shuffled,
+                     name, numberOfRuns, nkeys)
         in
             if n <> nkeys
             then print ("ERROR: Failed to find all " ^ Int.toString nkeys ^
@@ -159,12 +184,13 @@ functor TestImmutableFn (Arg : TEST_IMMUTABLE_ARG) = struct
             val nonKeys = Arg.distinctKeys keys
             val name = nameFor nkeys "read misses"
             val n = 
-                Timing.time (fn () => Vector.foldl (fn (k, tot) =>
-                                                       case M.find (m, k) of
-                                                           NONE => tot
-                                                         | SOME x => tot + x)
-                                                   0 nonKeys,
-                             name)
+                Timing.benchmark
+                    (fn () => Vector.foldl (fn (k, tot) =>
+                                               case M.find (m, k) of
+                                                   NONE => tot
+                                                 | SOME x => tot + x)
+                                           0 nonKeys,
+                     name, numberOfRuns, nkeys)
         in
             if n <> 0
             then print ("ERROR: Failed to find expected 0 keys (found " ^
@@ -179,15 +205,16 @@ functor TestImmutableFn (Arg : TEST_IMMUTABLE_ARG) = struct
             val toDelete = Vector.tabulate
                                (half, fn i => Vector.sub (shuffledToDelete, i))
             val toLookup = shuffle keys
-            val name = nameFor nkeys "reads after deleting half"
+            val name = nameFor nkeys "read half-misses"
             val m = Vector.foldl (fn (k, m) => M.remove (m, k)) m toDelete
             val n = 
-                Timing.time (fn () => Vector.foldl (fn (k, tot) =>
-                                                       case M.find (m, k) of
-                                                           NONE => tot
-                                                         | SOME x => tot + x)
-                                                   0 toLookup,
-                             name)
+                Timing.benchmark
+                    (fn () => Vector.foldl (fn (k, tot) =>
+                                               case M.find (m, k) of
+                                                   NONE => tot
+                                                 | SOME x => tot + x)
+                                           0 toLookup,
+                     name, numberOfRuns, nkeys)
         in
             if n <> nkeys - half
             then print ("ERROR: Failed to find expected " ^
@@ -198,8 +225,9 @@ functor TestImmutableFn (Arg : TEST_IMMUTABLE_ARG) = struct
 
     fun testEnumeration keys m =
         let val nkeys = Vector.length keys
-            val name = nameFor nkeys "key-value enumeration"
-            val e = Timing.time (fn () => M.enumerate m, name)
+            val name = nameFor nkeys "enumeration"
+            val e = Timing.benchmark
+                        (fn () => M.enumerate m, name, numberOfRuns, nkeys)
         in
             if length e <> nkeys
             then print ("ERROR: Failed to enumerate expected " ^
@@ -252,7 +280,7 @@ structure TestStringHashMap = TestImmutableFn
                                     end
                                     val keys = randomStrings 50
                                     val distinctKeys = distinctStrings
-                                    val name = "string persistent hash map"
+                                    val name = "PersistentHashMap/string"
                                     end)
                                   
 structure TestStringRBMap = TestImmutableFn
@@ -267,7 +295,7 @@ structure TestStringRBMap = TestImmutableFn
                                   end
                                   val keys = randomStrings 50
                                   val distinctKeys = distinctStrings
-                                  val name = "string red-black map"
+                                  val name = "RedBlackMap/string"
                                   end)
 
 structure TestStringMTrieMap = TestImmutableFn
@@ -278,7 +306,7 @@ structure TestStringMTrieMap = TestImmutableFn
                                     end
                                     val keys = randomStrings 50
                                     val distinctKeys = distinctStrings
-                                    val name = "string mtrie-map"
+                                    val name = "MTrieMap/string"
                                     end)
 
 structure TestStringATrieMap = TestImmutableFn
@@ -289,7 +317,7 @@ structure TestStringATrieMap = TestImmutableFn
                                     end
                                     val keys = randomStrings 50
                                     val distinctKeys = distinctStrings
-                                    val name = "string atrie-map"
+                                    val name = "ATrieMap/string"
                                     end)
 
 structure IntRBMap = RedBlackMapFn
@@ -335,7 +363,7 @@ structure TestIntHashMap = TestImmutableFn
                                     end
                                     val keys = randomInts
                                     val distinctKeys = distinctInts
-                                    val name = "int persistent hash map"
+                                    val name = "PersistentHashMap/int"
                                     end)
            
 structure TestIntRBMap = TestImmutableFn
@@ -350,7 +378,7 @@ structure TestIntRBMap = TestImmutableFn
                                   end
                                   val keys = randomInts
                                   val distinctKeys = distinctInts
-                                  val name = "int red-black map"
+                                  val name = "RedBlackMap/int"
                                   end)
 
 signature MUTABLE_MAP = sig
@@ -380,35 +408,41 @@ functor TestMutableFn (Arg : TEST_MUTABLE_ARG) = struct
     val name = Arg.name
                    
     fun nameFor n label =
-        name ^ ": " ^ Int.toString n ^ " " ^ label
+        name ^ " | " ^ label
                       
     fun testInserts keys =
         let val nkeys = Vector.length keys
-            val name = nameFor nkeys "insertions"
-            val m = M.new (nkeys div 10)
+            val name = nameFor nkeys "inserts"
         in
-            Timing.time (fn () => Vector.app (fn k => M.insert (m, k, 1)) keys,
-                         name)
+            Timing.benchmark_with_setup
+                (fn () => M.new (nkeys div 10),
+                 fn m => Vector.app (fn k => M.insert (m, k, 1)) keys,
+                 name, numberOfRuns, nkeys)
         end
            
     fun testInsertsPresized keys =
         let val nkeys = Vector.length keys
-            val name = nameFor nkeys "insertions with preallocation"
-            val m = M.new nkeys
+            val name = nameFor nkeys "inserts + prealloc"
         in
-            Timing.time (fn () => Vector.app (fn k => M.insert (m, k, 1)) keys,
-                         name)
+            Timing.benchmark_with_setup
+                (fn () => M.new nkeys,
+                 fn m => Vector.app (fn k => M.insert (m, k, 1)) keys,
+                 name, numberOfRuns, nkeys)
         end
             
     fun testDeletes keys =
         let val nkeys = Vector.length keys
             val shuffled = shuffle keys
             val name = nameFor nkeys "deletes"
-            val m = M.new nkeys
-            val _ = Vector.app (fn k => M.insert (m, k, 1)) keys
         in
-            Timing.time (fn () => Vector.app (fn k => M.remove (m, k)) shuffled,
-                         name)
+            Timing.benchmark_with_setup
+                (fn () => let val m = M.new nkeys
+                              val _ = Vector.app (fn k => M.insert (m, k, 1)) keys
+                          in
+                              m
+                          end,
+                 fn m => Vector.app (fn k => M.remove (m, k)) shuffled,
+                 name, numberOfRuns, nkeys)
         end
     
     fun testReads keys =
@@ -418,12 +452,13 @@ functor TestMutableFn (Arg : TEST_MUTABLE_ARG) = struct
             val m = M.new nkeys
             val _ = Vector.app (fn k => M.insert (m, k, 1)) keys
             val n = 
-                Timing.time (fn () => Vector.foldl (fn (k, tot) =>
-                                                       case M.find (m, k) of
-                                                           NONE => tot
-                                                         | SOME x => tot + x)
-                                                   0 shuffled,
-                             name)
+                Timing.benchmark
+                    (fn () => Vector.foldl (fn (k, tot) =>
+                                               case M.find (m, k) of
+                                                   NONE => tot
+                                                 | SOME x => tot + x)
+                                           0 shuffled,
+                     name, numberOfRuns, nkeys)
         in
             if n <> nkeys
             then print ("ERROR: Failed to find all " ^ Int.toString nkeys ^
@@ -438,12 +473,13 @@ functor TestMutableFn (Arg : TEST_MUTABLE_ARG) = struct
             val m = M.new nkeys
             val _ = Vector.app (fn k => M.insert (m, k, 1)) keys
             val n = 
-                Timing.time (fn () => Vector.foldl (fn (k, tot) =>
-                                                       case M.find (m, k) of
-                                                           NONE => tot
-                                                         | SOME x => tot + x)
-                                                   0 nonKeys,
-                             name)
+                Timing.benchmark
+                    (fn () => Vector.foldl (fn (k, tot) =>
+                                               case M.find (m, k) of
+                                                   NONE => tot
+                                                 | SOME x => tot + x)
+                                           0 nonKeys,
+                     name, numberOfRuns, nkeys)
         in
             if n <> 0
             then print ("ERROR: Failed to find expected 0 keys (found " ^
@@ -463,12 +499,13 @@ functor TestMutableFn (Arg : TEST_MUTABLE_ARG) = struct
             val _ = Vector.app (fn k => M.insert (m, k, 1)) keys
             val _ = Vector.app (fn k => M.remove (m, k)) toDelete
             val n = 
-                Timing.time (fn () => Vector.foldl (fn (k, tot) =>
-                                                       case M.find (m, k) of
-                                                           NONE => tot
-                                                         | SOME x => tot + x)
-                                                   0 toLookup,
-                             name)
+                Timing.benchmark
+                    (fn () => Vector.foldl (fn (k, tot) =>
+                                               case M.find (m, k) of
+                                                   NONE => tot
+                                                 | SOME x => tot + x)
+                                           0 toLookup,
+                     name, numberOfRuns, nkeys)
         in
             if n <> nkeys - half
             then print ("ERROR: Failed to find expected " ^
@@ -482,7 +519,8 @@ functor TestMutableFn (Arg : TEST_MUTABLE_ARG) = struct
             val name = nameFor nkeys "key-value enumeration"
             val m = M.new nkeys
             val _ = Vector.app (fn k => M.insert (m, k, 1)) keys
-            val e = Timing.time (fn () => M.enumerate m, name)
+            val e = Timing.benchmark
+                        (fn () => M.enumerate m, name, numberOfRuns, nkeys)
         in
             if length e <> nkeys
             then print ("ERROR: Failed to enumerate expected " ^
@@ -521,7 +559,7 @@ structure TestIntHashTable = TestMutableFn
                                    end
                                    val keys = randomInts
                                    val distinctKeys = distinctInts
-                                   val name = "int mutable hash table"
+                                   val name = "HashTable/int"
                                    end)
 
 structure StringHashTable = HashTableFn(struct
@@ -549,7 +587,7 @@ structure TestStringHashTable = TestMutableFn
                                       end
                                       val keys = randomStrings 50
                                       val distinctKeys = distinctStrings
-                                      val name = "string mutable hash table"
+                                      val name = "HashTable/string"
                                       end)
     
 val tests = [
@@ -562,14 +600,6 @@ val tests = [
     (TestStringATrieMap.name, TestStringATrieMap.testAll),
     (TestStringHashTable.name, TestStringHashTable.testAll)
 ]
-        
-fun runAllTests n =
-    List.app (fn (tname, t) => (print (tname ^ ":\n"); t n)) tests
-
-fun runATest name n =
-    List.app (fn (tname, t) => if tname = name
-                               then t n
-                               else ()) tests
                                     
 fun usage () =
     let open TextIO
@@ -587,6 +617,27 @@ fun usage () =
                 "\n\n");
         raise Fail "Incorrect arguments specified"
     end
+
+fun printHeader () =
+    print "Container | Test name | No of runs | No of keys | Time per run | Keys per sec\n"
+                
+fun runAllTests n =
+    (printHeader ();
+     List.app (fn (tname, t) => (print (tname ^ ":\n"); t n)) tests)
+
+fun runATest name n =
+    let val found = List.foldl (fn ((n, _), found) => if found
+                                                      then true
+                                                      else n = name) false tests
+    in
+        if not found
+        then usage ()
+        else
+            (printHeader ();
+             List.app (fn (tname, t) => if tname = name
+                                        then t n
+                                        else ()) tests)
+    end
      
 fun handleArgs args =
     case args of
@@ -602,8 +653,8 @@ fun handleArgs args =
            
 fun main () =
     handleArgs (CommandLine.arguments ())
-    handle Fail msg =>
-           (TextIO.output (TextIO.stdErr, "Exception: " ^ msg ^ "\n");
+    handle e =>
+           (TextIO.output (TextIO.stdErr, "Exception: " ^ (exnMessage e) ^ "\n");
             OS.Process.exit OS.Process.failure)
         
      
