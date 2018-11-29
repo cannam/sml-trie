@@ -124,15 +124,15 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
     fun foldliPatternMatch f acc (node, p) =
-        let fun fold' (acc, pfx, NODE (NONE, _), []) = acc
-              | fold' (acc, pfx, NODE (SOME v, _), []) = f (rev pfx, v, acc)
-              | fold' (acc, pfx, NODE (_, vec), NONE::xs) =
-                M.foldli (fn (x, n, acc) => fold' (acc, x :: pfx, n, xs))
+        let fun fold' (acc, rpfx, NODE (NONE, _), []) = acc
+              | fold' (acc, rpfx, NODE (SOME v, _), []) = f (rev rpfx, v, acc)
+              | fold' (acc, rpfx, NODE (_, vec), NONE::xs) =
+                M.foldli (fn (x, n, acc) => fold' (acc, x :: rpfx, n, xs))
                          acc vec
-              | fold' (acc, pfx, NODE (_, vec), (SOME x)::xs) =
+              | fold' (acc, rpfx, NODE (_, vec), (SOME x)::xs) =
                 case M.find (vec, x) of
                     NONE => acc
-                  | SOME nsub => fold' (acc, x :: pfx, nsub, xs)
+                  | SOME nsub => fold' (acc, x :: rpfx, nsub, xs)
         in
             fold' (acc, [], node, p)
         end

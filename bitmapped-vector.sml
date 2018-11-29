@@ -42,7 +42,7 @@ structure BitWord32 :> BIT_VECTOR = struct
     exception UnsupportedLength
 
     fun new n = if n = 32
-                then 0w0
+                then Word32.fromInt 0
                 else raise UnsupportedLength
 
     fun length _ = 32
