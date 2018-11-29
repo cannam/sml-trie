@@ -16,7 +16,7 @@ functor PersistentHashMapFn (Key : HASH_KEY)
                            | MANY of 'a hash_value list
     type 'a hash_map = 'a hash_entry T.trie
 
-    val new = T.new
+    val empty = T.empty
 
     val isEmpty = T.isEmpty
 

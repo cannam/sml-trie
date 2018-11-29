@@ -55,7 +55,7 @@ structure Word32TrieMap
           | b::bb => Word32.orb (Word32.<< (implode bb, bitsPerNodeW),
                                  Word32.fromInt b)
 
-    val new = T.new
+    val empty = T.empty
 
     val isEmpty = T.isEmpty
 

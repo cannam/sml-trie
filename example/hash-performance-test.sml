@@ -113,7 +113,7 @@ val numberOfRuns = 3
 signature IMMUTABLE_MAP = sig
     type 'a map
     type key
-    val new : unit -> 'a map
+    val empty : 'a map
     val insert : 'a map * key * 'a -> 'a map
     val remove : 'a map * key -> 'a map
     val find : 'a map * key -> 'a option
@@ -145,7 +145,7 @@ functor TestImmutableFn (Arg : TEST_IMMUTABLE_ARG) = struct
         in
             Timing.benchmark
                 (fn () => Vector.foldl (fn (k, m) => M.insert (m, k, 1))
-                                       (M.new ()) keys,
+                                       (M.empty) keys,
                  name, numberOfRuns, nkeys)
         end
     

@@ -19,8 +19,8 @@ signature PERSISTENT_HASH_MAP = sig
     type 'a hash_map
     type hash_key
 
-    (** Create an empty hash map *)
-    val new : unit -> 'a hash_map
+    (** Empty hash map *)
+    val empty : 'a hash_map
 
     (** Test whether a hash map is empty *)
     val isEmpty : 'a hash_map -> bool

@@ -8,8 +8,8 @@ signature TRIE = sig
     type t = trie
     type entry
 
-    (* Create an empty trie *)
-    val new : unit -> t
+    (* Empty trie *)
+    val empty : t
 
     (** Test whether a trie is empty. Note that this could be slow, as
         it is possible for some implementations to have substantial
