@@ -8,6 +8,7 @@ signature LIST_TRIE_NODE_MAP = sig
     val new : unit -> 'a map
     val isEmpty : 'a map -> bool
     val find : 'a map * key -> 'a option
+    val foldl : ('a * 'b -> 'b) -> 'b -> 'a map -> 'b
     val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a map -> 'b
     val update : 'a map * key * 'a -> 'a map
     val remove : 'a map * key -> 'a map
@@ -79,7 +80,18 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         case find (t, k) of
             SOME _ => true
           | NONE => false
-                     
+             
+    fun foldl f acc n =
+        let fun fold' (acc, NODE (item, map)) =
+                M.foldl (fn (n, acc) => fold' (acc, n))
+                        (case item of
+                             NONE => acc
+                           | SOME v => f (v, acc))
+                        map
+        in
+            fold' (acc, n)
+        end
+
     (* rpfx is reversed prefix built up so far (using cons) *)
     fun foldli_helper f (acc, rpfx, NODE (item, vec)) =
         M.foldli (fn (x, n, acc) => foldli_helper f (acc, x :: rpfx, n))
@@ -87,9 +99,6 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
                       NONE => acc
                     | SOME v => f (rev rpfx, v, acc))
                  vec
-
-    fun foldl f acc n = 
-        foldli_helper (fn (k, v, acc) => f (v, acc)) (acc, [], n)
                       
     fun foldli f acc n = 
         foldli_helper f (acc, [], n)
