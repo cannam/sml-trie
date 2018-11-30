@@ -109,7 +109,9 @@ fun shuffle vec =
     end
 
 val numberOfRuns = 3
-        
+
+datatype test_type = TEST_MEMORY | TEST_ALL
+                       
 signature IMMUTABLE_MAP = sig
     type 'a map
     type key
@@ -235,17 +237,33 @@ functor TestImmutableFn (Arg : TEST_IMMUTABLE_ARG) = struct
                         " items (found " ^ Int.toString (length e) ^ ")\n")
             else ()
         end
-            
-    fun testAll nkeys =
-        let val keys = Arg.keys nkeys
-            val fullMap = testInserts keys
+
+    fun testMemory nkeys =
+        let fun fill (m, 0) = m
+              | fill (m, n) =
+                let val key = Vector.sub (Arg.keys 1, 0)
+                    val m' = M.insert (m, key, 1)
+                in
+                    fill (m', n-1)
+                end
         in
-            testDeletes keys fullMap;
-            testReads keys fullMap;
-            testReadMisses keys fullMap;
-            testReadsAfterDeletingHalf keys fullMap;
-            testEnumeration keys fullMap
+            ignore (fill (M.empty, nkeys));
+            print "- | - | - | - | - | -\n"
         end
+            
+    fun test testType nkeys =
+        case testType of
+            TEST_MEMORY => testMemory nkeys
+          | TEST_ALL => 
+            let val keys = Arg.keys nkeys
+                val fullMap = testInserts keys
+            in
+                testDeletes keys fullMap;
+                testReads keys fullMap;
+                testReadMisses keys fullMap;
+                testReadsAfterDeletingHalf keys fullMap;
+                testEnumeration keys fullMap
+            end
             
 end
 
@@ -529,17 +547,34 @@ functor TestMutableFn (Arg : TEST_MUTABLE_ARG) = struct
             else ()
         end
             
-    fun testAll nkeys =
-        let val keys = Arg.keys nkeys
+    fun testMemory nkeys =
+        let val m = M.new nkeys
+            fun fill 0 = ()
+              | fill n =
+                let val key = Vector.sub (Arg.keys 1, 0)
+                    val _ = M.insert (m, key, 1)
+                in
+                    fill (n-1)
+                end
         in
-            testInserts keys;
-            testInsertsPresized keys;
-            testDeletes keys;
-            testReads keys;
-            testReadMisses keys;
-            testReadsAfterDeletingHalf keys;
-            testEnumeration keys
+            ignore (fill nkeys);
+            print "- | - | - | - | - | -\n"
         end
+            
+    fun test testType nkeys =
+        case testType of
+            TEST_MEMORY => testMemory nkeys
+          | TEST_ALL => 
+            let val keys = Arg.keys nkeys
+            in
+                testInserts keys;
+                testInsertsPresized keys;
+                testDeletes keys;
+                testReads keys;
+                testReadMisses keys;
+                testReadsAfterDeletingHalf keys;
+                testEnumeration keys
+            end
 end
 
 structure TestIntHashTable = TestMutableFn
@@ -590,17 +625,21 @@ structure TestStringHashTable = TestMutableFn
                                       val name = "HashTable/string"
                                       end)
     
-val tests = [
-    (TestIntHashMap.name, TestIntHashMap.testAll),
-    (TestIntRBMap.name, TestIntRBMap.testAll),
-    (TestIntHashTable.name, TestIntHashTable.testAll),
-    (TestStringHashMap.name, TestStringHashMap.testAll),
-    (TestStringRBMap.name, TestStringRBMap.testAll),
-    (TestStringMTrieMap.name, TestStringMTrieMap.testAll),
-    (TestStringATrieMap.name, TestStringATrieMap.testAll),
-    (TestStringHashTable.name, TestStringHashTable.testAll)
+val testStubs = [
+    (TestIntHashMap.name, TestIntHashMap.test),
+    (TestIntRBMap.name, TestIntRBMap.test),
+    (TestIntHashTable.name, TestIntHashTable.test),
+    (TestStringHashMap.name, TestStringHashMap.test),
+    (TestStringRBMap.name, TestStringRBMap.test),
+    (TestStringMTrieMap.name, TestStringMTrieMap.test),
+    (TestStringATrieMap.name, TestStringATrieMap.test),
+    (TestStringHashTable.name, TestStringHashTable.test)
 ]
-                                    
+
+val tests =
+    map (fn (n, t) => (n, t TEST_ALL)) testStubs @
+    map (fn (n, t) => (n ^ "/memory", t TEST_MEMORY)) testStubs
+                    
 fun usage () =
     let open TextIO
     in
@@ -611,6 +650,8 @@ fun usage () =
                 "\n" ^
                 "<n>         - size of test; number of items to insert/delete\n" ^
                 "<test-name> - name of single test suite to run (default is to run them all)\n\n" ^
+                "Test names ending in /memory print no output, and are intended to be run with\n" ^
+                "memory profiling to determine how much space a filled container uses.\n\n" ^
                 "Recognised test names are:\n" ^
                 (String.concatWith
                      "; " (map (fn (name, _) => "\"" ^ name ^ "\"") tests)) ^
