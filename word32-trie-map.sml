@@ -17,8 +17,12 @@ structure Word32NodeMap
     fun update (v, k, f) = V.modify (v, k, fn x => SOME (f x))
                        
 end
-                      
-structure Word32TrieMap
+
+signature WORD32_TRIE_MAP_FN_ARG = sig
+    val bitsToUse : int
+end
+                                            
+functor Word32TrieMapFn (Arg : WORD32_TRIE_MAP_FN_ARG)
           :> TRIE_MAP
                  where type key = Word32.word = struct
 
@@ -32,9 +36,7 @@ structure Word32TrieMap
 
     val bitsPerNode = 5    (* This cannot be > 5, since we are using a
                               32-bit bitmap for 32 slots in our vector *)
-    val bitsPerWord32 = 30 (* Total bits we use - ideally 32, but 30 is
-                              divisible by 5 and gives us good enough
-                              distribution in measurements *)
+    val bitsToUse = Arg.bitsToUse
     val bitsPerNodeW = Word.fromInt bitsPerNode
     val valuesPerNode = Word.toInt (Word.<< (0w1, bitsPerNodeW))
     val nodeMask = Word32.fromInt (valuesPerNode - 1)
@@ -50,7 +52,7 @@ structure Word32TrieMap
                 else Word32.toIntX (Word32.andb (w, nodeMask)) ::
                      explode' (Word32.>> (w, bitsPerNodeW), n - bitsPerNode)
         in
-            explode' (w, bitsPerWord32)
+            explode' (w, Arg.bitsToUse)
         end
 
     fun implode bb =
@@ -108,3 +110,6 @@ structure Word32TrieMap
    
 end
     
+structure Word32TrieMap = Word32TrieMapFn(struct val bitsToUse = 32 end)
+
+
