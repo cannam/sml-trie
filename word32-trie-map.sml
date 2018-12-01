@@ -4,60 +4,16 @@
 
 structure Word32NodeMap
           :> LIST_TRIE_NODE_MAP
-                 where type key = int
-= struct
+                 where type key = int = struct
 
     structure V = BitMappedVector32
 
     type key = int
+    type 'a map = 'a V.vector
 
-    datatype 'a map = SPARSE of 'a V.vector
-                    | DENSE of (int * 'a option Vector.vector)
-
-    val sparseLimit = 16
-                                  
-    fun new () = SPARSE (V.new 32)
-
-    fun isEmpty (SPARSE m) = V.isEmpty m
-      | isEmpty (DENSE (0, _)) = true
-      | isEmpty _ = false
-
-    fun find (SPARSE m, k) = V.find (m, k)
-      | find (DENSE (_, m), k) = Vector.sub (m, k)
-
-    fun foldl f acc (SPARSE m) = V.foldl f acc m
-      | foldl f acc (DENSE (_, m)) =
-        Vector.foldl (fn (SOME x, acc) => f (x, acc)
-                       | (_, acc) => acc) acc m
-
-    fun foldli f acc (SPARSE m) = V.foldli f acc m
-      | foldli f acc (DENSE (_, m)) =
-        Vector.foldli (fn (i, SOME x, acc) => f (i, x, acc)
-                        | (_, _, acc) => acc)
-                      acc m
-
-    fun makeDense (DENSE d) = DENSE d
-      | makeDense (SPARSE m) = 
-        DENSE (V.population m, Vector.tabulate (32, fn i => V.find (m, i)))
-
-    fun makeSparse (SPARSE m) = SPARSE m
-      | makeSparse (DENSE (_, m)) =
-        SPARSE (V.tabulate (32, fn i => Vector.sub (m, i)))
-                      
-    fun update (SPARSE m, k, v) =
-        if V.population m > sparseLimit
-        then update (makeDense (SPARSE m), k, v)
-        else SPARSE (V.update (m, k, v))
-      | update (DENSE (n, m), k, v) =
-        case Vector.sub (m, k) of
-            NONE => DENSE (n + 1, Vector.update (m, k, SOME v))
-          | SOME _ => DENSE (n, Vector.update (m, k, SOME v))
-
-    fun remove (SPARSE m, k) = SPARSE (V.remove (m, k))
-      | remove (DENSE (n, m), k) =
-        if n <= sparseLimit
-        then remove (makeSparse (DENSE (n, m)), k)
-        else DENSE (n - 1, Vector.update (m, k, NONE))
+    open V
+             
+    fun new () = V.new 32
                        
 end
                       
