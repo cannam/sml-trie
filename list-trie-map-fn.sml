@@ -10,7 +10,7 @@ signature LIST_TRIE_NODE_MAP = sig
     val find : 'a map * key -> 'a option
     val foldl : ('a * 'b -> 'b) -> 'b -> 'a map -> 'b
     val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a map -> 'b
-    val update : 'a map * key * 'a -> 'a map
+    val update : 'a map * key * ('a option -> 'a) -> 'a map
     val remove : 'a map * key -> 'a map
 end
                                           
@@ -40,12 +40,10 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     fun update' (n, xx, f) =
         case (n, xx) of
             (NODE (item, vec), []) => NODE (SOME (f item), vec)
-          | (NODE (item, vec), x::xs) => 
-            case M.find (vec, x) of
-                NONE =>
-                NODE (item, M.update (vec, x, update' (newNode (), xs, f)))
-              | SOME nsub =>
-                NODE (item, M.update (vec, x, update' (nsub, xs, f)))
+          | (NODE (item, vec), x::xs) =>
+            NODE (item,
+                  M.update (vec, x, fn NONE => update' (newNode (), xs, f)
+                                     | SOME nsub => update' (nsub, xs, f)))
 
     fun update (EMPTY, xx, f) = POPULATED (update' (newNode(), xx, f))
       | update (POPULATED n, xx, f) = POPULATED (update' (n, xx, f))
@@ -70,7 +68,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
                                 SOME _ => NODE (item, vv)
                               | NONE => NODE (item, vv)
                         end
-                    else NODE (item, M.update (vec, x, nsub'))
+                    else NODE (item, M.update (vec, x, fn _ => nsub'))
                 end
 
     fun remove (EMPTY, _) = EMPTY

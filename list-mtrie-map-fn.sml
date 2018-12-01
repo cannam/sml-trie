@@ -21,7 +21,7 @@ functor MTrieNodeMapFn (E : MTRIE_ELEMENT)
     open M
                      
     fun new _ = M.empty
-    val update = M.insert
+    fun update (m, k, f) = M.insert (m, k, f (M.find (m, k)))
     fun remove (m, k) = #1 (M.remove (m, k))
                                 
 end

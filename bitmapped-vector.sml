@@ -230,11 +230,11 @@ functor BitMappedVectorFn (V : BIT_VECTOR) = struct
                          :: acc)
                  [] b)
             
-    fun modify ((b, v) : 'a vector, i : int, xo : 'a option) : 'a vector =
+    fun modify ((b, v) : 'a vector, i : int, f : 'a option -> 'a option) : 'a vector =
         let val pc = V.popcount (b, i)
         in
             if V.sub (b, i)
-            then case xo of
+            then case f (SOME (Vector.sub (v, pc))) of
                      NONE =>
                      (V.update (b, i, false),
                       Vector.tabulate (Vector.length v - 1,
@@ -243,7 +243,7 @@ functor BitMappedVectorFn (V : BIT_VECTOR) = struct
                                                else Vector.sub (v, j + 1)))
                    | SOME x =>
                      (b, Vector.update (v, pc, x))
-            else case xo of
+            else case f NONE of
                      NONE =>
                      (b, v)
                    | SOME x =>
@@ -257,10 +257,10 @@ functor BitMappedVectorFn (V : BIT_VECTOR) = struct
         end
 
     fun update (vec, i, x) =
-        modify (vec, i, SOME x)
+        modify (vec, i, fn _ => SOME x)
 
     fun remove (vec, i) =
-        modify (vec, i, NONE)
+        modify (vec, i, fn _ => NONE)
 
     fun foldli (f : (int * 'a * 'b -> 'b))
                (acc : 'b) ((b, v) : 'a vector) : 'b =
