@@ -10,36 +10,55 @@ functor PersistentHashMapFn (Key : HASH_KEY)
     type hash = Word32.word
 
     structure T = Word32TrieMap
-
+                      
     type 'a hash_value = hash_key * 'a
     datatype 'a hash_entry = ONE of 'a hash_value
-                           | MANY of 'a hash_value list
+                           | MANY of 'a hash_value vector
     type 'a hash_map = 'a hash_entry T.trie
 
     val empty = T.empty
 
     val isEmpty = T.isEmpty
 
+    fun findKey (values, k) =
+        case Vector.findi (fn (i, (k', v')) => Key.sameKey (k', k)) values of
+            NONE => NONE
+          | SOME (i, _) => SOME i
+                      
     fun addToEntry (h : hash, k : hash_key, v : 'a)
                    (e : 'a hash_entry option) : 'a hash_entry =
         case e of
             NONE => ONE (k, v)
           | SOME (ONE (k', v')) => if Key.sameKey (k', k)
                                    then ONE (k', v)
-                                   else MANY [(k, v), (k', v')]
-          | SOME (MANY values) => 
-            case List.foldr (fn ((k', v'), (acc, found)) =>
-                                if Key.sameKey (k', k)
-                                then ((k', v) :: acc, true)
-                                else ((k', v') :: acc, found))
-                            ([], false)
-                            values of
-                (acc, false) => MANY ((k, v) :: acc)
-              | (acc, true) => MANY acc
+                                   else MANY (Vector.fromList [(k, v), (k', v')])
+          | SOME (MANY values) =>
+            case findKey (values, k) of
+                NONE => MANY (Vector.concat [values, Vector.fromList [(k, v)]])
+              | SOME i => MANY (Vector.update (values, i, (k, v)))
 
-    fun removeFromValues (h : hash, k : hash_key)
-                         (values : 'a hash_value list) : 'a hash_value list =
-        List.filter (fn (k', _) => not (Key.sameKey (k', k))) values
+    fun removeFromEntry (h : hash, k : hash_key)
+                        (e : 'a hash_entry) : 'a hash_entry option =
+        case e of
+            ONE (k', v') => if Key.sameKey (k', k)
+                            then NONE
+                            else SOME e
+          | MANY values => 
+            case findKey (values, k) of
+                NONE => SOME (MANY values)
+              | SOME i =>
+                case Vector.length values of
+                    0 => raise Fail "Internal error: zero-length SOME vector"
+                  | 1 => NONE
+                  | 2 =>
+                    SOME (ONE (Vector.sub (values,
+                                           if i = 0 then 1 else 0)))
+                  | len =>
+                    SOME (MANY (Vector.tabulate
+                                    (len - 1,
+                                     fn j => if j < i
+                                             then Vector.sub (values, j)
+                                             else Vector.sub (values, j + 1))))
                                    
     fun insert (m, k, v) =
         let val h = Key.hashVal k
@@ -52,15 +71,10 @@ functor PersistentHashMapFn (Key : HASH_KEY)
         in
             case T.find (m, h) of
                 NONE => m
-              | SOME (ONE (k', _)) =>
-                if Key.sameKey (k', k)
-                then T.remove (m, h)
-                else m
-              | SOME (MANY values) =>
-                case removeFromValues (h, k) values of
-                    [] => T.remove (m, h)
-                  | [value] => T.insert (m, h, ONE value)
-                  | values => T.insert (m, h, MANY values)
+              | SOME entry =>
+                case removeFromEntry (h, k) entry of
+                    NONE => T.remove (m, h)
+                  | SOME entry' => T.insert (m, h, entry')
         end
             
     fun find (m, k) =
@@ -72,9 +86,9 @@ functor PersistentHashMapFn (Key : HASH_KEY)
                                       then SOME v
                                       else NONE
               | SOME (MANY values) =>
-                case List.find (fn (k', v) => Key.sameKey (k', k)) values of
+                case findKey (values, k) of
                     NONE => NONE
-                  | SOME (_, v) => SOME v
+                  | SOME i => case Vector.sub (values, i) of (k, v) => SOME v
         end
 
     fun lookup (m, k) =
@@ -92,8 +106,8 @@ functor PersistentHashMapFn (Key : HASH_KEY)
                     case entry of
                         ONE (k, v) => f (v, acc)
                       | MANY values => 
-                        List.foldl (fn ((k, v), acc) =>
-                                       f (v, acc)) acc values)
+                        Vector.foldl (fn ((k, v), acc) =>
+                                         f (v, acc)) acc values)
                 acc m
 
     fun foldli f acc m =
@@ -101,8 +115,8 @@ functor PersistentHashMapFn (Key : HASH_KEY)
                     case entry of
                         ONE (k, v) => f (k, v, acc)
                       | MANY values => 
-                        List.foldl (fn ((k, v), acc) =>
-                                       f (k, v, acc)) acc values)
+                        Vector.foldl (fn ((k, v), acc) =>
+                                         f (k, v, acc)) acc values)
                 acc m
 
     fun enumerate m =
