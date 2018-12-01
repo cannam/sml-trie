@@ -30,8 +30,11 @@ structure Word32TrieMap
        available through Word32NodeMap. It is coincidence that this
        happens to be the same as the key size *)
 
-    val bitsPerNode = 5 (* This cannot be > 5, since we are using a
-                           32-bit bitmap for 32 slots in our vector *)
+    val bitsPerNode = 5    (* This cannot be > 5, since we are using a
+                              32-bit bitmap for 32 slots in our vector *)
+    val bitsPerWord32 = 30 (* Total bits we use - ideally 32, but 30 is
+                              divisible by 5 and gives us good enough
+                              distribution in measurements *)
     val bitsPerNodeW = Word.fromInt bitsPerNode
     val valuesPerNode = Word.toInt (Word.<< (0w1, bitsPerNodeW))
     val nodeMask = Word32.fromInt (valuesPerNode - 1)
@@ -47,7 +50,7 @@ structure Word32TrieMap
                 else Word32.toIntX (Word32.andb (w, nodeMask)) ::
                      explode' (Word32.>> (w, bitsPerNodeW), n - bitsPerNode)
         in
-            explode' (w, 32)
+            explode' (w, bitsPerWord32)
         end
 
     fun implode bb =
