@@ -52,7 +52,7 @@ functor Word32TrieMapFn (Arg : WORD32_TRIE_MAP_FN_ARG)
                 else Word32.toIntX (Word32.andb (w, nodeMask)) ::
                      explode' (Word32.>> (w, bitsPerNodeW), n - bitsPerNode)
         in
-            explode' (w, Arg.bitsToUse)
+            explode' (w, bitsToUse)
         end
 
     fun implode bb =
