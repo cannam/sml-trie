@@ -42,4 +42,21 @@ int main(int, char **)
     cout << n << " insertions with preallocation: "
          << chrono::duration_cast<chrono::microseconds>(after - before).count()
          << " us" << endl;
+
+    for (int i = n - 1; i > 0; --i) {
+        int j = rand() % (i + 1);
+        auto iv = strings[i];
+        strings[i] = strings[j];
+        strings[j] = iv;
+    }
+
+    before = chrono::high_resolution_clock::now();
+    int total = 0;
+    for (int i = 0; i < n; ++i) {
+        total += h[strings[i]];
+    }
+    after = chrono::high_resolution_clock::now();
+    cout << n << " reads: "
+         << chrono::duration_cast<chrono::microseconds>(after - before).count()
+         << " us" << endl;
 }

@@ -22,73 +22,71 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     type key = element list
     type pattern = element option list
                                
-    datatype 'a node = NODE of 'a option * 'a node M.map
+    datatype 'a node = NODE of 'a M.map * 'a node M.map
 
-    datatype 'a trie = EMPTY
-                     | POPULATED of 'a node
+    datatype 'a trie = EMPTY |
+                       TRIE of 'a option * 'a node
 
-    fun newNode () = NODE (NONE, M.new ())
-        
     val empty = EMPTY
                                                          
-    fun isEmptyNode (NODE (NONE, m)) = M.isEmpty m
+    fun newNode () = NODE (M.new (), M.new ())
+        
+    fun isEmptyNode (NODE (vm, nm)) = M.isEmpty vm andalso M.isEmpty nm
       | isEmptyNode _ = false
 
     fun isEmpty EMPTY = true
       | isEmpty _ = false
 
-    fun update' (n, xx, f) =
-        case (n, xx) of
-            (NODE (item, vec), []) => NODE (SOME (f item), vec)
-          | (NODE (item, vec), x::xs) =>
-            NODE (item,
-                  M.update (vec, x, fn NONE => update' (newNode (), xs, f)
-                                     | SOME nsub => update' (nsub, xs, f)))
+    fun update' (NODE (vm, nm), xx, f) =
+        case xx of
+            [] => raise Fail "Internal error: empty entry reached in update'"
+          | [x] => NODE (M.update (vm, x, f), nm)
+          | x::xs => NODE (vm, M.update (nm, x,
+                                         fn NONE => update' (newNode (), xs, f)
+                                          | SOME nsub => update' (nsub, xs, f)))
 
-    fun update (EMPTY, xx, f) = POPULATED (update' (newNode(), xx, f))
-      | update (POPULATED n, xx, f) = POPULATED (update' (n, xx, f))
+    fun update (EMPTY, xx, f) = update (TRIE (NONE, newNode ()), xx, f)
+      | update (TRIE (v, n), [], f) = TRIE (SOME (f v), n)
+      | update (TRIE (v, n), xx, f) = TRIE (v, update' (n, xx, f))
 
     fun insert (n, xx, v) =
         update (n, xx, fn _ => v)
 
-    fun remove' (n, xx) =
-        case (n, xx) of
-            (NODE (item, vec), []) => NODE (NONE, vec)
-          | (n as NODE (item, vec), x::xs) =>
-            case M.find (vec, x) of
-                NONE => n
-              | SOME nsub =>
-                let val nsub' = remove' (nsub, xs)
-                in
-                    if isEmptyNode nsub'
-                    then 
-                        let val vv = M.remove (vec, x)
-                        in
-                            case item of
-                                SOME _ => NODE (item, vv)
-                              | NONE => NODE (item, vv)
-                        end
-                    else NODE (item, M.update (vec, x, fn _ => nsub'))
-                end
+    fun remove' (NODE (vm, nm), xx) =
+        case xx of
+            [] => raise Fail "Internal error: empty entry reached in remove'"
+          | [x] => NODE (M.remove (vm, x), nm)
+          | x::xs => case M.find (nm, x) of
+                         NONE => NODE (vm, nm)
+                       | SOME nsub =>
+                         let val nsub' = remove' (nsub, xs)
+                         in
+                             if isEmptyNode nsub'
+                             then NODE (vm, M.remove (nm, x))
+                             else NODE (vm, M.update (nm, x, fn _ => nsub'))
+                         end
 
     fun remove (EMPTY, _) = EMPTY
-      | remove (POPULATED n, xx) =
+      | remove (TRIE (_, n), []) = TRIE (NONE, n)
+      | remove (TRIE (v, n), xx) =
         let val n' = remove' (n, xx)
         in
-            if isEmptyNode n'
+            if isEmptyNode n' andalso v = NONE
             then EMPTY
-            else POPULATED n'
+            else TRIE (v, n')
         end
-                    
-    fun find' (NODE (item, _), []) = item
-      | find' (NODE (item, vec), x::xs) =
-        case M.find (vec, x) of
-            NONE => NONE
-          | SOME nsub => find' (nsub, xs)
+
+    fun find' (NODE (vm, nm), xx) =
+        case xx of
+            [] => raise Fail "Internal error: empty entry reached in find'"
+          | [x] => M.find (vm, x)
+          | x::xs => case M.find (nm, x) of
+                         NONE => NONE
+                       | SOME nsub => find' (nsub, xs)
 
     fun find (EMPTY, _) = NONE
-      | find (POPULATED n, xx) =
-        find' (n, xx)
+      | find (TRIE (v, _), []) = v
+      | find (TRIE (_, n), xx) = find' (n, xx)
                                
     fun lookup (t, k) =
         case find (t, k) of
@@ -101,50 +99,56 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
           | NONE => false
              
     fun foldl f acc t =
-        let fun fold' (acc, NODE (item, map)) =
-                M.foldl (fn (n, acc) => fold' (acc, n))
-                        (case item of
-                             NONE => acc
-                           | SOME v => f (v, acc))
-                        map
+        let fun fold' (NODE (vm, nm), acc) =
+                M.foldl fold'
+                        (M.foldl f acc vm)
+                        nm
         in
             case t of
                 EMPTY => acc
-              | POPULATED n => fold' (acc, n)
+              | TRIE (NONE, n) => fold' (n, acc)
+              | TRIE (SOME v, n) => fold' (n, f (v, acc))
         end
 
-    (* rpfx is reversed prefix built up so far (using cons) *)
-    fun foldli_helper f (acc, rpfx, NODE (item, vec)) =
-        M.foldli (fn (x, n, acc) => foldli_helper f (acc, x :: rpfx, n))
-                 (case item of
-                      NONE => acc
-                    | SOME v => f (rev rpfx, v, acc))
-                 vec
-                      
+    fun foldli_helper f (rpfx, NODE (vm, nm), acc) =
+        M.foldli (fn (k, n, acc) => foldli_helper f (k :: rpfx, n, acc))
+                 (M.foldli (fn (k, v, acc) => f (k :: rpfx, v, acc))
+                           acc vm)
+                 nm
+            
     fun foldli f acc t =
         case t of
             EMPTY => acc
-          | POPULATED n => foldli_helper f (acc, [], n)
+          | TRIE (NONE, n) => foldli_helper f ([], n, acc)
+          | TRIE (SOME v, n) => foldli_helper f ([], n, f ([], v, acc))
 
     fun enumerate trie =
         rev (foldli (fn (k, v, acc) => (k, v) :: acc) [] trie)
 
     fun foldliPrefixMatch' f acc (node, e) = 
         (* rpfx is reversed prefix built up so far (using cons) *)
-        let fun fold' (acc, rpfx, n, []) = foldli_helper f (acc, rpfx, n)
-              | fold' (acc, rpfx, NODE (item, vec), x::xs) =
-                case M.find (vec, x) of
-                    NONE => acc
-                  | SOME nsub => fold' (acc, x :: rpfx, nsub, xs)
+        let fun fold' (rpfx, n, acc, []) = foldli_helper f (rpfx, n, acc)
+              | fold' (rpfx, NODE (vm, nm), acc, [x]) =
+                (case M.find (vm, x) of
+                     NONE => acc
+                   | SOME v => f (x :: rpfx, v, acc))
+              | fold' (rpfx, NODE (vm, nm), acc, x::xs) =
+                (case M.find (nm, x) of
+                     NONE => acc
+                   | SOME nsub => fold' (x :: rpfx, nsub, acc, xs))
         in
-            fold' (acc, [], node, e)
+            fold' ([], node, acc, e)
         end
 
-    fun foldliPrefixMatch f acc (trie, e) =
-        case trie of
+    fun foldliPrefixMatch f acc (t, e) =
+        case t of
             EMPTY => acc
-          | POPULATED n => foldliPrefixMatch' f acc (n, e)
-            
+          | TRIE (NONE, n) => foldliPrefixMatch' f acc (n, e)
+          | TRIE (SOME v, n) =>
+            case e of
+                [] => foldliPrefixMatch' f (f ([], v, acc)) (n, e)
+              | _ => foldliPrefixMatch' f acc (n, e)
+                                        
     fun foldlPrefixMatch f acc (trie, e) =
         foldliPrefixMatch (fn (k, v, acc) => f (v, acc)) acc (trie, e)
             
@@ -152,23 +156,28 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
     fun foldliPatternMatch' f acc (node, p) =
-        let fun fold' (acc, rpfx, NODE (NONE, _), []) = acc
-              | fold' (acc, rpfx, NODE (SOME v, _), []) = f (rev rpfx, v, acc)
-              | fold' (acc, rpfx, NODE (_, vec), NONE::xs) =
-                M.foldli (fn (x, n, acc) => fold' (acc, x :: rpfx, n, xs))
-                         acc vec
-              | fold' (acc, rpfx, NODE (_, vec), (SOME x)::xs) =
-                case M.find (vec, x) of
-                    NONE => acc
-                  | SOME nsub => fold' (acc, x :: rpfx, nsub, xs)
+        let fun fold' (rpfx, n, acc, []) = acc
+              | fold' (rpfx, NODE (vm, nm), acc, NONE::xs) =
+                M.foldli (fn (k, n, acc) => fold' (k :: rpfx, n, acc, xs))
+                         (M.foldli (fn (k, v, acc) => f (k :: rpfx, v, acc))
+                                   acc vm)
+                         nm
+              | fold' (rpfx, NODE (vm, nm), acc, (SOME x)::xs) =
+                M.foldli (fn (k, n, acc) => fold' (k :: rpfx, n, acc, xs))
+                         (case M.find (vm, x) of
+                              NONE => acc
+                            | SOME v => f (x :: rpfx, v, acc))
+                         nm
         in
-            fold' (acc, [], node, p)
+            fold' ([], node, acc, p)
         end
 
-    fun foldliPatternMatch f acc (trie, p) =
-        case trie of
-            EMPTY => acc
-          | POPULATED node => foldliPatternMatch' f acc (node, p)
+    fun foldliPatternMatch f acc (t, p) =
+        case (t, p) of
+            (EMPTY, _) => acc
+          | (TRIE (NONE, n), []) => acc
+          | (TRIE (SOME v, n), []) => f ([], v, acc)
+          | (TRIE (_, n), p) => foldliPatternMatch' f acc (n, p)
             
     fun patternMatch (trie, p) =
         rev (foldliPatternMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
