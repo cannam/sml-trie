@@ -14,12 +14,12 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
     structure T = ARG.T
     val name = ARG.name
 
-    val strings = [ "poot", "parp", "par",
+    val strings = [ "poot", "parp", "par", "po",
 		    "alligator", "zebra",
 		    "alliance", "abrasive",
 		    "a" ]
 
-    val cutdown_strings = [ "poot", "parp",
+    val cutdown_strings = [ "poot", "parp", "po",
 			    "alligator",
 			    "alliance", "abrasive",
 			    "a" ]
