@@ -54,10 +54,9 @@ functor PersistentHashMapFn (Key : HASH_KEY)
         in
             case T.find (m, h) of
                 NONE => m
-              | SOME (ONE (k', _)) =>
-                if Key.sameKey (k', k)
-                then T.remove (m, h)
-                else m
+              | SOME (ONE (k', _)) => if Key.sameKey (k', k)
+                                      then T.remove (m, h)
+                                      else m
               | SOME (MANY values) =>
                 case removeFromValues (h, k) values of
                     [] => T.remove (m, h)
