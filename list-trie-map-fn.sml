@@ -111,7 +111,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         end
 
     fun foldli_helper f (rpfx, NODE (vm, nm), acc) =
-        M.foldli (fn (k, n, acc) => foldli_helper f (rev (k :: rpfx), n, acc))
+        M.foldli (fn (k, n, acc) => foldli_helper f (k :: rpfx, n, acc))
                  (M.foldli (fn (k, v, acc) => f (rev (k :: rpfx), v, acc))
                            acc vm)
                  nm
@@ -128,18 +128,24 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     fun foldliPrefixMatch' f acc (node, e) = 
         (* rpfx is reversed prefix built up so far (using cons) *)
         let fun fold' (rpfx, n, acc, []) = foldli_helper f (rpfx, n, acc)
-              | fold' (rpfx, NODE (vm, nm), acc, [x]) =
-                (case M.find (vm, x) of
+              | fold' (rpfx, n as NODE (vm, nm), acc, [x]) =
+                (case M.find (nm, x) of
                      NONE => acc
-                   | SOME v => f (rev (x :: rpfx), v, acc))
+                   | SOME nsub =>
+                     fold' (x :: rpfx, nsub,
+                            case M.find (vm, x) of
+                                NONE => acc
+                              | SOME v => f (rev (x :: rpfx), v, acc),
+                            []))
               | fold' (rpfx, NODE (vm, nm), acc, x::xs) =
                 (case M.find (nm, x) of
                      NONE => acc
-                   | SOME nsub => fold' (rev (x :: rpfx), nsub, acc, xs))
+                   | SOME nsub => fold' (x :: rpfx, nsub, acc, xs))
         in
             fold' ([], node, acc, e)
         end
 
+    (*!!! we need to test these edge cases better, now that they are actually edge cases *)
     fun foldliPrefixMatch f acc (t, e) =
         case t of
             EMPTY => acc
@@ -156,18 +162,23 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
     fun foldliPatternMatch' f acc (node, p) =
-        let fun fold' (rpfx, n, acc, []) = acc
-              | fold' (rpfx, NODE (vm, nm), acc, NONE::xs) =
-                M.foldli (fn (k, n, acc) => fold' (k :: rpfx, n, acc, xs))
-                         (M.foldli (fn (k, v, acc) => f (rev (k :: rpfx), v, acc))
-                                   acc vm)
-                         nm
-              | fold' (rpfx, NODE (vm, nm), acc, (SOME x)::xs) =
-                M.foldli (fn (k, n, acc) => fold' (k :: rpfx, n, acc, xs))
-                         (case M.find (vm, x) of
-                              NONE => acc
-                            | SOME v => f (rev (x :: rpfx), v, acc))
-                         nm
+        let fun fold' (rpfx, NODE (vm, nm), acc, xx) =
+                case xx of
+                    [] => acc
+                  | [NONE] => 
+                    (M.foldli (fn (k, v, acc) => f (rev (k :: rpfx), v, acc))
+                              acc vm)
+                  | [SOME x] =>
+                    (case M.find (vm, x) of
+                         NONE => acc
+                       | SOME v => f (rev (x :: rpfx), v, acc))
+                  | (NONE::xs) =>
+                    (M.foldli (fn (k, n, acc) => fold' (k :: rpfx, n, acc, xs))
+                              acc nm)
+                  | ((SOME x)::xs) =>
+                    (case M.find (nm, x) of
+                         NONE => acc
+                       | SOME nsub => fold' (x :: rpfx, nsub, acc, xs))
         in
             fold' ([], node, acc, p)
         end
@@ -183,20 +194,26 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         rev (foldliPatternMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
 
     fun prefixOf (trie, e) = 
-        let fun prefix' (acc, n as NODE (vm, nm), xx) =
+        let fun prefix' (best, acc, n as NODE (vm, nm), xx) =
                 case xx of
-                    [] => acc
-                  | [x] => (case M.find (vm, x) of
-                                NONE => acc
-                              | SOME _ => x :: acc)
-                  | x::xs => (case M.find (nm, x) of
-                                  NONE => acc
-                                | SOME nsub => prefix' (x :: acc, nsub, xs))
+                    [] => best
+                  | x::xs =>
+                    let val best = case M.find (vm, x) of
+                                       NONE => best
+                                     | SOME _ => x :: acc
+                    in
+                        case M.find (nm, x) of
+                            NONE => best
+                          | SOME nsub => prefix' (best, x :: acc, nsub, xs)
+                    end
         in
             case trie of
                 EMPTY => []
-              | TRIE (v, node) => rev (prefix' ([], node, e))
+              | TRIE (v, node) => rev (prefix' ([], [], node, e))
         end
 
 end
 
+(*!!! + need to check ordering - are we returning all result of length
+        N before any of length >N? If so that won't do for an ordered
+        map... *)
