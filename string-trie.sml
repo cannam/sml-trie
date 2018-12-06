@@ -12,4 +12,4 @@ structure StringMTrie :> STRING_TRIE = PatternMatchTrieFn(StringMTrieMap)
 structure StringATrie :> STRING_TRIE = PatternMatchTrieFn(StringATrieMap)
 structure StringBTrie :> STRING_TRIE = PatternMatchTrieFn(StringBTrieMap)
 
-structure StringTrie = StringATrie
+structure StringTrie = StringMTrie
