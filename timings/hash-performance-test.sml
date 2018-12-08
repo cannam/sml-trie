@@ -2,7 +2,8 @@
 structure Rand = struct (* based on SML/NJ library *)
 
     val a : Int32.int = 48271
-    val m : Int32.int = 2147483647  (* 2^31 - 1 *)
+    val m : Int32.int = 2147483647 (* 2^31 - 1 *)
+
     val q = m div a
     val r = m mod a
 
@@ -345,16 +346,17 @@ structure IntRBMap = RedBlackMapFn
                               end)
                                
 fun randomInts n =
-    Vector.tabulate (n, fn _ => Int32.toInt (randomGenerator ()))
+    shuffle (Vector.tabulate (n, fn i => i))
 
 fun distinctInts ii =
     let val m = Vector.foldl (fn (i, m) => IntRBMap.insert (m, i, 1))
                              IntRBMap.empty
                              ii
         val n = Vector.length ii
+        val range = Rand.range (0, 100000000)
         fun fill jj 0 = jj
           | fill jj remaining = 
-            let val candidate = Int32.toInt (randomGenerator ())
+            let val candidate = range (randomGenerator ())
             in
                 if (IntRBMap.inDomain (m, candidate))
                 then fill jj remaining
