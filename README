@@ -4,9 +4,9 @@ Persistent tries in Standard ML
 
 This is an immutable trie library in Standard ML.
 
-The library contains two types of container implementation: Trie (both
-"set" and "map" kinds) and a Persistent Hash Map implemented using
-tries internally. This README will describe both.
+The library contains two types of container implementation: a Trie (in
+both "set" and "map" kinds), and a Persistent Hash Map implemented
+using tries internally.
 
 
 1. TRIES
@@ -79,7 +79,7 @@ trie-maps:
    bitmap-compressed semi-sparse array at each node. This is only
    suited to entries whose elements map sparsely into a small range.
 
-These functors provide set-type trie structures:
+These functors adapt them into set-type trie structures:
 
  * TrieFn (trie-fn.sml) - a functor that turns a TRIE_MAP into a TRIE
 
