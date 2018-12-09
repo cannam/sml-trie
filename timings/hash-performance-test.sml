@@ -51,7 +51,10 @@ fun randomString len =
                          else Char.chr (n - 52 + Char.ord #"0")
                      end))
     end
-               
+
+datatype verbosity = TERSE | VERBOSE
+val verbosity = ref VERBOSE               
+        
 structure Timing = struct
 
     fun timed_call f =
@@ -76,15 +79,20 @@ structure Timing = struct
                            (List.tabulate (nruns, fn x => x))
 	    val secs = Time.toReal time
         in
-            print (name ^ " | " ^ (Int.toString nruns) ^ " | " ^
-                   (Int.toString count) ^ " | " ^
-                   (Real.toString (secs / Real.fromInt nruns)) ^ " | " ^
-                   (Int.toString (Real.floor (Real.fromInt
-                                                  (nruns * count) / secs)))
-                   ^ "\n");
-            case result of
-                SOME r => r
-              | NONE => raise Fail "no result!?"
+            (case !verbosity of
+                 VERBOSE =>
+                 print (name ^ " | " ^ (Int.toString nruns) ^ " | " ^
+                        (Int.toString count) ^ " | " ^
+                        (Real.toString (secs / Real.fromInt nruns)) ^ " | " ^
+                        (Int.toString (Real.floor (Real.fromInt
+                                                       (nruns * count)
+                                                   / secs)))
+                        ^ "\n")
+               | TERSE =>
+                 print (Int.toString (Real.round ((secs * 1000.0) / Real.fromInt nruns)) ^ "ms\t");
+             case result of
+                 SOME r => r
+               | NONE => raise Fail "no result!?")
         end
 
     fun benchmark (f, name, nruns, count) =
@@ -633,8 +641,9 @@ val testStubs = [
     (TestIntHashTable.name, TestIntHashTable.test),
     (TestStringHashMap.name, TestStringHashMap.test),
     (TestStringRBMap.name, TestStringRBMap.test),
+(*
     (TestStringMTrieMap.name, TestStringMTrieMap.test),
-    (TestStringATrieMap.name, TestStringATrieMap.test),
+    (TestStringATrieMap.name, TestStringATrieMap.test), *)
     (TestStringHashTable.name, TestStringHashTable.test)
 ]
 
@@ -661,20 +670,33 @@ fun usage () =
         raise Fail "Incorrect arguments specified"
     end
 
-fun printHeader () =
-    print "Container | Test name | No of runs | No of keys | Time per run | Keys per sec\n"
+fun printHeader n =
+    case !verbosity of
+        VERBOSE =>
+        print "Container | Test name | No of runs | No of keys | Time per run | Keys per sec\n"
+      | TERSE =>
+        (print ("\nWith " ^ (Int.toString n) ^ " keys:\n");
+         print "Name\tInsert\tDelete\tRead\tRead/miss\tRead/half\tEnumerate")
                 
 fun runAllTests n =
     (* actually all but the "memory" tests *)
-    (printHeader ();
+    (printHeader n;
      List.app (fn (tname, t) =>
                   let val parts = String.tokens (fn c => c = #"/") tname
                   in
                       if hd (rev parts) = "memory"
                       then ()
-                      else (print (tname ^ ":\n"); t n)
-                  end) tests)
+                      else case !verbosity of
+                               VERBOSE => (print (tname ^ ":\n"); t n)
+                             | TERSE => (print ("\n" ^ tname ^ "\t"); t n)
+                  end) tests;
+     case !verbosity of
+         TERSE => print "\n"
+       | _ => ())
 
+fun runAllTestsAllCounts () =
+    app runAllTests [ 10000, 100000, 1000000, 3000000, 10000000 ]
+        
 fun runATest name n =
     let val found = List.foldl (fn ((n, _), found) => if found
                                                       then true
@@ -683,7 +705,7 @@ fun runATest name n =
         if not found
         then usage ()
         else
-            (printHeader ();
+            (printHeader n;
              List.app (fn (tname, t) => if tname = name
                                         then t n
                                         else ()) tests)
@@ -691,7 +713,8 @@ fun runATest name n =
      
 fun handleArgs args =
     case args of
-        [nstr] =>
+        [] => (verbosity := TERSE; runAllTestsAllCounts ())
+      | [nstr] =>
         (case Int.fromString nstr of
              NONE => usage ()
            | SOME n => runAllTests n)

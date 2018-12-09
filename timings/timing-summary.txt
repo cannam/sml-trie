@@ -1,3 +1,60 @@
+Host: Lenovo Yoga 2 Pro (2014) - Intel Core i7-4510U CPU @ 2.00GHz - 8GB RAM
+
+Latest for comparison
+
+NB the HashTable rows have an extra column! (Second column is "insert
+with preallocation")
+
+MLton:
+
+With 10000 keys:
+Name	Insert	Delete	Read	Read/miss	Read/half	Enumerate
+PersistentHashMap/int	15ms	19ms	5ms	2ms	3ms	0ms	
+RedBlackMap/int	4ms	6ms	1ms	0ms	1ms	0ms	
+HashTable/int	0ms	0ms	0ms	0ms	0ms	0ms	0ms	
+PersistentHashMap/string	9ms	18ms	7ms	2ms	3ms	0ms	
+RedBlackMap/string	5ms	9ms	3ms	3ms	3ms	0ms	
+HashTable/string	3ms	1ms	2ms	1ms	1ms	1ms	0ms	
+
+With 100000 keys:
+Name	Insert	Delete	Read	Read/miss	Read/half	Enumerate
+PersistentHashMap/int	203ms	196ms	106ms	17ms	57ms	6ms	
+RedBlackMap/int	62ms	85ms	17ms	3ms	15ms	2ms	
+HashTable/int	7ms	3ms	2ms	1ms	2ms	1ms	2ms	
+PersistentHashMap/string	166ms	250ms	119ms	35ms	70ms	5ms	
+RedBlackMap/string	110ms	140ms	69ms	70ms	61ms	1ms	
+HashTable/string	20ms	20ms	25ms	24ms	19ms	22ms	13ms	
+
+With 1000000 keys:
+Name	Insert	Delete	Read	Read/miss	Read/half	Enumerate
+PersistentHashMap/int	2068ms	2324ms	1134ms	464ms	660ms	38ms	
+RedBlackMap/int	1276ms	1363ms	477ms	32ms	431ms	11ms	
+HashTable/int	99ms	39ms	54ms	45ms	43ms	33ms	30ms	
+PersistentHashMap/string	2133ms	2894ms	1232ms	606ms	855ms	33ms	
+RedBlackMap/string	1928ms	2324ms	1422ms	1429ms	1214ms	12ms	
+HashTable/string	307ms	225ms	302ms	309ms	255ms	273ms	133ms	
+
+With 3000000 keys:
+Name	Insert	Delete	Read	Read/miss	Read/half	Enumerate
+PersistentHashMap/int	7358ms	7291ms	3572ms	1617ms	2447ms	101ms	
+RedBlackMap/int	3366ms	4179ms	2039ms	147ms	1770ms	34ms	
+HashTable/int	589ms	130ms	181ms	149ms	144ms	112ms	102ms	
+PersistentHashMap/string	8355ms	8330ms	3907ms	2110ms	3322ms	349ms	
+RedBlackMap/string	7596ms	8381ms	5531ms	5434ms	4681ms	32ms	
+HashTable/string	1165ms	636ms	934ms	955ms	719ms	843ms	141ms	
+
+With 10000000 keys:
+Name	Insert	Delete	Read	Read/miss	Read/half	Enumerate
+PersistentHashMap/int	29072ms	29160ms	12953ms	7718ms	9856ms	1003ms	
+RedBlackMap/int	19324ms	20422ms	9333ms	356ms	8043ms	142ms	
+HashTable/int	2883ms	1170ms	727ms	551ms	514ms	410ms	339ms	
+PersistentHashMap/string	29170ms	43632ms	14422ms	6644ms	11192ms	1045ms	
+RedBlackMap/string	31733ms	40808ms	21883ms	21764ms	23582ms	313ms	
+HashTable/string	5249ms	3477ms	3525ms	3477ms	2359ms	3247ms	511ms	
+
+
+
+Development updates:
 
 Revision        86c76acd5ad1 43affa1d8c55 d215ab4e4ea3 1d68b0542b9e af96c1ba753a
 Insert (Poly)   5.207178     5.192838     2.60645      2.824241     3.038165
