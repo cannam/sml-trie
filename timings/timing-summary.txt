@@ -1,6 +1,6 @@
 Host: Lenovo Yoga 2 Pro (2014) - Intel Core i7-4510U CPU @ 2.00GHz - 8GB RAM
 
-Latest for comparison
+Latest for comparison (rev cf89475bb37a)
 
 NB the HashTable rows have an extra column! (Second column is "insert
 with preallocation")
