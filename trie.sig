@@ -1,5 +1,5 @@
 
-(* Copyright 2015-2016 Chris Cannam.
+(* Copyright 2015-2018 Chris Cannam.
    MIT/X11 licence. See the file COPYING for details. *)
 
 signature TRIE = sig
@@ -49,6 +49,8 @@ signature TRIE = sig
        prefix, in sort order. The prefix itself does not need to be
        present as an entry in the trie *)
     val foldlPrefixMatch : (entry * 'a -> 'a) -> 'a -> (t * entry) -> 'a 
-    
+
+  (*!!! + union / intersection / merge *)
+                                                                          
 end
 

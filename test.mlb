@@ -1,7 +1,7 @@
 $(SML_LIB)/basis/basis.mlb
 trie.mlb
-$(SML_LIB)/smlnj-lib/Util/listsort-sig.sml
-$(SML_LIB)/smlnj-lib/Util/list-mergesort.sml
+../sml-smlnj-containers/listsort-sig.sml
+../sml-smlnj-containers/list-mergesort.sml
 tests.sig
 test-support.sml
 test.sml

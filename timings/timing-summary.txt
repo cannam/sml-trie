@@ -1,0 +1,112 @@
+
+Revision        86c76acd5ad1 43affa1d8c55 d215ab4e4ea3 1d68b0542b9e af96c1ba753a
+Insert (Poly)   5.207178     5.192838     2.60645      2.824241     3.038165
+Insert (MLton)  3.217271     3.094772     2.71985      3.228173     2.834256
+Read (Poly)     1.551168     1.639618     0.97786      1.010758     1.02929
+Read (MLton)    1.885892     1.786611     1.478492     1.649978     1.55675
+Mem (Poly)      1087808      1157872      1460088      1405964      1814844
+Mem (MLton)     2570364      4042464      4042908      4042964      4042832
+
+Revision        f55eeb124661 471394ad63c5 c638f71c8229 7de34a26d314 1e70fb06383a
+Insert (Poly)   2.59222      2.5562       2.64144      2.529881     3.57821
+Insert (MLton)  2.94779      2.72875      2.78291      2.82276      2.738808
+Read (Poly)     1.00314      0.97088      0.98264      1.06229      1.314594
+Read (MLton)    1.681645     1.579573     1.64650      1.49127      1.528494
+Mem (Poly)      1901584      1861264      1393812      1515748      1879508
+Mem (MLton)     4041876      4042880      4042436      4042732      4042816
+
+Revision        3d93a7a5d14a 414fc73981fd 599e7967684c cc10509c04f0
+Insert (Poly)   3.29562      2.75177      2.502904     2.46579
+Insert (MLton)  2.67765      2.38360      1.96290      1.84813
+Read (Poly)     1.13555      1.02744      0.915713     0.88955
+Read (MLton)    1.91068      1.49241      1.17906      1.20099
+Mem (Poly)      1798628      1507952      1197952      1139724
+Mem (MLton)     4042720      4042940      4042884      4041444
+
+Aspirational:
+                Mutable                   Unordered
+                hash table                map (C++)
+                (SML)
+Insert (Poly)   0.735 (prealloc: 0.573)   0.737 (prealloc: 0.275)
+Insert (MLton)  0.338 (prealloc: 0.211)
+Read (Poly)     0.444                     0.328
+Read (MLton)    0.340      
+Mem (Poly)      609604                    235992
+Mem (MLton)     1178132      
+
+Changes:
+43affa1d8c55    Switch from NO_NODE | NODE of 'a option * map to
+                LEAF of 'a option | NODE of 'a option * map. Rationale:
+                store the leaves directly in the map of the parent node
+
+d215ab4e4ea3    As 43affa1d8c55, but store bitmap in a single word32
+                rather than a 1-element vector of word32
+
+(1d68b0542b9e and af96c1ba753a are two alternative paths from the above)
+
+1d68b0542b9e    Switch from LEAF of 'a option | NODE of 'a option * map
+                to LEAF of 'a | ENODE of 'a node map | PNODE of 'a *
+                'a node map. Rationale: avoid options, reduce storage
+                in cases where no non-leaves are populated (HAMT)
+
+af96c1ba753a    Switch from LEAF of 'a option | NODE of 'a option * map
+                to LEAF of 'a | NODE of 'a option * map. Rationale:
+                avoid useless option since the map already carries an
+                implicit option for its elements: every leaf should
+                contain a value, otherwise the leaf shouldn't be there
+
+f55eeb124661    Back out the change in d215ab4e4ea3; revert to the
+                implementation of list-trie-map-fn.sml from 86c76acd5ad1.
+                I can't explain why this still has higher memory usage
+                after reverting, in MLton at least
+                
+471394ad63c5    Switch from NO_NODE | NODE of 'a option * map to
+                NODE of 'a option * map. Rationale: as for af96c1ba753a
+                And AH! the perceived higher memory usage is because we
+                switched, at some point after 43affa1d8c55, to doing 3
+                runs of each test. With only 1 run it's down to 983132 !!
+
+c638f71c8229    Improvement to enumeration speed by using foldl instead
+                of foldli - a change we had made before and subsequently
+                lost in a revert. Only really affects enumerate
+                
+7de34a26d314    Add EMPTY datatype at trie root so as to allow "empty"
+                to be a value rather than requiring "new" as a function
+
+1e70fb06383a    Make BitWord32 store its length, and remove length from
+                BitVector. This is pleasing but does seem to be slower
+                without any practical advantage for our application
+
+3d93a7a5d14a    Switch between sparse (bitmapped) and dense vectors
+                according to how full the node map is. Every setting for
+                max-fill for sparseness seems to perform worse than the
+                parent revision did
+
+bb4bba7d9e07    Use vector for collisions instead of list. Makes no
+                difference in this test case, as we have only 300-odd
+                collisions from our million strings. Might be more
+                interesting with ten million, if we can be bothered to
+                wait for the results
+
+414fc73981fd    Connect through the update function (with lambda arg to
+                determine what to insert if something exists) all the
+                way to the node-map rather than splitting it into
+                find/insert
+
+599e7967684c    Use 30-bit hashes. For a million entries, 25- or even 20-
+                bit hashes are faster still - but performance falls away
+                dramatically when we start getting a lot of collisions
+
+cc10509c04f0    Split the node map into two, one for values at this node
+                and the other for subnodes. This has the big problem that
+                strings are enumerated ordered by length first and sort
+                order only afterwards - so it may be a good thing if it
+                doesn't significantly outperform the previous version!
+
+Further ideas:
+
+* try CHAMP-style split of map: datatype 'a node = NODE of 'a M.map *
+  'a node M.map where the maps are respectively values and subnodes
+  (substantial rework of list-trie-map-fn.sml)
+
+* review documentation of faster implementations!

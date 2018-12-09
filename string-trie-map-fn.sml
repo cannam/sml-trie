@@ -1,5 +1,5 @@
 
-(* Copyright 2015-2016 Chris Cannam.
+(* Copyright 2015-2018 Chris Cannam.
    MIT/X11 licence. See the file COPYING for details. *)
 
 signature STRING_TRIE_MAP = sig
@@ -25,6 +25,9 @@ functor StringTrieMapFn (T : CHAR_LIST_TRIE_MAP) :> STRING_TRIE_MAP = struct
 
     val isEmpty = T.isEmpty
 
+    fun update (trie, s, f) =
+        T.update (trie, String.explode s, f)
+                      
     fun insert (trie, s, v) =
         T.insert (trie, String.explode s, v)
 
@@ -36,6 +39,9 @@ functor StringTrieMapFn (T : CHAR_LIST_TRIE_MAP) :> STRING_TRIE_MAP = struct
 
     fun find (trie, s) =
         T.find (trie, String.explode s)
+
+    fun lookup (trie, s) =
+        T.lookup (trie, String.explode s)
                  
     fun foldl f acc trie =
         T.foldl f acc trie

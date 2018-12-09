@@ -1,3 +1,7 @@
+
+(* Copyright 2015-2018 Chris Cannam.
+   MIT/X11 licence. See the file COPYING for details. *)
+
 signature TRIE_MAP = sig
 
     (*!!! how far should this match ORD_MAP? *)
@@ -15,17 +19,29 @@ signature TRIE_MAP = sig
         already present, its value will be updated in the new trie *)
     val insert : 'a trie * key * 'a -> 'a trie
 
-    (** Test whether the trie contains the given key *)
-    val contains : 'a trie * key -> bool
+    (** Update a key-value pair in the trie, returning a new trie. The
+        function argument should map from the previous value
+        associated with the key (or NONE if it was absent before) to
+        the new value. Thus update (t, k, f) is equivalent to insert
+        (t, k, f (find (t, k)) except that it may be quicker. Note
+        that this cannot be used to remove anything from the trie *)
+    val update : 'a trie * key * ('a option -> 'a) -> 'a trie
 
     (** Return the trie with the given key removed. If the key is
         not present, the returned trie will be unchanged *)
     val remove : 'a trie * key -> 'a trie
+                                          
+    (** Test whether the trie contains the given key *)
+    val contains : 'a trie * key -> bool
 
     (** Look for a key and return its corresponding value, or NONE if
         the key is not present in the trie *)
     val find : 'a trie * key -> 'a option
-                                     
+
+    (** Look for a key and return its corresponding value, raising
+        Subscript if the key is not present in the trie *)
+    val lookup : 'a trie * key -> 'a
+                                   
     (** Fold over all the values in the trie, in sort order *)
     val foldl : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b
 

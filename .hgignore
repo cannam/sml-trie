@@ -6,3 +6,5 @@ readtest
 *.orig
 mlmon.out
 mlb-coverage.log
+*.o
+MLB/
