@@ -665,8 +665,15 @@ fun printHeader () =
     print "Container | Test name | No of runs | No of keys | Time per run | Keys per sec\n"
                 
 fun runAllTests n =
+    (* actually all but the "memory" tests *)
     (printHeader ();
-     List.app (fn (tname, t) => (print (tname ^ ":\n"); t n)) tests)
+     List.app (fn (tname, t) =>
+                  let val parts = String.tokens (fn c => c = #"/") tname
+                  in
+                      if hd (rev parts) = "memory"
+                      then ()
+                      else (print (tname ^ ":\n"); t n)
+                  end) tests)
 
 fun runATest name n =
     let val found = List.foldl (fn ((n, _), found) => if found
