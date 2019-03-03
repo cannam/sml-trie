@@ -3,7 +3,7 @@
    MIT/X11 licence. See the file COPYING for details. *)
 
 signature LIST_TRIE_NODE_MAP = sig
-    type key
+    eqtype key
     type 'a map
     val new : unit -> 'a map
     val isEmpty : 'a map -> bool
@@ -21,31 +21,45 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     type element = M.key
     type key = element list
     type pattern = element option list
-                               
-    datatype 'a node = NODE of 'a option * 'a node M.map
+
+    datatype 'a node = LEAF of 'a
+                     | TWIG of key * 'a  (* key is nonempty, else it's a leaf *)
+                     | BRANCH of 'a option * 'a node M.map
 
     datatype 'a trie = EMPTY
                      | POPULATED of 'a node
-
-    fun newNode () = NODE (NONE, M.new ())
         
     val empty = EMPTY
-                                                         
-    fun isEmptyNode (NODE (NONE, m)) = M.isEmpty m
-      | isEmptyNode _ = false
 
     fun isEmpty EMPTY = true
       | isEmpty _ = false
 
-    fun update' (n, xx, f) =
-        case (n, xx) of
-            (NODE (item, vec), []) => NODE (SOME (f item), vec)
-          | (NODE (item, vec), x::xs) =>
-            NODE (item,
-                  M.update (vec, x, fn NONE => update' (newNode (), xs, f)
-                                     | SOME nsub => update' (nsub, xs, f)))
+    fun newBranch opt = BRANCH (opt, M.new ())
 
-    fun update (EMPTY, xx, f) = POPULATED (update' (newNode(), xx, f))
+    fun isEmptyBranch (BRANCH (NONE, m)) = M.isEmpty m
+      | isEmptyBranch _ = false
+
+    fun update' (n, xx, f : 'a option -> 'a) =
+        let fun f' item = f (SOME item)
+        in
+            case (n, xx) of
+                (LEAF item, []) => LEAF (f' item)
+              | (LEAF item, xx) => update' (newBranch (SOME item), xx, f)
+              | (TWIG (kk, item), xx) =>
+                (if kk = xx
+                 then TWIG (kk, f' item)
+                 else update' (update' (newBranch NONE,
+                                        kk, fn _ => item),
+                               xx, f))
+              | (BRANCH (iopt, m), []) => BRANCH (SOME (f iopt), m)
+              | (BRANCH (iopt, m), x::xs) =>
+                BRANCH (iopt,
+                        M.update (m, x,
+                                  fn NONE => update' (newBranch NONE, xs, f)
+                                   | SOME nsub => update' (nsub, xs, f)))
+        end
+
+    fun update (EMPTY, xx, f) = POPULATED (update' (newBranch NONE, xx, f))
       | update (POPULATED n, xx, f) = POPULATED (update' (n, xx, f))
 
     fun insert (n, xx, v) =
@@ -53,38 +67,46 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
 
     fun remove' (n, xx) =
         case (n, xx) of
-            (NODE (item, vec), []) => NODE (NONE, vec)
-          | (n as NODE (item, vec), x::xs) =>
-            case M.find (vec, x) of
+            (LEAF item, []) => newBranch NONE
+          | (LEAF _, _) => n
+          | (TWIG (kk, item), xx) =>
+            (if kk = xx
+             then newBranch NONE
+             else n)
+          | (BRANCH (iopt, m), []) => BRANCH (NONE, m)
+          | (BRANCH (iopt, m), x::xs) =>
+            case M.find (m, x) of
                 NONE => n
               | SOME nsub =>
                 let val nsub' = remove' (nsub, xs)
                 in
-                    if isEmptyNode nsub'
-                    then 
-                        let val vv = M.remove (vec, x)
-                        in
-                            case item of
-                                SOME _ => NODE (item, vv)
-                              | NONE => NODE (item, vv)
-                        end
-                    else NODE (item, M.update (vec, x, fn _ => nsub'))
+                    if isEmptyBranch nsub'
+                    then BRANCH (iopt, M.remove (m, x))
+                    else BRANCH (iopt, M.update (m, x, fn _ => nsub'))
                 end
 
     fun remove (EMPTY, _) = EMPTY
       | remove (POPULATED n, xx) =
         let val n' = remove' (n, xx)
         in
-            if isEmptyNode n'
+            if isEmptyBranch n'
             then EMPTY
             else POPULATED n'
         end
-                    
-    fun find' (NODE (item, _), []) = item
-      | find' (NODE (item, vec), x::xs) =
-        case M.find (vec, x) of
-            NONE => NONE
-          | SOME nsub => find' (nsub, xs)
+
+    fun find' (n, xx) =
+        case (n, xx) of
+            (LEAF item, []) => SOME item
+          | (LEAF _, _) => NONE
+          | (TWIG (kk, item), xx) =>
+            (if kk = xx
+             then SOME item
+             else NONE)
+          | (BRANCH (iopt, m), []) => iopt
+          | (BRANCH (iopt, m), x::xs) =>
+            case M.find (m, x) of
+                NONE => NONE
+              | SOME nsub => find' (nsub, xs)
 
     fun find (EMPTY, _) = NONE
       | find (POPULATED n, xx) =
@@ -101,12 +123,15 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
           | NONE => false
              
     fun foldl f acc t =
-        let fun fold' (acc, NODE (item, map)) =
-                M.foldl (fn (n, acc) => fold' (acc, n))
-                        (case item of
-                             NONE => acc
-                           | SOME v => f (v, acc))
-                        map
+        let fun fold' (n, acc) =
+                case n of
+                    LEAF item => f (item, acc)
+                  | TWIG (kk, item) => f (item, acc)
+                  | BRANCH (iopt, m) =>
+                    M.foldl fold' (case iopt of
+                                       NONE => acc
+                                     | SOME item => f (item, acc))
+                            m
         in
             case t of
                 EMPTY => acc
@@ -114,30 +139,46 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         end
 
     (* rpfx is reversed prefix built up so far (using cons) *)
-    fun foldli_helper f (acc, rpfx, NODE (item, vec)) =
-        M.foldli (fn (x, n, acc) => foldli_helper f (acc, x :: rpfx, n))
-                 (case item of
-                      NONE => acc
-                    | SOME v => f (rev rpfx, v, acc))
-                 vec
+    fun foldli_helper f (rpfx, n, acc) =
+        case n of
+            LEAF item => f (rev rpfx, item, acc)
+          | TWIG (kk, item) => f ((rev rpfx) @ kk, item, acc)
+          | BRANCH (iopt, m) =>
+            M.foldli (fn (x, n, acc) => foldli_helper f (x :: rpfx, n, acc))
+                     (case iopt of
+                          NONE => acc
+                        | SOME item => f (rev rpfx, item, acc))
+                     m
                       
     fun foldli f acc t =
         case t of
             EMPTY => acc
-          | POPULATED n => foldli_helper f (acc, [], n)
+          | POPULATED n => foldli_helper f ([], n, acc)
 
     fun enumerate trie =
         rev (foldli (fn (k, v, acc) => (k, v) :: acc) [] trie)
 
+    fun isPrefixOf ([], yy) = true
+      | isPrefixOf (xx, []) = false
+      | isPrefixOf (x::xs, y::ys) = x = y andalso isPrefixOf (xs, ys)
+            
     fun foldliPrefixMatch' f acc (node, e) = 
         (* rpfx is reversed prefix built up so far (using cons) *)
-        let fun fold' (acc, rpfx, n, []) = foldli_helper f (acc, rpfx, n)
-              | fold' (acc, rpfx, NODE (item, vec), x::xs) =
-                case M.find (vec, x) of
-                    NONE => acc
-                  | SOME nsub => fold' (acc, x :: rpfx, nsub, xs)
+        let fun fold' (rpfx, n, [], acc) = foldli_helper f (rpfx, n, acc)
+              | fold' (rpfx, n, xx, acc) =
+                case n of
+                    LEAF item => acc
+                  | TWIG (kk, item) =>
+                    (if isPrefixOf (xx, kk)
+                     then foldli_helper f (rpfx, n, acc)
+                     else acc)
+                  | BRANCH (iopt, m) => 
+                    case M.find (m, hd xx) of
+                        NONE => acc
+                      | SOME nsub =>
+                        fold' ((hd xx) :: rpfx, nsub, (tl xx), acc)
         in
-            fold' (acc, [], node, e)
+            fold' ([], node, e, acc)
         end
 
     fun foldliPrefixMatch f acc (trie, e) =
