@@ -66,7 +66,8 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
               | (BRANCH (iopt, m), x::xs) =>
                 BRANCH (iopt,
                         M.update (m, x,
-                                  fn NONE => TWIG (xs, f NONE)
+                                  fn NONE => (case xs of [] => LEAF (f NONE)
+                                                       | xs => TWIG (xs, f NONE))
                                    | SOME nsub => update' (nsub, xs, f)))
         end
 
