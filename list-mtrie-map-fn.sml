@@ -3,7 +3,7 @@
    MIT/X11 licence. See the file COPYING for details. *)
 
 signature MTRIE_ELEMENT = sig
-    type t
+    eqtype t
     val compare : t * t -> order
 end
 

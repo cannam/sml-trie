@@ -23,6 +23,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     type pattern = element option list
 
     datatype 'a node = LEAF of 'a
+                     (*!!! we could replace LEAF with TWIG ([], x) - try it and compare *)
                      | TWIG of key * 'a  (* key is nonempty, else it's a leaf *)
                      | BRANCH of 'a option * 'a node M.map
 
@@ -44,10 +45,20 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         in
             case (n, xx) of
                 (LEAF item, []) => LEAF (f' item)
-              | (LEAF item, xx) => update' (newBranch (SOME item), xx, f)
+              | (LEAF item, xx) => update' (newBranch (SOME item),
+                                            xx, f)
+              | (TWIG (kk, item), []) => update' (newBranch (SOME (f NONE)),
+                                                  kk, fn _ => item)
               | (TWIG (kk, item), xx) =>
                 (if kk = xx
                  then TWIG (kk, f' item)
+                 else if hd kk = hd xx  (* e.g. adding XDEF next to XABC *)
+                 then BRANCH (NONE,
+                              M.update
+                                  (M.new (), hd kk,
+                                   fn _ => update' (update' (newBranch NONE,
+                                                             tl xx, f),
+                                                    tl kk, fn _ => item)))
                  else update' (update' (newBranch NONE,
                                         kk, fn _ => item),
                                xx, f))
@@ -55,7 +66,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
               | (BRANCH (iopt, m), x::xs) =>
                 BRANCH (iopt,
                         M.update (m, x,
-                                  fn NONE => update' (newBranch NONE, xs, f)
+                                  fn NONE => TWIG (xs, f NONE)
                                    | SOME nsub => update' (nsub, xs, f)))
         end
 
@@ -135,7 +146,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         in
             case t of
                 EMPTY => acc
-              | POPULATED n => fold' (acc, n)
+              | POPULATED n => fold' (n, acc)
         end
 
     (* rpfx is reversed prefix built up so far (using cons) *)
@@ -193,17 +204,27 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
     fun foldliPatternMatch' f acc (node, p) =
-        let fun fold' (acc, rpfx, NODE (NONE, _), []) = acc
-              | fold' (acc, rpfx, NODE (SOME v, _), []) = f (rev rpfx, v, acc)
-              | fold' (acc, rpfx, NODE (_, vec), NONE::xs) =
-                M.foldli (fn (x, n, acc) => fold' (acc, x :: rpfx, n, xs))
-                         acc vec
-              | fold' (acc, rpfx, NODE (_, vec), (SOME x)::xs) =
-                case M.find (vec, x) of
-                    NONE => acc
-                  | SOME nsub => fold' (acc, x :: rpfx, nsub, xs)
+        let fun fold' (rpfx, n, xx, acc) =
+                case (n, xx) of
+                    (LEAF item, []) => f (rev rpfx, item, acc)
+                  | (TWIG (kk, item), []) => f (rev rpfx, item, acc)
+                  | (BRANCH (NONE, _), []) => acc
+                  | (BRANCH (SOME item, _), []) => f (rev rpfx, item, acc)
+                  | (LEAF _, xx) => acc
+                  | (TWIG (kk, item), xx) =>
+                    (if ListPair.allEq (fn (k, NONE) => true
+                                         | (k, SOME x) => k = x) (kk, xx)
+                     then f (rev rpfx @ kk, item, acc)
+                     else acc)
+                  | (BRANCH (_, m), NONE::xs) =>
+                    M.foldli (fn (x, n, acc) => fold' (x :: rpfx, n, xs, acc))
+                             acc m
+                  | (BRANCH (_, m), (SOME x)::xs) =>
+                    case M.find (m, x) of
+                        NONE => acc
+                      | SOME nsub => fold' (x :: rpfx, nsub, xs, acc)
         in
-            fold' (acc, [], node, p)
+            fold' ([], node, p, acc)
         end
 
     fun foldliPatternMatch f acc (trie, p) =
@@ -214,25 +235,30 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     fun patternMatch (trie, p) =
         rev (foldliPatternMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
 
-    fun prefixOf (trie, e) = 
-        let fun prefix' (best, acc, n as NODE (item, vec), x::xs) =
-                let val best = case item of
-                                   NONE => best
-                                 | SOME _ => acc
-                in
-                    prefix' (best,
-                             x :: acc,
-                             case M.find (vec, x) of
-                                 NONE => newNode ()
-                               | SOME nsub => nsub,
-                             xs)
-                end
-              | prefix' (best, acc, NODE (SOME _, _), []) = acc
-              | prefix' (best, acc, NODE (NONE, _), []) = best
+    fun prefixOf (trie, e) =
+        let fun prefix' (n, xx, best, acc) =
+                case (n, xx) of
+                    (LEAF item, _) => acc
+                  | (TWIG (kk, item), []) => acc
+                  | (TWIG (kk, item), xx) =>
+                    if kk = xx
+                    then (rev kk) @ acc
+                    else best
+                  | (BRANCH (NONE, m), []) => best
+                  | (BRANCH (SOME item, m), []) => acc
+                  | (BRANCH (iopt, m), x::xs) =>
+                    let val best = case iopt of
+                                       NONE => best
+                                     | SOME _ => acc
+                    in
+                        case M.find (m, x) of
+                            NONE => best
+                          | SOME nsub => prefix' (nsub, xs, best, x :: acc)
+                    end
         in
             case trie of
                 EMPTY => []
-              | POPULATED node => rev (prefix' ([], [], node, e))
+              | POPULATED node => rev (prefix' (node, e, [], []))
         end
 
 end

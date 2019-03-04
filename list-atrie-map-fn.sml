@@ -3,7 +3,7 @@
    MIT/X11 licence. See the file COPYING for details. *)
 
 signature ATRIE_ELEMENT = sig
-    type t
+    eqtype t
     val ord : t -> int
     val invOrd : int -> t
 end
