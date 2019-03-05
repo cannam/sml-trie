@@ -2,7 +2,7 @@
 (* Copyright 2015-2018 Chris Cannam.
    MIT/X11 licence. See the file COPYING for details. *)
 
-signature LIST_TRIE_NODE_MAP = sig
+signature TRIE_NODE_MAP = sig
     eqtype key (*!!! would be ideal if didn't have to be eqtype - that is a disadvantage of the twig approach at the mo *)
     type 'a map
     val new : unit -> 'a map
@@ -13,13 +13,29 @@ signature LIST_TRIE_NODE_MAP = sig
     val update : 'a map * key * ('a option -> 'a) -> 'a map
     val remove : 'a map * key -> 'a map
 end
-                                          
-functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
-	:> PATTERN_MATCH_TRIE_MAP
-	       where type element = M.key where type key = M.key list = struct
 
-    type element = M.key
-    type key = element list
+signature TRIE_KEY = sig
+    type element
+    eqtype key
+    val isEmpty : key -> bool
+    val head : key -> element
+    val tail : key -> key
+end
+
+signature TRIE_MAP_FN_ARG = sig
+    structure M : TRIE_NODE_MAP
+    structure K : TRIE_KEY
+end
+                              
+functor TrieMapFn (A : TRIE_MAP_FN_ARG)
+	:> PATTERN_MATCH_TRIE_MAP
+	       where type element = A.K.element where type key = A.K.key = struct
+
+    structure M = A.M
+    structure K = A.K
+                      
+    type element = K.element
+    type key = K.key
     type pattern = element option list
 
     datatype 'a node = LEAF of 'a
@@ -264,3 +280,20 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
 
 end
 
+functor ListTrieMapFn (M : TRIE_NODE_MAP)
+	:> PATTERN_MATCH_TRIE_MAP
+	       where type element = M.key where type key = M.key list = struct
+
+    structure T = TrieMapFn(struct
+                              structure M = M
+                              structure K = struct
+                                type element = M.key
+                                type key = M.key list
+                                fun isEmpty [] = true | isEmpty _ = false
+                                val head = List.hd
+                                val tail = List.tl
+                              end
+                            end)
+
+    open T
+end
