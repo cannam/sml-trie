@@ -3,7 +3,7 @@
    MIT/X11 licence. See the file COPYING for details. *)
 
 signature LIST_TRIE_NODE_MAP = sig
-    eqtype key
+    eqtype key (*!!! would be ideal if didn't have to be eqtype - that is a disadvantage of the twig approach at the mo *)
     type 'a map
     val new : unit -> 'a map
     val isEmpty : 'a map -> bool
