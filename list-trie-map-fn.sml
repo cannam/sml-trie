@@ -15,7 +15,7 @@ signature TRIE_NODE_MAP = sig
 end
 
 signature TRIE_KEY = sig
-    type element
+    eqtype element
     eqtype key
     val isEmpty : key -> bool
     val head : key -> element
@@ -23,8 +23,10 @@ signature TRIE_KEY = sig
 end
 
 signature TRIE_MAP_FN_ARG = sig
-    structure M : TRIE_NODE_MAP
-    structure K : TRIE_KEY
+    eqtype element
+    eqtype key
+    structure M : TRIE_NODE_MAP where type key = element
+    structure K : TRIE_KEY where type element = element where type key = key
 end
                               
 functor TrieMapFn (A : TRIE_MAP_FN_ARG)
@@ -39,8 +41,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     type pattern = element option list
 
     datatype 'a node = LEAF of 'a
-                     (*!!! we could replace LEAF with TWIG ([], x) - try it and compare *)
-                     | TWIG of key * 'a  (* key is nonempty, else it's a leaf *)
+                     | TWIG of key * 'a (* key is nonempty, else it's a leaf *)
                      | BRANCH of 'a option * 'a node M.map
 
     datatype 'a trie = EMPTY
@@ -59,32 +60,37 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun update' (n, xx, f : 'a option -> 'a) =
         let fun f' item = f (SOME item)
         in
-            case (n, xx) of
-                (LEAF item, []) => LEAF (f' item)
-              | (LEAF item, xx) => update' (newBranch (SOME item),
-                                            xx, f)
-              | (TWIG (kk, item), []) => update' (newBranch (SOME (f NONE)),
-                                                  kk, fn _ => item)
-              | (TWIG (kk, item), xx) =>
+            case (n, K.isEmpty xx) of
+                (LEAF item, true) => LEAF (f' item)
+              | (LEAF item, false) => update' (newBranch (SOME item),
+                                               xx, f)
+              | (TWIG (kk, item), true) => update' (newBranch (SOME (f NONE)),
+                                                    kk, fn _ => item)
+              | (TWIG (kk, item), false) =>
                 (if kk = xx
                  then TWIG (kk, f' item)
-                 else if hd kk = hd xx  (* e.g. adding XDEF next to XABC *)
+                 else if K.head kk = K.head xx (* e.g. adding XDEF next to XABC *)
                  then BRANCH (NONE,
                               M.update
-                                  (M.new (), hd kk,
+                                  (M.new (), K.head kk,
                                    fn _ => update' (update' (newBranch NONE,
-                                                             tl xx, f),
-                                                    tl kk, fn _ => item)))
+                                                             K.tail xx, f),
+                                                    K.tail kk, fn _ => item)))
                  else update' (update' (newBranch NONE,
                                         kk, fn _ => item),
                                xx, f))
-              | (BRANCH (iopt, m), []) => BRANCH (SOME (f iopt), m)
-              | (BRANCH (iopt, m), x::xs) =>
+              | (BRANCH (iopt, m), true) => BRANCH (SOME (f iopt), m)
+              | (BRANCH (iopt, m), false) =>
                 BRANCH (iopt,
-                        M.update (m, x,
-                                  fn NONE => (case xs of [] => LEAF (f NONE)
-                                                       | xs => TWIG (xs, f NONE))
-                                   | SOME nsub => update' (nsub, xs, f)))
+                        M.update (m, K.head xx,
+                                  fn SOME nsub => update' (nsub, K.tail xx, f)
+                                   | NONE =>
+                                     let val xs = K.tail xx
+                                     in
+                                         if K.isEmpty xs
+                                         then LEAF (f NONE)
+                                         else TWIG (xs, f NONE)
+                                     end))
         end
 
     fun update (EMPTY, xx, f) = POPULATED (update' (newBranch NONE, xx, f))
@@ -94,25 +100,27 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         update (n, xx, fn _ => v)
 
     fun remove' (n, xx) =
-        case (n, xx) of
-            (LEAF item, []) => newBranch NONE
+        case (n, K.isEmpty xx) of
+            (LEAF item, true) => newBranch NONE
           | (LEAF _, _) => n
-          | (TWIG (kk, item), xx) =>
-            (if kk = xx
-             then newBranch NONE
-             else n)
-          | (BRANCH (iopt, m), []) => BRANCH (NONE, m)
-          | (BRANCH (iopt, m), x::xs) =>
-            case M.find (m, x) of
-                NONE => n
-              | SOME nsub =>
-                let val nsub' = remove' (nsub, xs)
-                in
-                    if isEmptyBranch nsub'
-                    then BRANCH (iopt, M.remove (m, x))
-                    else BRANCH (iopt, M.update (m, x, fn _ => nsub'))
-                end
-
+          | (TWIG (kk, item), _) => (if kk = xx
+                                     then newBranch NONE
+                                     else n)
+          | (BRANCH (iopt, m), true) => BRANCH (NONE, m)
+          | (BRANCH (iopt, m), false) =>
+            let val x = K.head xx
+            in
+                case M.find (m, x) of
+                    NONE => n
+                  | SOME nsub =>
+                    let val nsub' = remove' (nsub, K.tail xx)
+                    in
+                        if isEmptyBranch nsub'
+                        then BRANCH (iopt, M.remove (m, x))
+                        else BRANCH (iopt, M.update (m, x, fn _ => nsub'))
+                    end
+            end
+                        
     fun remove (EMPTY, _) = EMPTY
       | remove (POPULATED n, xx) =
         let val n' = remove' (n, xx)
@@ -123,18 +131,17 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         end
 
     fun find' (n, xx) =
-        case (n, xx) of
-            (LEAF item, []) => SOME item
+        case (n, K.isEmpty xx) of
+            (LEAF item, true) => SOME item
           | (LEAF _, _) => NONE
-          | (TWIG (kk, item), xx) =>
-            (if kk = xx
-             then SOME item
-             else NONE)
-          | (BRANCH (iopt, m), []) => iopt
-          | (BRANCH (iopt, m), x::xs) =>
-            case M.find (m, x) of
+          | (TWIG (kk, item), _) => (if kk = xx
+                                     then SOME item
+                                     else NONE)
+          | (BRANCH (iopt, m), true) => iopt
+          | (BRANCH (iopt, m), false) =>
+            case M.find (m, K.head xx) of
                 NONE => NONE
-              | SOME nsub => find' (nsub, xs)
+              | SOME nsub => find' (nsub, K.tail xx)
 
     fun find (EMPTY, _) = NONE
       | find (POPULATED n, xx) =
