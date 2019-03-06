@@ -22,9 +22,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     type key = element list
     type pattern = element option list
 
-    datatype 'a node = LEAF of 'a
-                     (*!!! we could replace LEAF with TWIG ([], x) - try it and compare *)
-                     | TWIG of key * 'a  (* key is nonempty, else it's a leaf *)
+    datatype 'a node = TWIG of key * 'a  (* if key is empty, it's a leaf *)
                      | BRANCH of 'a option * 'a node M.map
 
     datatype 'a trie = EMPTY
@@ -44,9 +42,9 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         let fun f' item = f (SOME item)
         in
             case (n, xx) of
-                (LEAF item, []) => LEAF (f' item)
-              | (LEAF item, xx) => update' (newBranch (SOME item),
-                                            xx, f)
+                (TWIG ([], item), []) => TWIG ([], f' item)
+              | (TWIG ([], item), xx) => update' (newBranch (SOME item),
+                                                  xx, f)
               | (TWIG (kk, item), []) => update' (newBranch (SOME (f NONE)),
                                                   kk, fn _ => item)
               | (TWIG (kk, item), xx) =>
@@ -66,8 +64,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
               | (BRANCH (iopt, m), x::xs) =>
                 BRANCH (iopt,
                         M.update (m, x,
-                                  fn NONE => (case xs of [] => LEAF (f NONE)
-                                                       | xs => TWIG (xs, f NONE))
+                                  fn NONE => TWIG (xs, f NONE)
                                    | SOME nsub => update' (nsub, xs, f)))
         end
 
@@ -79,8 +76,8 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
 
     fun remove' (n, xx) =
         case (n, xx) of
-            (LEAF item, []) => newBranch NONE
-          | (LEAF _, _) => n
+            (TWIG ([], _), []) => newBranch NONE
+          | (TWIG ([], _), _) => n
           | (TWIG (kk, item), xx) =>
             (if kk = xx
              then newBranch NONE
@@ -108,8 +105,8 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
 
     fun find' (n, xx) =
         case (n, xx) of
-            (LEAF item, []) => SOME item
-          | (LEAF _, _) => NONE
+            (TWIG ([], item), []) => SOME item
+          | (TWIG ([], _), _) => NONE
           | (TWIG (kk, item), xx) =>
             (if kk = xx
              then SOME item
@@ -137,8 +134,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     fun foldl f acc t =
         let fun fold' (n, acc) =
                 case n of
-                    LEAF item => f (item, acc)
-                  | TWIG (kk, item) => f (item, acc)
+                    TWIG (_, item) => f (item, acc)
                   | BRANCH (iopt, m) =>
                     M.foldl fold' (case iopt of
                                        NONE => acc
@@ -153,7 +149,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     (* rpfx is reversed prefix built up so far (using cons) *)
     fun foldli_helper f (rpfx, n, acc) =
         case n of
-            LEAF item => f (rev rpfx, item, acc)
+            TWIG ([], item) => f (rev rpfx, item, acc)
           | TWIG (kk, item) => f ((rev rpfx) @ kk, item, acc)
           | BRANCH (iopt, m) =>
             M.foldli (fn (x, n, acc) => foldli_helper f (x :: rpfx, n, acc))
@@ -179,7 +175,7 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
         let fun fold' (rpfx, n, [], acc) = foldli_helper f (rpfx, n, acc)
               | fold' (rpfx, n, xx, acc) =
                 case n of
-                    LEAF item => acc
+                    TWIG ([], item) => acc
                   | TWIG (kk, item) =>
                     (if isPrefixOf (xx, kk)
                      then foldli_helper f (rpfx, n, acc)
@@ -207,11 +203,10 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     fun foldliPatternMatch' f acc (node, p) =
         let fun fold' (rpfx, n, xx, acc) =
                 case (n, xx) of
-                    (LEAF item, []) => f (rev rpfx, item, acc)
-                  | (TWIG (kk, item), []) => f (rev rpfx, item, acc)
-                  | (BRANCH (NONE, _), []) => acc
+                    (BRANCH (NONE, _), []) => acc
                   | (BRANCH (SOME item, _), []) => f (rev rpfx, item, acc)
-                  | (LEAF _, xx) => acc
+                  | (TWIG (_, item), []) => f (rev rpfx, item, acc)
+                  | (TWIG ([], _), _) => acc
                   | (TWIG (kk, item), xx) =>
                     (if ListPair.allEq (fn (k, NONE) => true
                                          | (k, SOME x) => k = x) (kk, xx)
@@ -239,8 +234,8 @@ functor ListTrieMapFn (M : LIST_TRIE_NODE_MAP)
     fun prefixOf (trie, e) =
         let fun prefix' (n, xx, best, acc) =
                 case (n, xx) of
-                    (LEAF item, _) => acc
-                  | (TWIG (kk, item), []) => acc
+                    (TWIG ([], _), _) => acc
+                  | (TWIG (_, _), []) => acc
                   | (TWIG (kk, item), xx) =>
                     if kk = xx
                     then (rev kk) @ acc
