@@ -20,6 +20,8 @@ signature TRIE_KEY = sig
     val isEmpty : key -> bool
     val head : key -> element
     val tail : key -> key
+    val explode : key -> element list
+    val implode : element list -> key
 end
 
 signature TRIE_MAP_FN_ARG = sig
@@ -175,15 +177,18 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
 
     (* rpfx is reversed prefix built up so far (using cons) *)
     fun foldli_helper f (rpfx, n, acc) =
-        case n of
-            LEAF item => f (rev rpfx, item, acc)
-          | TWIG (kk, item) => f ((rev rpfx) @ kk, item, acc)
-          | BRANCH (iopt, m) =>
-            M.foldli (fn (x, n, acc) => foldli_helper f (x :: rpfx, n, acc))
-                     (case iopt of
-                          NONE => acc
-                        | SOME item => f (rev rpfx, item, acc))
-                     m
+        let fun f' (pfx, item, acc) = f (K.implode pfx, item, acc)
+        in
+            case n of
+                LEAF item => f' (rev rpfx, item, acc)
+              | TWIG (kk, item) => f' ((rev rpfx) @ (K.explode kk), item, acc)
+              | BRANCH (iopt, m) =>
+                M.foldli (fn (x, n, acc) => foldli_helper f (x :: rpfx, n, acc))
+                         (case iopt of
+                              NONE => acc
+                            | SOME item => f' (rev rpfx, item, acc))
+                         m
+        end
                       
     fun foldli f acc t =
         case t of
@@ -199,19 +204,21 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             
     fun foldliPrefixMatch' f acc (node, e) = 
         (* rpfx is reversed prefix built up so far (using cons) *)
-        let fun fold' (rpfx, n, [], acc) = foldli_helper f (rpfx, n, acc)
-              | fold' (rpfx, n, xx, acc) =
-                case n of
-                    LEAF item => acc
-                  | TWIG (kk, item) =>
-                    (if isPrefixOf (xx, kk)
-                     then foldli_helper f (rpfx, n, acc)
-                     else acc)
-                  | BRANCH (iopt, m) => 
-                    case M.find (m, hd xx) of
-                        NONE => acc
-                      | SOME nsub =>
-                        fold' ((hd xx) :: rpfx, nsub, (tl xx), acc)
+        let fun fold' (rpfx, n, xx, acc) =
+                if K.isEmpty xx
+                then foldli_helper f (rpfx, n, acc)
+                else
+                    case n of
+                        LEAF item => acc
+                      | TWIG (kk, item) =>
+                        (if isPrefixOf (K.explode xx, K.explode kk)
+                         then foldli_helper f (rpfx, n, acc)
+                         else acc)
+                      | BRANCH (iopt, m) => 
+                        case M.find (m, K.head xx) of
+                            NONE => acc
+                          | SOME nsub =>
+                            fold' ((K.head xx) :: rpfx, nsub, (K.tail xx), acc)
         in
             fold' ([], node, e, acc)
         end
@@ -228,20 +235,23 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
     fun foldliPatternMatch' f acc (node, p) =
-        let fun fold' (rpfx, n, xx, acc) =
+        let fun f' (pfx, item, acc) = f (K.implode pfx, item, acc)
+            fun fold' (rpfx, n, xx, acc) =
                 case (n, xx) of
-                    (LEAF item, []) => f (rev rpfx, item, acc)
-                  | (TWIG (kk, item), []) => f (rev rpfx, item, acc)
+                    (LEAF item, []) => f' (rev rpfx, item, acc)
+                  | (TWIG (kk, item), []) => f' (rev rpfx, item, acc)
                   | (BRANCH (NONE, _), []) => acc
-                  | (BRANCH (SOME item, _), []) => f (rev rpfx, item, acc)
+                  | (BRANCH (SOME item, _), []) => f' (rev rpfx, item, acc)
                   | (LEAF _, xx) => acc
                   | (TWIG (kk, item), xx) =>
                     (if ListPair.allEq (fn (k, NONE) => true
-                                         | (k, SOME x) => k = x) (kk, xx)
-                     then f (rev rpfx @ kk, item, acc)
+                                         | (k, SOME x) => k = x)
+                                       (K.explode kk, xx)
+                     then f' (rev rpfx @ K.explode kk, item, acc)
                      else acc)
                   | (BRANCH (_, m), NONE::xs) =>
-                    M.foldli (fn (x, n, acc) => fold' (x :: rpfx, n, xs, acc))
+                    M.foldli (fn (x, n, acc) =>
+                                 fold' (x :: rpfx, n, xs, acc))
                              acc m
                   | (BRANCH (_, m), (SOME x)::xs) =>
                     case M.find (m, x) of
@@ -261,17 +271,18 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
 
     fun prefixOf (trie, e) =
         let fun prefix' (n, xx, best, acc) =
-                case (n, xx) of
+                case (n, K.isEmpty xx) of
                     (LEAF item, _) => acc
-                  | (TWIG (kk, item), []) => acc
-                  | (TWIG (kk, item), xx) =>
+                  | (TWIG (kk, item), true) => acc
+                  | (TWIG (kk, item), false) =>
                     if kk = xx
-                    then (rev kk) @ acc
+                    then (rev (K.explode kk)) @ acc
                     else best
-                  | (BRANCH (NONE, m), []) => best
-                  | (BRANCH (SOME item, m), []) => acc
-                  | (BRANCH (iopt, m), x::xs) =>
-                    let val best = case iopt of
+                  | (BRANCH (NONE, m), true) => best
+                  | (BRANCH (SOME item, m), true) => acc
+                  | (BRANCH (iopt, m), false) =>
+                    let val (x, xs) = (K.head xx, K.tail xx)
+                        val best = case iopt of
                                        NONE => best
                                      | SOME _ => acc
                     in
@@ -280,9 +291,10 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                           | SOME nsub => prefix' (nsub, xs, best, x :: acc)
                     end
         in
-            case trie of
-                EMPTY => []
-              | POPULATED node => rev (prefix' (node, e, [], []))
+            K.implode
+                (case trie of
+                     EMPTY => []
+                   | POPULATED node => rev (prefix' (node, e, [], [])))
         end
 
 end
@@ -299,8 +311,15 @@ functor ListTrieMapFn (M : TRIE_NODE_MAP)
                                 fun isEmpty [] = true | isEmpty _ = false
                                 val head = List.hd
                                 val tail = List.tl
+                                fun explode x = x
+                                fun implode x = x
                               end
+                              type element = K.element
+                              type key = K.key
                             end)
 
     open T
 end
+
+(*!!! temporarily *)
+signature LIST_TRIE_NODE_MAP = TRIE_NODE_MAP
