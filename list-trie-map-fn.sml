@@ -321,5 +321,78 @@ functor ListTrieMapFn (M : TRIE_NODE_MAP)
     open T
 end
 
+functor VectorTrieMapFn (M : TRIE_NODE_MAP)
+	:> PATTERN_MATCH_TRIE_MAP
+	       where type element = M.key where type key = M.key vector = struct
+
+    structure T = TrieMapFn
+                      (struct
+                        structure M = M
+                        structure K = struct
+                          type element = M.key
+                          type key = M.key vector * int (* start index *)
+                          fun isEmpty (v, i) = i >= Vector.length v
+                          fun head (v, i) = Vector.sub (v, i)
+                          fun tail (v, i) = (v, i+1)
+                          fun explode k = if isEmpty k then []
+                                          else (head k) :: explode (tail k)
+                          fun implode ee = (Vector.fromList ee, 0)
+                        end
+                        type element = K.element
+                        type key = K.key
+                        end)
+
+    local
+        fun vectorFrom (v, i) =
+            if i = 0 then v
+            else Vector.tabulate (Vector.length v - i,
+                                  fn j => Vector.sub (v, j - i))
+    in
+        type 'a trie = 'a T.trie
+        type element = M.key
+        type key = M.key vector
+        type pattern = element option list
+                               
+        val empty = T.empty
+        val isEmpty = T.isEmpty
+
+        fun insert (t, k, x) = T.insert (t, (k, 0), x)
+        fun update (t, k, f) = T.update (t, (k, 0), f)
+        fun remove (t, k) = T.remove (t, (k, 0))
+        fun contains (t, k) = T.contains (t, (k, 0))
+        fun find (t, k) = T.find (t, (k, 0))
+        fun lookup (t, k) = T.lookup (t, (k, 0))
+
+        val foldl = T.foldl
+
+        fun foldli f =
+            T.foldli (fn (k, x, acc) => f (vectorFrom k, x, acc))
+
+        fun enumerate t =
+            map (fn (k, x) => (vectorFrom k, x)) (T.enumerate t)
+
+        fun prefixOf (t, k) =
+            vectorFrom (T.prefixOf (t, (k, 0)))
+
+        fun prefixMatch (t, k) =
+            map (fn (k, x) => (vectorFrom k, x)) (T.prefixMatch (t, (k, 0)))
+
+        fun foldlPrefixMatch f acc (t, k) =
+            T.foldlPrefixMatch f acc (t, (k, 0))
+
+        fun foldliPrefixMatch f acc (t, k) =
+            T.foldliPrefixMatch (fn (k, x, acc) => f (vectorFrom k, x, acc))
+                                acc (t, (k, 0))
+
+        fun patternMatch (t, p) =
+            map (fn (k, x) => (vectorFrom k, x)) (T.patternMatch (t, p))
+
+        fun foldliPatternMatch f =
+            T.foldliPatternMatch (fn (k, x, acc) => f (vectorFrom k, x, acc))
+            
+    end
+end
+
+                                                                            
 (*!!! temporarily *)
 signature LIST_TRIE_NODE_MAP = TRIE_NODE_MAP
