@@ -330,6 +330,7 @@ functor VectorTrieMapFn (M : TRIE_NODE_MAP)
                         structure M = M
                         structure K = struct
                           type element = M.key
+(*!!! ah, this won't work: although key vector * int is an equality type, default equality produces the wrong result on it. We need e.g. ([a,b,c],1), ([b,b,c], 1) and ([b,c], 0) all to be considered equal. We must either provide an equality function explicitly, or find another representation *)
                           type key = M.key vector * int (* start index *)
                           fun isEmpty (v, i) = i >= Vector.length v
                           fun head (v, i) = Vector.sub (v, i)
