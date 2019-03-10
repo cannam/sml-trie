@@ -40,76 +40,78 @@ functor Word32TrieMapFn (Arg : WORD32_TRIE_MAP_FN_ARG)
     val bitsPerNodeW = Word.fromInt bitsPerNode
     val valuesPerNode = Word.toInt (Word.<< (0w1, bitsPerNodeW))
     val nodeMask = Word32.fromInt (valuesPerNode - 1)
-                   
-    structure T = ListTrieMapFn(Word32NodeMap)
+    val nodesPerWord = Int.div (32, bitsPerNode)
+
+    fun extract (w, n) =
+        let val b = Word.fromInt (bitsPerNode * n)
+            val shifted = Word32.>> (w, b)
+            val masked = Word32.andb (shifted, nodeMask)
+        in
+            Word32.toIntX masked
+        end
+
+    structure T = TrieMapFn
+                      (struct
+                        structure M = Word32NodeMap
+                        structure K = struct
+                          type element = M.key
+                          type key = Word32.word * int
+                          fun isEmpty (w, n) = n >= nodesPerWord
+                          fun head (w, n) = extract (w, n)
+                          fun tail (w, n) = (w, n + 1)
+                          fun explode k = if isEmpty k then []
+                                          else head k :: explode (tail k)
+                          fun implode nn =
+                              let fun implode' [] = 0w0
+                                    | implode' (n::nn) = 
+                                      Word32.orb (Word32.<< (implode' nn,
+                                                             bitsPerNodeW),
+                                                  Word32.fromInt n)
+                              in
+                                  (implode' nn, 0)
+                              end
+                        end
+                        type element = K.element
+                        type key = K.key
+                        end)
                                
     type 'a trie = 'a T.trie
 
-    fun explode w =
-        let fun explode' (w, n) =
-                if n <= 0
-                then []
-                else Word32.toIntX (Word32.andb (w, nodeMask)) ::
-                     explode' (Word32.>> (w, bitsPerNodeW), n - bitsPerNode)
-        in
-            explode' (w, bitsToUse)
-        end
-
-    fun implode bb =
-        case bb of
-            [] => 0w0
-          | b::bb => Word32.orb (Word32.<< (implode bb, bitsPerNodeW),
-                                 Word32.fromInt b)
-
+    (*!!! this is not right, is it? *)
+    fun keyFrom (w, i) = Word32.>> (w, Word.fromInt (i * bitsPerNode))
+                             
     val empty = T.empty
-
     val isEmpty = T.isEmpty
 
-    fun update (trie, h, f) =
-        T.update (trie, explode h, f)
-                      
-    fun insert (trie, h, v) =
-        T.insert (trie, explode h, v)
+    fun insert (t, k, x) = T.insert (t, (k, 0), x)
+    fun update (t, k, f) = T.update (t, (k, 0), f)
+    fun remove (t, k) = T.remove (t, (k, 0))
+    fun contains (t, k) = T.contains (t, (k, 0))
+    fun find (t, k) = T.find (t, (k, 0))
+    fun lookup (t, k) = T.lookup (t, (k, 0))
 
-    fun contains (trie, h) =
-        T.contains (trie, explode h)
-                         
-    fun remove (trie, h) =
-        T.remove (trie, explode h)
+    val foldl = T.foldl
 
-    fun find (trie, h) =
-        T.find (trie, explode h)
+    fun foldli f =
+        T.foldli (fn (k, x, acc) => f (keyFrom k, x, acc))
 
-    fun lookup (trie, h) =
-        T.lookup (trie, explode h)
-                 
-    fun foldl f acc trie =
-        T.foldl f acc trie
+    fun enumerate t =
+        map (fn (k, x) => (keyFrom k, x)) (T.enumerate t)
 
-    fun foldli f acc trie =
-        T.foldli (fn (k, v, acc) => f (implode k, v, acc))
-                 acc trie
+    fun prefixOf (t, k) =
+        keyFrom (T.prefixOf (t, (k, 0)))
 
-    fun enumerate trie =
-        List.map (fn (k, v) => (implode k, v))
-                 (T.enumerate trie)
+    fun prefixMatch (t, k) =
+        map (fn (k, x) => (keyFrom k, x)) (T.prefixMatch (t, (k, 0)))
 
-    fun foldlPrefixMatch f acc (trie, h) =
-        T.foldlPrefixMatch f acc (trie, explode h)
+    fun foldlPrefixMatch f acc (t, k) =
+        T.foldlPrefixMatch f acc (t, (k, 0))
 
-    fun foldliPrefixMatch f acc (trie, h) =
-        T.foldliPrefixMatch (fn (k, v, acc) => f (implode k, v, acc))
-                            acc (trie, explode h)
-                 
-    fun prefixMatch (trie, h) =
-        List.map (fn (k, v) => (implode k, v))
-                 (T.prefixMatch (trie, explode h))
-
-    fun prefixOf (trie, h) =
-        implode (T.prefixOf (trie, explode h))
-   
+    fun foldliPrefixMatch f acc (t, k) =
+        T.foldliPrefixMatch (fn (k, x, acc) => f (keyFrom k, x, acc))
+                            acc (t, (k, 0))
 end
-    
+                                                    
 structure Word32TrieMap = Word32TrieMapFn(struct val bitsToUse = 32 end)
 
 
