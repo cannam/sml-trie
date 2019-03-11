@@ -16,17 +16,18 @@ end
 
 signature TRIE_KEY = sig
     eqtype element
-    eqtype key
+    type key
     val isEmpty : key -> bool
     val head : key -> element
     val tail : key -> key
     val explode : key -> element list
     val implode : element list -> key
+    val equal : key * key -> bool
 end
 
 signature TRIE_MAP_FN_ARG = sig
     eqtype element
-    eqtype key
+    type key
     structure M : TRIE_NODE_MAP where type key = element
     structure K : TRIE_KEY where type element = element where type key = key
 end
@@ -69,7 +70,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
               | (TWIG (kk, item), true) => update' (newBranch (SOME (f NONE)),
                                                     kk, fn _ => item)
               | (TWIG (kk, item), false) =>
-                (if kk = xx
+                (if K.equal (kk, xx)
                  then TWIG (kk, f' item)
                  else if K.head kk = K.head xx (* e.g. adding XDEF next to XABC *)
                  then BRANCH (NONE,
@@ -105,7 +106,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         case (n, K.isEmpty xx) of
             (LEAF item, true) => newBranch NONE
           | (LEAF _, _) => n
-          | (TWIG (kk, item), _) => (if kk = xx
+          | (TWIG (kk, item), _) => (if K.equal (kk, xx)
                                      then newBranch NONE
                                      else n)
           | (BRANCH (iopt, m), true) => BRANCH (NONE, m)
@@ -136,7 +137,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         case (n, K.isEmpty xx) of
             (LEAF item, true) => SOME item
           | (LEAF _, _) => NONE
-          | (TWIG (kk, item), _) => (if kk = xx
+          | (TWIG (kk, item), _) => (if K.equal (kk, xx)
                                      then SOME item
                                      else NONE)
           | (BRANCH (iopt, m), true) => iopt
@@ -275,7 +276,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                     (LEAF item, _) => acc
                   | (TWIG (kk, item), true) => acc
                   | (TWIG (kk, item), false) =>
-                    if kk = xx
+                    if K.equal (kk, xx)
                     then (rev (K.explode kk)) @ acc
                     else best
                   | (BRANCH (NONE, m), true) => best
@@ -313,6 +314,7 @@ functor ListTrieMapFn (M : TRIE_NODE_MAP)
                                 val tail = List.tl
                                 fun explode x = x
                                 fun implode x = x
+                                fun equal (x, y) = x = y
                               end
                               type element = K.element
                               type key = K.key
@@ -330,7 +332,6 @@ functor VectorTrieMapFn (M : TRIE_NODE_MAP)
                         structure M = M
                         structure K = struct
                           type element = M.key
-(*!!! ah, this won't work: although key vector * int is an equality type, default equality produces the wrong result on it. We need e.g. ([a,b,c],1), ([b,b,c], 1) and ([b,c], 0) all to be considered equal. We must either provide an equality function explicitly, or find another representation *)
                           type key = M.key vector * int (* start index *)
                           fun isEmpty (v, i) = i >= Vector.length v
                           fun head (v, i) = Vector.sub (v, i)
@@ -338,6 +339,16 @@ functor VectorTrieMapFn (M : TRIE_NODE_MAP)
                           fun explode k = if isEmpty k then []
                                           else (head k) :: explode (tail k)
                           fun implode ee = (Vector.fromList ee, 0)
+                          fun equal (k as (v, i), k' as (v', i')) =
+                              let fun equal' (k, k') =
+                                      isEmpty k orelse
+                                      ((head k = head k') andalso
+                                       equal' (tail k, tail k'))
+                              in
+                                  Vector.length v - i = Vector.length v' - i'
+                                  andalso
+                                  equal' (k, k')
+                              end
                         end
                         type element = K.element
                         type key = K.key

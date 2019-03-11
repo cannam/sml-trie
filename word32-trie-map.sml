@@ -70,6 +70,11 @@ functor Word32TrieMapFn (Arg : WORD32_TRIE_MAP_FN_ARG)
                               in
                                   (implode' nn, 0)
                               end
+                          fun equal ((w, n), (w', n')) =
+                              n = n' andalso
+                              (isEmpty (w, n) orelse
+                               (head (w, n) = head (w', n') andalso
+                                equal (tail (w, n), tail (w', n'))))
                         end
                         type element = K.element
                         type key = K.key
