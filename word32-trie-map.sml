@@ -40,81 +40,69 @@ functor Word32TrieMapFn (Arg : WORD32_TRIE_MAP_FN_ARG)
     val bitsPerNodeW = Word.fromInt bitsPerNode
     val valuesPerNode = Word.toInt (Word.<< (0w1, bitsPerNodeW))
     val nodeMask = Word32.fromInt (valuesPerNode - 1)
-    val nodesPerWord = Int.div (32, bitsPerNode)
+    val nodesPerWord = Int.div (32, bitsPerNode) +
+                       (if Int.mod (32, bitsPerNode) = 0 then 0 else 1)
 
-    fun extract (w, n) =
-        let val b = Word.fromInt (bitsPerNode * n)
-            val shifted = Word32.>> (w, b)
-            val masked = Word32.andb (shifted, nodeMask)
-        in
-            Word32.toIntX masked
-        end
-
+    structure Key = struct
+        type element = int
+        type key = Word32.word * int  (* length in nodes *)
+        fun isEmpty (w, n) = n = 0
+        fun head (w, n) = Word32.toIntX (Word32.andb (w, nodeMask))
+        fun tail (w, n) = (Word32.>> (w, bitsPerNodeW), n - 1)
+        fun explode k = if isEmpty k then []
+                        else head k :: explode (tail k)
+        fun implode [] = (0w0, 0)
+          | implode (x::xs) =
+            case implode xs of
+                (w, n) => (Word32.orb (Word32.<< (w, bitsPerNodeW),
+                                       Word32.fromInt x),
+                           n + 1)
+        fun equal ((w, n), (w', n')) = w = w' andalso n = n'
+    end    
+            
     structure T = TrieMapFn
                       (struct
                         structure M = Word32NodeMap
-                        structure K = struct
-                          type element = M.key
-                          type key = Word32.word * int
-                          fun isEmpty (w, n) = n >= nodesPerWord
-                          fun head (w, n) = extract (w, n)
-                          fun tail (w, n) = (w, n + 1)
-                          fun explode k = if isEmpty k then []
-                                          else head k :: explode (tail k)
-                          fun implode nn =
-                              let fun implode' [] = 0w0
-                                    | implode' (n::nn) = 
-                                      Word32.orb (Word32.<< (implode' nn,
-                                                             bitsPerNodeW),
-                                                  Word32.fromInt n)
-                              in
-                                  (implode' nn, 0)
-                              end
-                          fun equal ((w, n), (w', n')) =
-                              n = n' andalso
-                              (isEmpty (w, n) orelse
-                               (head (w, n) = head (w', n') andalso
-                                equal (tail (w, n), tail (w', n'))))
-                        end
+                        structure K = Key
                         type element = K.element
                         type key = K.key
                         end)
                                
     type 'a trie = 'a T.trie
 
-    (*!!! this is not right, is it? *)
-    fun keyFrom (w, i) = Word32.>> (w, Word.fromInt (i * bitsPerNode))
+    fun enkey k = (k, nodesPerWord)
+    fun dekey (k, n) = k
                              
     val empty = T.empty
     val isEmpty = T.isEmpty
 
-    fun insert (t, k, x) = T.insert (t, (k, 0), x)
-    fun update (t, k, f) = T.update (t, (k, 0), f)
-    fun remove (t, k) = T.remove (t, (k, 0))
-    fun contains (t, k) = T.contains (t, (k, 0))
-    fun find (t, k) = T.find (t, (k, 0))
-    fun lookup (t, k) = T.lookup (t, (k, 0))
+    fun insert (t, k, x) = T.insert (t, enkey k, x)
+    fun update (t, k, f) = T.update (t, enkey k, f)
+    fun remove (t, k) = T.remove (t, enkey k)
+    fun contains (t, k) = T.contains (t, enkey k)
+    fun find (t, k) = T.find (t, enkey k)
+    fun lookup (t, k) = T.lookup (t, enkey k)
 
     val foldl = T.foldl
 
     fun foldli f =
-        T.foldli (fn (k, x, acc) => f (keyFrom k, x, acc))
+        T.foldli (fn (k, x, acc) => f (dekey k, x, acc))
 
     fun enumerate t =
-        map (fn (k, x) => (keyFrom k, x)) (T.enumerate t)
+        map (fn (k, x) => (dekey k, x)) (T.enumerate t)
 
     fun prefixOf (t, k) =
-        keyFrom (T.prefixOf (t, (k, 0)))
+        dekey (T.prefixOf (t, enkey k))
 
     fun prefixMatch (t, k) =
-        map (fn (k, x) => (keyFrom k, x)) (T.prefixMatch (t, (k, 0)))
+        map (fn (k, x) => (dekey k, x)) (T.prefixMatch (t, enkey k))
 
     fun foldlPrefixMatch f acc (t, k) =
-        T.foldlPrefixMatch f acc (t, (k, 0))
+        T.foldlPrefixMatch f acc (t, enkey k)
 
     fun foldliPrefixMatch f acc (t, k) =
-        T.foldliPrefixMatch (fn (k, x, acc) => f (keyFrom k, x, acc))
-                            acc (t, (k, 0))
+        T.foldliPrefixMatch (fn (k, x, acc) => f (dekey k, x, acc))
+                            acc (t, enkey k)
 end
                                                     
 structure Word32TrieMap = Word32TrieMapFn(struct val bitsToUse = 32 end)
