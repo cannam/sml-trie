@@ -31,7 +31,9 @@ signature TRIE_MAP_FN_ARG = sig
     structure M : TRIE_NODE_MAP where type key = element
     structure K : TRIE_KEY where type element = element where type key = key
 end
-                              
+
+(*!!! todo: rename this file, now that the functor name has changed *)
+                                
 functor TrieMapFn (A : TRIE_MAP_FN_ARG)
 	:> PATTERN_MATCH_TRIE_MAP
 	       where type element = A.K.element where type key = A.K.key = struct

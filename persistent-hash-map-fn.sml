@@ -9,9 +9,7 @@ functor PersistentHashMapFn (Key : HASH_KEY)
     type hash_key = Key.hash_key
     type hash = Word32.word
 
-    structure T = Word32TrieMapFn(struct
-                                   val bitsToUse = 30
-                                   end)
+    structure T = Word32TrieMap
 
     type 'a hash_value = hash_key * 'a
     datatype 'a hash_entry = ONE of 'a hash_value
