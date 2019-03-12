@@ -23,7 +23,7 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
 			    "alligator",
 			    "alliance", "abrasive",
 			    "a" ]
-
+                              
     fun sorted s = ListMergeSort.sort String.> s
 
     fun test_trie () = List.foldl (fn (s, t) => T.add (t, s))
@@ -130,7 +130,9 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
 	( "prefixOf",
           fn () => check_pairs id [(T.prefixOf (test_trie (), "par"), "par"),
 		                   (T.prefixOf (test_trie (), "parp"), "parp"),
-		                   (T.prefixOf (test_trie (), "part"), "par")
+		                   (T.prefixOf (test_trie (), "part"), "par"),
+		                   (T.prefixOf (test_trie (), "abras"), "abras"),
+		                   (T.prefixOf (test_trie (), "abrasiveness"), "abrasive")
                                   ]
         ),
 	( "prefixOf-no-matches",
