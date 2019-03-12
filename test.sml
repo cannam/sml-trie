@@ -131,7 +131,7 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
           fn () => check_pairs id [(T.prefixOf (test_trie (), "par"), "par"),
 		                   (T.prefixOf (test_trie (), "parp"), "parp"),
 		                   (T.prefixOf (test_trie (), "part"), "par"),
-		                   (T.prefixOf (test_trie (), "abras"), "abras"),
+		                   (T.prefixOf (test_trie (), "abras"), "a"),
 		                   (T.prefixOf (test_trie (), "abrasiveness"), "abrasive")
                                   ]
         ),

@@ -272,11 +272,11 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun patternMatch (trie, p) =
         rev (foldliPatternMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
 
-    fun longestCommon (xx, yy) =
-        if K.isEmpty xx orelse K.isEmpty yy orelse K.head xx <> K.head yy
-        then []
-        else (K.head xx) :: longestCommon (K.tail xx, K.tail yy)
-            
+    fun isKeyPrefixOf (kk, xx) =
+        if K.isEmpty kk then true
+        else if K.isEmpty xx then false
+        else K.head kk = K.head xx andalso isKeyPrefixOf (K.tail kk, K.tail xx)
+                                          
     fun prefixOf (trie, e) =
         let fun prefix' (n, xx, best, acc) =
                 if K.isEmpty xx
@@ -287,7 +287,10 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                        | BRANCH (SOME item, m) => acc
                 else case n of
                          LEAF item => acc
-                       | TWIG (kk, item) => rev (longestCommon (kk, xx)) @ acc
+                       | TWIG (kk, item) =>
+                         if K.equal (kk, xx) orelse isKeyPrefixOf (kk, xx)
+                         then rev (K.explode kk) @ acc
+                         else best
                        | BRANCH (iopt, m) =>
                          let val (x, xs) = (K.head xx, K.tail xx)
                              val best = case iopt of NONE => best
