@@ -8,7 +8,7 @@ signature MTRIE_ELEMENT = sig
 end
 
 functor MTrieNodeMapFn (E : MTRIE_ELEMENT)
-        :> LIST_TRIE_NODE_MAP
+        :> TRIE_NODE_MAP
                where type key = E.t = struct
 
     structure M = RedBlackMapFn (struct

@@ -4,7 +4,9 @@ trie-map.sig
 trie.sig
 pattern-match-trie-map.sig
 pattern-match-trie.sig
+trie-map-fn.sml
 list-trie-map-fn.sml
+vector-trie-map-fn.sml
 list-mtrie-map-fn.sml
 list-atrie-map-fn.sml
 bitmapped-vector.sml

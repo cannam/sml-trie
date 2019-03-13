@@ -9,7 +9,7 @@ signature ATRIE_ELEMENT = sig
 end
 
 functor ATrieNodeMapFn (E : ATRIE_ELEMENT)
-        :> LIST_TRIE_NODE_MAP
+        :> TRIE_NODE_MAP
                where type key = E.t = struct
 
     type key = E.t

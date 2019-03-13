@@ -10,7 +10,7 @@ signature BTRIE_ELEMENT = sig
 end
 
 functor BTrieNodeMapFn (E : BTRIE_ELEMENT)
-        :> LIST_TRIE_NODE_MAP
+        :> TRIE_NODE_MAP
                where type key = E.t = struct
                                 
     structure V = BitMappedVector

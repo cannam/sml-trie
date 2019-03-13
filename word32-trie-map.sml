@@ -3,7 +3,7 @@
    MIT/X11 licence. See the file COPYING for details. *)
 
 structure Word32NodeMap
-          :> LIST_TRIE_NODE_MAP
+          :> TRIE_NODE_MAP
                  where type key = int = struct
 
     structure V = BitMappedVector32
@@ -66,5 +66,4 @@ structure Word32TrieMap
     open T
                       
 end
-
 
