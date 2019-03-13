@@ -28,8 +28,3 @@ functor BTrieNodeMapFn (E : BTRIE_ELEMENT)
                                 
 end
                                           
-functor ListBTrieMapFn (E : BTRIE_ELEMENT)
-	:> PATTERN_MATCH_TRIE_MAP
-	       where type element = E.t where type key = E.t list =
-    ListTrieMapFn(BTrieNodeMapFn(E))
-

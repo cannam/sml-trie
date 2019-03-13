@@ -44,7 +44,7 @@ structure Word32TrieMap
     structure Key = struct
         type element = int
         type key = Word32.word
-        fun isEmpty w = w = 0w0
+        fun isEmpty w = w = Word32.fromInt 0
         fun head w = Word32.toIntX (Word32.andb (w, nodeMask))
         fun tail w = Word32.>> (w, bitsPerNodeW)
         fun explode k = if isEmpty k then []
