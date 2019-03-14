@@ -1,22 +1,35 @@
 
-functor VectorTrieMapFn (M : TRIE_NODE_MAP)
-	:> PATTERN_MATCH_TRIE_MAP
-	       where type element = M.key where type key = M.key vector = struct
+(* Copyright 2015-2018 Chris Cannam.
+   MIT/X11 licence. See the file COPYING for details. *)
 
+signature VECTOR_TRIE_MAP_FN_ARG = sig
+    eqtype element
+    type key
+    structure M : TRIE_NODE_MAP where type key = element
+    structure V : MONO_VECTOR where type elem = element where type vector = key
+end
+
+functor VectorTrieMapFn (A : VECTOR_TRIE_MAP_FN_ARG)
+	:> PATTERN_MATCH_TRIE_MAP
+	       where type element = A.element where type key = A.key = struct
+
+    structure M = A.M
+    structure V = A.V
+                      
     structure Key = struct
         type element = M.key
-        type key = M.key vector * int (* start index *)
-        fun isEmpty (v, i) = i >= Vector.length v
-        fun head (v, i) = Vector.sub (v, i)
+        type key = V.vector * int (* start index *)
+        fun isEmpty (v, i) = i >= V.length v
+        fun head (v, i) = V.sub (v, i)
         fun tail (v, i) = (v, i+1)
         fun explode k = if isEmpty k then [] else (head k) :: explode (tail k)
-        fun implode ee = (Vector.fromList ee, 0)
+        fun implode ee = (V.fromList ee, 0)
         fun equal ((v1, i1), (v2, i2)) =
             let fun equal' (k1, k2) =
                     isEmpty k1 orelse
                     (head k1 = head k2 andalso equal' (tail k1, tail k2))
             in
-                Vector.length v1 - i1 = Vector.length v2 - i2 andalso
+                V.length v1 - i1 = V.length v2 - i2 andalso
                 equal' ((v1, i1), (v2, i2))
             end
     end
@@ -31,12 +44,12 @@ functor VectorTrieMapFn (M : TRIE_NODE_MAP)
 
     fun enkey v = (v, 0)
     fun dekey (v, 0) = v
-      | dekey (v, i) = Vector.tabulate (Vector.length v - i,
-                                        fn j => Vector.sub (v, j - i))
+      | dekey (v, i) = V.tabulate (V.length v - i,
+                                   fn j => V.sub (v, j - i))
                              
     type 'a trie = 'a T.trie
     type element = M.key
-    type key = M.key vector
+    type key = V.vector
     type pattern = element option list
                                
     val empty = T.empty
