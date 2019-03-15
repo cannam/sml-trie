@@ -17,6 +17,7 @@ pattern-match-trie-fn.sml
 persistent-hash-map.sig
 persistent-hash-map-fn.sml
 list-tries.sml
+vector-tries.sml
 string-trie-map.sml
 string-trie.sml
 string-hash-map.sml
