@@ -641,9 +641,8 @@ val testStubs = [
     (TestIntHashTable.name, TestIntHashTable.test),
     (TestStringHashMap.name, TestStringHashMap.test),
     (TestStringRBMap.name, TestStringRBMap.test),
-(*
     (TestStringMTrieMap.name, TestStringMTrieMap.test),
-    (TestStringATrieMap.name, TestStringATrieMap.test), *)
+    (TestStringATrieMap.name, TestStringATrieMap.test),
     (TestStringHashTable.name, TestStringHashTable.test)
 ]
 
