@@ -34,7 +34,7 @@ functor VectorTrieMapFn (A : VECTOR_TRIE_MAP_FN_ARG)
             end
     end
                                                            
-    structure T = TrieMapKeyAdapterFn
+    structure T = PatternMatchTrieMapKeyAdapterFn
                       (struct
                         type element = Key.element
                         type key = Key.key
