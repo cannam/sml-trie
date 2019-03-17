@@ -39,19 +39,22 @@ structure Word32TrieMap
 
     val bitsPerNodeW = Word.fromInt bitsPerNode
     val valuesPerNode = Word.toInt (Word.<< (0w1, bitsPerNodeW))
-    val nodeMask = Word32.fromInt (valuesPerNode - 1)
+    val maskShift = 0w32 - bitsPerNodeW
+    val nodeMask = Word32.<< (Word32.fromInt (valuesPerNode - 1), maskShift)
 
     structure Key = struct
         type element = int
         type key = Word32.word
         fun isEmpty w = w = Word32.fromInt 0
-        fun head w = Word32.toIntX (Word32.andb (w, nodeMask))
-        fun tail w = Word32.>> (w, bitsPerNodeW)
+        fun head w = Word32.toIntX (Word32.>> (Word32.andb (w, nodeMask),
+                                               maskShift))
+        fun tail w = Word32.<< (w, bitsPerNodeW)
         fun explode k = if isEmpty k then []
                         else head k :: explode (tail k)
         fun implode [] = 0w0
-          | implode (x::xs) = Word32.orb (Word32.<< (implode xs, bitsPerNodeW),
-                                          Word32.fromInt x)
+          | implode (x::xs) =
+            Word32.orb (Word32.<< (Word32.fromInt x, bitsPerNodeW),
+                        implode xs)
         fun equal (w, w') = w = w'
     end    
             
