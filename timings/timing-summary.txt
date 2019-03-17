@@ -80,6 +80,14 @@ Read (MLton)    1.91068      1.49241      1.17906      1.20099
 Mem (Poly)      1798628      1507952      1197952      1139724
 Mem (MLton)     4042720      4042940      4042884      4041444
 
+Revision        f9b95610f142
+Insert (Poly)   2.05041
+Insert (MLton)  1.848122
+Read (Poly)     0.95644
+Read (MLton)    0.7313
+Mem (Poly)      1075280
+Mem (MLton)     3441900
+
 Aspirational:
                 Mutable                   Unordered
                 hash table                map (C++)
