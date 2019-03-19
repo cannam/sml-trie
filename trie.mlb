@@ -5,6 +5,7 @@ trie.sig
 pattern-match-trie-map.sig
 pattern-match-trie.sig
 trie-map-fn.sml
+trie-map-keyadapter-fn.sml
 list-trie-map-fn.sml
 vector-trie-map-fn.sml
 bitmapped-vector.sml

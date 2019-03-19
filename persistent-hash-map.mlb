@@ -3,7 +3,7 @@ trie-map.sig
 trie.sig
 pattern-match-trie-map.sig
 pattern-match-trie.sig
-list-trie-map-fn.sml
+trie-map-fn.sml
 bitmapped-vector.sml
 word32-trie-map.sml
 persistent-hash-map.sig
