@@ -77,17 +77,17 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             case n of
                 LEAF item => update' (newBranch (SOME item), xx, f)
               | TWIG (kk, item) =>
-                (if K.equal (kk, xx)
-                 then TWIG (kk, f (SOME item))
-                 else if K.head kk = K.head xx (* e.g. adding XDEF next to XABC *)
-                 then BRANCH (NONE,
-                              M.update
-                                  (M.new (), K.head kk,
-                                   fn _ => update' (update' (newBranch NONE,
-                                                             K.tail xx, f),
-                                                    K.tail kk, fn _ => item)))
-                 else update' (update' (newBranch NONE, kk, fn _ => item),
-                               xx, f))
+                if K.equal (kk, xx)
+                then TWIG (kk, f (SOME item))
+                else if K.head kk = K.head xx (* e.g. adding XDEF next to XABC *)
+                then BRANCH (NONE,
+                             M.update
+                                 (M.new (), K.head kk,
+                                  fn _ => update' (update' (newBranch NONE,
+                                                            K.tail xx, f),
+                                                   K.tail kk, fn _ => item)))
+                else update' (update' (newBranch NONE, kk, fn _ => item),
+                              xx, f)
               | BRANCH (iopt, m) =>
                 BRANCH (iopt,
                         M.update (m, K.head xx,
@@ -116,9 +116,9 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         else
             case n of
                 LEAF _ => n
-              | TWIG (kk, item) => (if K.equal (kk, xx)
-                                    then newBranch NONE
-                                    else n)
+              | TWIG (kk, item) => if K.equal (kk, xx)
+                                   then newBranch NONE
+                                   else n
               | BRANCH (iopt, m) =>
                 let val x = K.head xx
                 in
@@ -259,11 +259,11 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                   | (BRANCH (SOME item, _), []) => f' (rev rpfx, item, acc)
                   | (LEAF _, xx) => acc
                   | (TWIG (kk, item), xx) =>
-                    (if ListPair.allEq (fn (k, NONE) => true
-                                         | (k, SOME x) => k = x)
-                                       (K.explode kk, xx)
-                     then f' (rev rpfx @ K.explode kk, item, acc)
-                     else acc)
+                    if ListPair.allEq (fn (k, NONE) => true
+                                        | (k, SOME x) => k = x)
+                                      (K.explode kk, xx)
+                    then f' (rev rpfx @ K.explode kk, item, acc)
+                    else acc
                   | (BRANCH (_, m), NONE::xs) =>
                     M.foldli (fn (x, n, acc) =>
                                  fold' (x :: rpfx, n, xs, acc))
