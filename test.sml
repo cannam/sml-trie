@@ -67,6 +67,17 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
                               (T.enumerate
                                    (test_trie ())) - 1)
         ),
+        ( "remove-absent",
+          fn () => check_lists id
+                               (T.enumerate
+                                    (T.remove
+                                         (T.remove
+                                              (T.remove (test_trie (), "zebr"),
+                                               "zebras"),
+                                          "flarp")),
+                                T.enumerate
+                                    (test_trie ()))
+        ),
         ( "remove-many",
           fn () => check_lists
 	               id (T.enumerate
