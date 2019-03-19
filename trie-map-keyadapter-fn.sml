@@ -7,12 +7,12 @@ signature TRIE_MAP_KEYADAPTER_FN_ARG = sig
     val dekey : key -> external_key
 end
 
-(* Adapt a trie map into another trie map with a different external
-   key type. Useful when implementing a map whose key can be readily
-   converted into a type for which an implementation already exists,
-   such as a list or vector. You provide conversion functions between
-   the existing trie key and the external key you want for your trie
-   signature, in both directions, and it provides the wrapped API.
+(** Adapt a trie map into another trie map with a different external
+    key type. Useful when implementing a map whose key can be readily
+    converted into a type for which an implementation already exists,
+    such as a list or vector. You provide conversion functions between
+    the existing trie key and the external key you want for your trie
+    signature, in both directions, and it provides the wrapped API.
 *)
 functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
         :> TRIE_MAP
@@ -68,13 +68,13 @@ signature PATTERN_MATCH_TRIE_MAP_KEYADAPTER_FN_ARG = sig
     val dekey : key -> external_key
 end
 
-(* Adapt a pattern-match trie map into another pattern-match trie map
-   with a different external key type. Useful when implementing a map
-   whose key can be readily converted into a type for which an
-   implementation already exists, such as a list or vector. You
-   provide conversion functions between the existing trie key and the
-   external key you want for your trie signature, in both directions,
-   and it provides the wrapped API.
+(** Adapt a pattern-match trie map into another pattern-match trie map
+    with a different external key type. Useful when implementing a map
+    whose key can be readily converted into a type for which an
+    implementation already exists, such as a list or vector. You
+    provide conversion functions between the existing trie key and the
+    external key you want for your trie signature, in both directions,
+    and it provides the wrapped API.
 *)
 functor PatternMatchTrieMapKeyAdapterFn (A : PATTERN_MATCH_TRIE_MAP_KEYADAPTER_FN_ARG)
         :> PATTERN_MATCH_TRIE_MAP
