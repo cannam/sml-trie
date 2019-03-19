@@ -15,7 +15,9 @@ signature PERSISTENT_VECTOR = sig
 
     val sub : 'a vector * int -> 'a
     val update : 'a vector * int * 'a -> 'a vector
-                                                
+
+    val tabulate : int * (int -> 'a) -> 'a vector
+                                            
 end
 
 structure PersistentVector :> PERSISTENT_VECTOR = struct
@@ -80,6 +82,15 @@ structure PersistentVector :> PERSISTENT_VECTOR = struct
              in
                  { start = start, size = size, trie = t }
              end
+
+    fun tabulate (n, f) =
+        let fun tabulate' (i, v) =
+                if i = n
+                then v
+                else tabulate' (i + 1, append (v, f i))
+        in
+            tabulate' (0, empty)
+        end
                  
 end
                                  
