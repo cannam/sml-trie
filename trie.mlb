@@ -22,3 +22,4 @@ vector-tries.sml
 string-trie-map.sml
 string-trie.sml
 string-hash-map.sml
+persistent-vector.sml
