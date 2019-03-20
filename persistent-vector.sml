@@ -49,12 +49,13 @@ structure PersistentVector :> PERSISTENT_VECTOR = struct
         end
 
     fun popStart { start, size, trie } =
-        let val x = T.lookup (trie, start)
-            (*!!! ah, here's where having remove return the value is useful *)
-            val t = T.remove (trie, start)
-        in
-            ({ start = start + 0w1, size = size - 0w1, trie = t }, x)
-        end
+        case T.find (trie, start) of
+            NONE => raise Size
+          | SOME x =>
+            let val t = T.remove (trie, start)
+            in
+                ({ start = start + 0w1, size = size - 0w1, trie = t }, x)
+            end
             
     fun append ({ start, size, trie }, x) =
         let val t = T.insert (trie, start + size, x)
@@ -63,12 +64,13 @@ structure PersistentVector :> PERSISTENT_VECTOR = struct
         end
 
     fun popEnd { start, size, trie } =
-        let val x = T.lookup (trie, start + size - 0w1)
-            (*!!! ah, here's where having remove return the value is useful *)
-            val t = T.remove (trie, start + size - 0w1)
-        in
-            ({ start = start, size = size - 0w1, trie = t }, x)
-        end
+        case T.find (trie, start + size - 0w1) of
+            NONE => raise Size
+          | SOME x =>
+            let val t = T.remove (trie, start + size - 0w1)
+            in
+                ({ start = start, size = size - 0w1, trie = t }, x)
+            end
 
     fun sub (v as { start, size, trie }, i) =
         if i < 0 orelse i >= length v
