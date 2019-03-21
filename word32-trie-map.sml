@@ -28,20 +28,28 @@ structure Word32TrieMap
 
     type key = Word32.word
 
-    (* The 32-bit word key gets split up into 5-bit chunks (and one
-       remaining 2-bit chunk). 5 bits represent the range 0-31, thus
-       fitting neatly in the 32-bit compression bitmap we have
-       available through Word32NodeMap. It is coincidence that this
-       happens to be the same as the key size *)
-
-    val bitsPerNode = 5    (* This cannot be > 5, since we are using a
-                              32-bit bitmap for 32 slots in our vector *)
-
-    val bitsPerNodeW = Word.fromInt bitsPerNode
-    val valuesPerNode = Word.toInt (Word.<< (0w1, bitsPerNodeW))
-    val maskShift = 0w32 - bitsPerNodeW
-
     structure Key = struct
+
+        (* The 32-bit word key gets split up into 5-bit chunks (and
+           one remaining 2-bit chunk). 5 bits represent the range
+           0-31, thus fitting neatly in the 32-bit compression bitmap
+           we have available through Word32NodeMap. It is coincidence
+           that this happens to be the same as the key size *)
+
+        val bitsPerNode = 5    (* This cannot be > 5, since we are using a
+                                  32-bit bitmap for 32 slots in our vector *)
+
+        val bitsPerNodeW = Word.fromInt bitsPerNode
+        val valuesPerNode = Word.toInt (Word.<< (0w1, bitsPerNodeW))
+        val maskShift = 0w32 - bitsPerNodeW
+        val nodesPerWord = Int.quot (32, bitsPerNode) +
+                           (case Int.mod (32, bitsPerNode) of
+                                0 => 0
+                              | _ => 1)
+        val bitsInLastNodeW = case Int.mod (32, bitsPerNode) of
+                                  0 => bitsPerNodeW
+                                | n => Word.fromInt n
+
         type element = int
         type key = Word32.word
         fun isEmpty w = w = Word32.fromInt 0
@@ -49,13 +57,31 @@ structure Word32TrieMap
         fun tail w = Word32.<< (w, bitsPerNodeW)
         fun explode k = if isEmpty k then []
                         else head k :: explode (tail k)
-        fun implode [] = 0w0
-          | implode (x::xs) =
-            Word32.orb (Word32.<< (Word32.fromInt x, bitsPerNodeW),
-                        implode xs)
+        fun implode xx =
+            let fun implode' (xx, i, acc) =
+                    if i + 1 = nodesPerWord
+                    then case xx of
+                             [] => Word32.<< (acc, bitsInLastNodeW)
+                           | x::xs =>
+                             Word32.orb (Word32.<< (acc, bitsInLastNodeW),
+                                         Word32.>> (Word32.fromInt x,
+                                                    bitsPerNodeW -
+                                                    bitsInLastNodeW))
+                    else case xx of
+                             [] =>
+                             implode' (xx, i + 1,
+                                       Word32.<< (acc, bitsPerNodeW))
+                           | x::xs =>
+                             implode' (xs, i + 1,
+                                       Word32.orb
+                                           (Word32.<< (acc, bitsPerNodeW),
+                                            Word32.fromInt x))
+            in
+                implode' (xx, 0, 0w0)
+            end
         fun equal (w, w') = w = w'
     end    
-            
+
     structure T = TrieMapFn
                       (struct
                         structure M = Word32NodeMap
