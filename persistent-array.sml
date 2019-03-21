@@ -24,11 +24,17 @@ signature PERSISTENT_ARRAY = sig
     val empty : 'a array
     val isEmpty : 'a array -> bool
 
-    val prepend : 'a array * 'a -> 'a array
-    val popStart : 'a array -> 'a array * 'a
-
     val append : 'a array * 'a -> 'a array
     val popEnd : 'a array -> 'a array * 'a
+                                            
+end
+
+signature PERSISTENT_QUEUE = sig
+
+    include PERSISTENT_ARRAY
+
+    val prepend : 'a array * 'a -> 'a array
+    val popStart : 'a array -> 'a array * 'a
                                             
 end
 
@@ -37,7 +43,6 @@ structure PersistentArray : PERSISTENT_ARRAY = struct
     structure T = Word32TrieMap
 
     type 'a array = {
-        start : Word32.word,
         size : Word32.word,
         trie : 'a T.trie
     }
@@ -56,6 +61,92 @@ structure PersistentArray : PERSISTENT_ARRAY = struct
         end
 
     val maxLen = Word32.toInt maxLenW
+
+    val empty = {
+        size = 0w0,
+        trie = T.empty
+    }
+                    
+    fun isEmpty { size, trie } =
+        size = 0w0
+
+    fun length { size, trie } =
+        Word32.toInt size
+            
+    fun append ({ size, trie }, x) =
+        let val _ = if size = maxLenW then raise Size else ()
+            val t = T.insert (trie, size, x)
+        in
+            { size = size + 0w1, trie = t }
+        end
+
+    fun popEnd { size, trie } =
+        case T.find (trie, size - 0w1) of
+            NONE => raise Size
+          | SOME x =>
+            let val t = T.remove (trie, size - 0w1)
+            in
+                ({ size = size - 0w1, trie = t }, x)
+            end
+
+    fun sub (v as { size, trie }, i) =
+        if i < 0 orelse i >= length v
+        then raise Subscript
+        else T.lookup (trie, Word32.fromInt i)
+
+    fun update (v as { size, trie }, i, x) =
+        if i < 0 orelse i >= length v
+        then raise Subscript
+        else let val t = T.insert (trie, Word32.fromInt i, x)
+             in
+                 { size = size, trie = t }
+             end
+
+    fun foldli f acc { size, trie } =
+        T.foldli (fn (w, x, acc) => f (Word32.toInt w, x, acc))
+                 acc trie
+
+    fun foldl f acc { size, trie } =
+        T.foldl f acc trie
+
+    fun mapi f v =
+        foldli (fn (i, x, acc) => append (acc, f (i, x))) empty v
+
+    fun map f v =
+        foldl (fn (x, acc) => append (acc, f x)) empty v
+
+    fun appi f v =
+        foldli (fn (i, x, _) => ignore (f (i, x))) () v
+              
+    fun app f v =
+        foldl (fn (x, _) => ignore (f x)) () v
+
+    fun fromList xx =
+        List.foldl (fn (x, acc) => append (acc, x)) empty xx
+                    
+    fun tabulate (n, f) =
+        let fun tabulate' (i, v) =
+                if i = n
+                then v
+                else tabulate' (i + 1, append (v, f i))
+        in
+            tabulate' (0, empty)
+        end
+                 
+end
+
+structure PersistentQueue : PERSISTENT_QUEUE = struct
+
+    structure T = Word32TrieMap
+
+    type 'a array = {
+        start : Word32.word,
+        size : Word32.word,
+        trie : 'a T.trie
+    }
+
+    val maxLen = PersistentArray.maxLen
+    val maxLenW = Word32.fromInt maxLen
 
     val empty = {
         start = 0w0,
@@ -114,12 +205,17 @@ structure PersistentArray : PERSISTENT_ARRAY = struct
                  { start = start, size = size, trie = t }
              end
 
-    fun foldli f acc { start, size, trie } =
-        T.foldli (fn (w, x, acc) => f (Word32.toInt (w - start), x, acc))
-                 acc trie
+    fun foldli f acc v =
+        let fun foldli' i acc =
+                if i = length v
+                then acc
+                else foldli' (i + 1) (f (i, sub (v, i), acc))
+        in
+            foldli' 0 acc
+        end
 
-    fun foldl f acc { start, size, trie } =
-        T.foldl f acc trie
+    fun foldl f =
+        foldli (fn (i, x, acc) => f (x, acc))
 
     fun mapi f v =
         foldli (fn (i, x, acc) => append (acc, f (i, x))) empty v
