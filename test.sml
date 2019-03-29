@@ -2,12 +2,12 @@
 (* Copyright 2015-2018 Chris Cannam.
    MIT/X11 licence. See the file COPYING for details. *)
 
-signature TEST_TRIE_FN_ARG = sig
+signature TRIE_TEST_FN_ARG = sig
     structure T : STRING_TRIE
     val name : string
 end
 
-functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
+functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
 
     open TestSupport
 
@@ -213,6 +213,19 @@ functor TestTrieFn (ARG : TEST_TRIE_FN_ARG) :> TESTS = struct
     ]
 
 end
+                                     
+structure StringMTrieTest = TrieTestFn(struct
+                                        structure T = StringMTrie
+                                        val name = "string-mtrie"
+                                        end)
+structure StringATrieTest = TrieTestFn(struct
+                                        structure T = StringATrie
+                                        val name = "string-atrie"
+                                        end)
+structure StringBTrieTest = TrieTestFn(struct
+                                        structure T = StringBTrie
+                                        val name = "string-btrie"
+                                        end)
 
 structure BitMappedVectorTest :> TESTS = struct
 
@@ -358,7 +371,7 @@ structure HashMapTest :> TESTS = struct
 
     open TestSupport
 
-    val name = "hash-map"
+    val name = "persistent-hash-map"
 
     fun test_map () = M.insert
                           (M.insert
@@ -479,20 +492,129 @@ structure HashMapTest :> TESTS = struct
     ]
                        
 end
-                                             
-structure StringMTrieTest = TestTrieFn(struct
-                                        structure T = StringMTrie
-                                        val name = "string-mtrie"
-                                        end)
-structure StringATrieTest = TestTrieFn(struct
-                                        structure T = StringATrie
-                                        val name = "string-atrie"
-                                        end)
-structure StringBTrieTest = TestTrieFn(struct
-                                        structure T = StringBTrie
-                                        val name = "string-btrie"
-                                        end)
-                                                    
+
+signature PERSISTENT_ARRAY_TEST_FN_ARG = sig
+    structure A : PERSISTENT_ARRAY
+    val name : string
+end
+    
+functor PersistentArrayTestFn (ARG : PERSISTENT_ARRAY_TEST_FN_ARG) :> TESTS = struct
+
+    open TestSupport
+
+    structure A = ARG.A
+    val name = ARG.name
+                   
+    fun tests () = [
+        ( "empty",
+          fn () => A.isEmpty (A.empty)
+                   andalso
+                   A.length (A.empty) = 0
+        ),
+        ( "toList-empty",
+          fn () => check_lists id (A.toList A.empty, [])
+        ),
+        ( "fromList",
+          fn () => check_lists id (A.toList (A.fromList []), [])
+                   andalso
+                   check_lists id (A.toList (A.fromList [ "hello", "world" ]),
+                                   [ "hello", "world" ])
+        ),
+        ( "append",
+          fn () => check_lists id (A.toList (A.append (A.empty, "hello")),
+                                   [ "hello" ])
+                   andalso
+                   check_lists id (A.toList (A.append
+                                                 (A.append
+                                                      (A.empty, "hello"),
+                                                  "world")),
+                                   [ "hello", "world" ])
+                               
+        ),
+        ( "foldli",
+          fn () => check_lists (fn (i, s) => Int.toString i ^ ":" ^ s)
+                               (A.foldli (fn (i, x, acc) => (i, x) :: acc)
+                                         []
+                                         (A.fromList [ "hello", "world" ]),
+                                [ (1, "world"), (0, "hello") ])
+        ),
+        ( "map",
+          fn () => check_lists id
+                               (A.toList (A.map (implode o rev o explode)
+                                                (A.fromList [ "hello", "world" ])),
+                                [ "olleh", "dlrow" ])
+        ),
+        ( "sub",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d", "banana" ]
+             in
+                 check_pairs id [(A.sub (a, 0), "a"),
+                                 (A.sub (a, 4), "banana"),
+                                 (A.sub (a, 2), "c")]
+             end
+        ),
+        ( "update",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d", "banana" ]
+             in
+                 check_lists id
+                             (A.toList (A.update (a, 2, "weevil")),
+                              [ "a", "b", "weevil", "d", "banana" ])
+                 andalso (* check a was not mutated *)
+                 check_lists id
+                             (A.toList a,
+                              [ "a", "b", "c", "d", "banana" ])
+             end
+        ),
+        ( "popEnd",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d" ]
+             in
+                 check_lists id
+                             (A.toList (#1 (A.popEnd a)), [ "a", "b", "c" ])
+                 andalso 
+                 check_pairs id
+                             [((#2 (A.popEnd a)), "d")]
+                 andalso
+                 check_lists id
+                             (A.toList (#1 (A.popEnd (A.fromList [ "a" ]))),
+                              [])
+             end
+        ),
+        ( "tabulate",
+          fn () =>
+             check_lists Int.toString
+                         (A.toList (A.tabulate (4, fn x => x * 2)),
+                          [ 0, 2, 4, 6 ])
+             andalso
+             check_lists Int.toString
+                         (A.toList (A.tabulate (0, fn x => x * 2)),
+                          [])
+        )
+    ]
+end
+
+structure PersistentArrayTest = PersistentArrayTestFn(struct
+                                                       structure A = PersistentArray
+                                                       val name = "persistent-array"
+                                                       end)
+
+structure PersistentQueueTest :> TESTS = struct
+
+    open TestSupport
+
+    val name = "persistent-queue"
+
+    structure ArrayTestPart = PersistentArrayTestFn(struct
+                                                     structure A = PersistentQueue
+                                                     val name = name
+                                                     end)
+
+    fun tests () =
+        (ArrayTestPart.tests ()) @
+        []
+end
+                                                     
 fun main () =
     let open TestSupport
     in
@@ -501,7 +623,9 @@ fun main () =
             (StringATrieTest.name, StringATrieTest.tests ()),
             (BitMappedVectorTest.name, BitMappedVectorTest.tests ()),
             (StringBTrieTest.name, StringBTrieTest.tests ()),
-            (HashMapTest.name, HashMapTest.tests ())
+            (HashMapTest.name, HashMapTest.tests ()),
+            (PersistentArrayTest.name, PersistentArrayTest.tests ()),
+            (PersistentQueueTest.name, PersistentQueueTest.tests ())
         ]
     end
 
