@@ -3,6 +3,8 @@ signature PERSISTENT_QUEUE = sig
 
     include PERSISTENT_ARRAY
 
+    type 'a queue = 'a array
+
     val prepend : 'a array * 'a -> 'a array
     val popStart : 'a array -> 'a array * 'a
                                             
@@ -17,6 +19,8 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
         size : Word32.word,
         trie : 'a T.trie
     }
+
+    type 'a queue = 'a array
 
     val maxLen = PersistentArray.maxLen
     val maxLenW = Word32.fromInt maxLen

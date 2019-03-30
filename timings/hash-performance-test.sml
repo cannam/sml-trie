@@ -84,12 +84,16 @@ structure Timing = struct
                  print (name ^ " | " ^ (Int.toString nruns) ^ " | " ^
                         (Int.toString count) ^ " | " ^
                         (Real.toString (secs / Real.fromInt nruns)) ^ " | " ^
-                        (Int.toString (Real.floor (Real.fromInt
-                                                       (nruns * count)
-                                                   / secs)))
+                        (let val rn = (Real.fromInt (nruns * count) / secs)
+                         in
+                             Int.toString (Real.floor rn)
+                             handle Overflow => "lots"
+                         end)
                         ^ "\n")
                | TERSE =>
-                 print (Int.toString (Real.round ((secs * 1000.0) / Real.fromInt nruns)) ^ "ms\t");
+                 print (Int.toString (Real.round ((secs * 1000.0) /
+                                                  Real.fromInt nruns))
+                        ^ "ms\t");
              case result of
                  SOME r => r
                | NONE => raise Fail "no result!?")
@@ -634,7 +638,90 @@ structure TestStringHashTable = TestMutableFn
                                       val distinctKeys = distinctStrings
                                       val name = "HashTable/string"
                                       end)
+
+signature IMMUTABLE_ARRAY = sig
+    type 'a array
+    val tabulate : int * (int -> 'a) -> 'a array
+    val toList : 'a array -> 'a list
+    val update : 'a array * int * 'a -> 'a array
+    val sub : 'a array * int -> 'a
+    val length : 'a array -> int
+end
+
+signature TEST_IMMUTABLE_ARRAY_ARG = sig
+
+    structure Array : IMMUTABLE_ARRAY
+
+    val indices : int -> int vector
+    val name : string
+                   
+end
+                                
+functor TestImmutableArrayFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
+
+    structure A = Arg.Array
+
+    val name = Arg.name
+
+    fun nameFor n label =
+        name ^ " | " ^ label
+                      
+    fun testTabulate n =
+        let val name = nameFor n "tabulation"
+            val len = 
+                Timing.benchmark
+                    (fn () => A.length (A.tabulate (n, fn i => i)),
+                     name, numberOfRuns, n)
+        in
+            if len <> n
+            then print ("ERROR: Failed to insert all " ^
+                        Int.toString n ^
+                        " entries in tabulation (inserted " ^
+                        Int.toString len ^ "\n")
+            else ()
+        end
+
+    fun testMemory n =
+        (ignore (testTabulate n);
+         print "- | - | - | - | - | -\n")
+            
+    fun test testType nkeys =
+        case testType of
+            TEST_MEMORY => testMemory nkeys
+          | TEST_ALL => 
+            let val indices = Arg.indices nkeys
+                val arr = testTabulate nkeys
+            in
+                ()
+            end
     
+end
+
+structure TestPersistentArray = TestImmutableArrayFn
+                                    (struct
+                                      structure Array = PersistentArray
+                                      val indices = randomInts
+                                      val name = "PersistentArray/int"
+                                      end)
+
+structure TestPersistentQueue = TestImmutableArrayFn
+                                    (struct
+                                      structure Array = PersistentQueue
+                                      val indices = randomInts
+                                      val name = "PersistentQueue/int"
+                                      end)
+
+structure TestVector = TestImmutableArrayFn
+                                    (struct
+                                      structure Array = struct
+                                      open Vector
+                                      type 'a array = 'a vector
+                                      fun toList v = foldr (op::) [] v
+                                      end
+                                      val indices = randomInts
+                                      val name = "Vector/int"
+                                      end)
+                                      
 val testStubs = [
     (TestIntHashMap.name, TestIntHashMap.test),
     (TestIntRBMap.name, TestIntRBMap.test),
@@ -643,7 +730,10 @@ val testStubs = [
     (TestStringRBMap.name, TestStringRBMap.test),
     (TestStringMTrieMap.name, TestStringMTrieMap.test),
     (TestStringATrieMap.name, TestStringATrieMap.test),
-    (TestStringHashTable.name, TestStringHashTable.test)
+    (TestStringHashTable.name, TestStringHashTable.test),
+    (TestPersistentArray.name, TestPersistentArray.test),
+    (TestPersistentQueue.name, TestPersistentQueue.test),
+    (TestVector.name, TestVector.test)
 ]
 
 val tests =
