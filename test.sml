@@ -531,6 +531,23 @@ functor PersistentArrayTestFn (ARG : PERSISTENT_ARRAY_TEST_FN_ARG) :> TESTS = st
                                    [ "hello", "world" ])
                                
         ),
+        ( "popEnd",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d" ]
+             in
+                 check_lists id
+                             (A.toList (#1 (A.popEnd a)), [ "a", "b", "c" ])
+                 andalso 
+                 check_pairs id
+                             [((#2 (A.popEnd a)), "d")]
+                 andalso
+                 check_lists id
+                             (A.toList (#1 (A.popEnd (A.fromList [ "a" ]))),
+                              [])
+                 andalso
+                 ((A.popEnd (A.fromList []); false) handle Size => true)
+             end
+        ),
         ( "foldli",
           fn () => check_lists (fn (i, s) => Int.toString i ^ ":" ^ s)
                                (A.foldli (fn (i, x, acc) => (i, x) :: acc)
@@ -551,6 +568,10 @@ functor PersistentArrayTestFn (ARG : PERSISTENT_ARRAY_TEST_FN_ARG) :> TESTS = st
                  check_pairs id [(A.sub (a, 0), "a"),
                                  (A.sub (a, 4), "banana"),
                                  (A.sub (a, 2), "c")]
+                 andalso
+                 ((A.sub (a, 5); false) handle Subscript => true)
+                 andalso
+                 ((A.sub (a, ~1); false) handle Subscript => true)
              end
         ),
         ( "update",
@@ -564,21 +585,10 @@ functor PersistentArrayTestFn (ARG : PERSISTENT_ARRAY_TEST_FN_ARG) :> TESTS = st
                  check_lists id
                              (A.toList a,
                               [ "a", "b", "c", "d", "banana" ])
-             end
-        ),
-        ( "popEnd",
-          fn () =>
-             let val a = A.fromList [ "a", "b", "c", "d" ]
-             in
-                 check_lists id
-                             (A.toList (#1 (A.popEnd a)), [ "a", "b", "c" ])
-                 andalso 
-                 check_pairs id
-                             [((#2 (A.popEnd a)), "d")]
                  andalso
-                 check_lists id
-                             (A.toList (#1 (A.popEnd (A.fromList [ "a" ]))),
-                              [])
+                 ((A.update (a, 5, "oops"); false) handle Subscript => true)
+                 andalso
+                 ((A.update (a, ~1, "oops"); false) handle Subscript => true)
              end
         ),
         ( "tabulate",
@@ -610,9 +620,85 @@ structure PersistentQueueTest :> TESTS = struct
                                                      val name = name
                                                      end)
 
+    structure Q = PersistentQueue
+                                                   
     fun tests () =
-        (ArrayTestPart.tests ()) @
-        []
+        (ArrayTestPart.tests ()) @ [
+        ( "prepend",
+          fn () => check_lists id (Q.toList (Q.prepend (Q.empty, "hello")),
+                                   [ "hello" ])
+                   andalso
+                   check_lists id (Q.toList (Q.prepend
+                                                 (Q.prepend
+                                                      (Q.empty, "hello"),
+                                                  "world")),
+                                   [ "world", "hello" ])
+                               
+        ),
+        ( "popStart",
+          fn () =>
+             let val a = Q.fromList [ "a", "b", "c", "d" ]
+             in
+                 check_lists id
+                             (Q.toList (#1 (Q.popStart a)), [ "b", "c", "d" ])
+                 andalso 
+                 check_pairs id
+                             [((#2 (Q.popStart a)), "a")]
+                 andalso
+                 check_lists id
+                             (Q.toList (#1 (Q.popStart (Q.fromList [ "a" ]))),
+                              [])
+                 andalso
+                 ((Q.popStart (Q.fromList []); false) handle Size => true)
+             end
+        ),
+        ( "queue-forward",
+          fn () =>
+             let val q1 = Q.fromList [ "a", "b" ]
+                 val q2 = (#1 (Q.popStart (Q.append (q1, "c"))))
+                 val q3 = (#1 (Q.popStart (Q.append (q2, "d"))))
+                 val q4 = (#1 (Q.popStart q3))
+                 val q5 = (#1 (Q.popStart q4))
+             in
+                 check_lists id (Q.toList q1, [ "a", "b" ])
+                 andalso
+                 check_lists id (Q.toList q2, [ "b", "c" ])
+                 andalso
+                 check_lists id (Q.toList q3, [ "c", "d" ])
+                 andalso
+                 check_pairs id [(Q.sub (q3, 1), "d")]
+                 andalso
+                 check_lists id (Q.toList q4, [ "d" ])
+                 andalso
+                 check_lists id (Q.toList q5, [])
+                 andalso
+                 Q.isEmpty q5
+             end
+        ),
+        ( "queue-reverse",
+          fn () =>
+             let val q1 = Q.fromList [ "a", "b" ]
+                 val q2 = (#1 (Q.popEnd (Q.prepend (q1, "c"))))
+                 val q3 = (#1 (Q.popEnd (Q.prepend (q2, "d"))))
+                 val q4 = (#1 (Q.popEnd q3))
+                 val q5 = (#1 (Q.popEnd q4))
+             in
+                 check_lists id (Q.toList q1, [ "a", "b" ])
+                 andalso
+                 check_lists id (Q.toList q2, [ "c", "a" ])
+                 andalso
+                 check_lists id (Q.toList q3, [ "d", "c" ])
+                 andalso
+                 check_pairs id [(Q.sub (q3, 1), "c")]
+                 andalso
+                 check_lists id (Q.toList q4, [ "d" ])
+                 andalso
+                 check_lists id (Q.toList q5, [])
+                 andalso
+                 Q.isEmpty q5
+             end
+        )
+        ]
 end
                                                      
 fun main () =
