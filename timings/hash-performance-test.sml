@@ -666,23 +666,46 @@ functor TestImmutableArrayFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
     fun nameFor n label =
         name ^ " | " ^ label
                       
-    fun testTabulate n =
+    fun testTabulation n =
         let val name = nameFor n "tabulation"
-            val len = 
+        in
+            Timing.benchmark
+                (fn () => A.tabulate (n, fn i => i),
+                 name, numberOfRuns, n)
+        end
+
+    fun testRandomReads indices a =
+        let val n = Vector.length indices
+            val name = nameFor n "random reads"
+            val sum =
                 Timing.benchmark
-                    (fn () => A.length (A.tabulate (n, fn i => i)),
+                    (fn () => Vector.foldl (fn (i, tot) =>
+                                               tot + A.sub (a, i))
+                                           0 indices,
                      name, numberOfRuns, n)
         in
-            if len <> n
-            then print ("ERROR: Failed to insert all " ^
+            if sum <> Int.div (n * (n - 1), 2)
+            then print ("ERROR: Failed to get expected sum "
+                        ^ Int.toString (Int.div (n * (n - 1), 2)) ^
+                        " (got " ^ Int.toString sum ^ ")\n")
+            else ()
+        end
+            
+    fun testEnumeration n a =
+        let val name = nameFor n "enumeration"
+            val e = 
+                Timing.benchmark
+                    (fn () => A.toList a, name, numberOfRuns, n)
+        in
+            if length e <> n
+            then print ("ERROR: Failed to enumerate expected " ^
                         Int.toString n ^
-                        " entries in tabulation (inserted " ^
-                        Int.toString len ^ "\n")
+                        " items (found " ^ Int.toString (length e) ^ ")\n")
             else ()
         end
 
     fun testMemory n =
-        (ignore (testTabulate n);
+        (ignore (testTabulation n);
          print "- | - | - | - | - | -\n")
             
     fun test testType nkeys =
@@ -690,9 +713,10 @@ functor TestImmutableArrayFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
             TEST_MEMORY => testMemory nkeys
           | TEST_ALL => 
             let val indices = Arg.indices nkeys
-                val arr = testTabulate nkeys
+                val arr = testTabulation nkeys
             in
-                ()
+                testRandomReads indices arr;
+                testEnumeration nkeys arr
             end
     
 end
