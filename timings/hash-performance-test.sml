@@ -644,6 +644,8 @@ signature IMMUTABLE_ARRAY = sig
     val tabulate : int * (int -> 'a) -> 'a array
     val toList : 'a array -> 'a list
     val update : 'a array * int * 'a -> 'a array
+    val foldl : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
+    val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
     val sub : 'a array * int -> 'a
     val length : 'a array -> int
 end
@@ -670,7 +672,7 @@ functor TestImmutableArrayFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
         let val name = nameFor n "tabulation"
         in
             Timing.benchmark
-                (fn () => A.tabulate (n, fn i => i),
+                (fn () => A.tabulate (n, fn i => Real.fromInt i),
                  name, numberOfRuns, n)
         end
 
@@ -679,15 +681,65 @@ functor TestImmutableArrayFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
             val name = nameFor n "random reads"
             val sum =
                 Timing.benchmark
-                    (fn () => Vector.foldl (fn (i, tot) =>
-                                               tot + A.sub (a, i))
-                                           0 indices,
+                    (fn () => Vector.foldl (fn (i, tot) => tot + A.sub (a, i))
+                                           0.0 indices,
                      name, numberOfRuns, n)
+            val expected = (Real.fromInt n) * (Real.fromInt (n-1)) * 0.5
         in
-            if sum <> Int.div (n * (n - 1), 2)
+            if Real.abs (sum - expected) > 0.01
             then print ("ERROR: Failed to get expected sum "
-                        ^ Int.toString (Int.div (n * (n - 1), 2)) ^
-                        " (got " ^ Int.toString sum ^ ")\n")
+                        ^ Real.toString expected ^
+                        " (got " ^ Real.toString sum ^ ")\n")
+            else ()
+        end
+
+    fun testFoldl n a =
+        let val name = nameFor n "foldl"
+            val sum =
+                Timing.benchmark
+                    (fn () => A.foldl (Real.+) 0.0 a,
+                     name, numberOfRuns, n)
+            val expected = (Real.fromInt n) * (Real.fromInt (n-1)) * 0.5
+        in
+            if Real.abs (sum - expected) > 0.01
+            then print ("ERROR: Failed to get expected sum "
+                        ^ Real.toString expected ^
+                        " (got " ^ Real.toString sum ^ ")\n")
+            else ()
+        end
+
+    fun testFoldli n a =
+        let val name = nameFor n "foldli"
+            val sum =
+                Timing.benchmark
+                    (fn () => A.foldli (fn (i, x, acc) => acc + x + Real.fromInt i) 0.0 a,
+                     name, numberOfRuns, n)
+            val expected = (Real.fromInt n) * (Real.fromInt (n-1))
+        in
+            if Real.abs (sum - expected) > 0.01
+            then print ("ERROR: Failed to get expected sum "
+                        ^ Real.toString expected ^
+                        " (got " ^ Real.toString sum ^ ")\n")
+            else ()
+        end
+            
+    fun testUpdates indices a =
+        let val n = Vector.length indices
+            val name = nameFor n "random updates"
+            val a' = 
+                Timing.benchmark
+                    (fn () => Vector.foldl (fn (i, acc) =>
+                                               A.update (acc, i,
+                                                         Real.fromInt (~i)))
+                                           a indices,
+                     name, numberOfRuns, n)
+            val sum = A.foldl (Real.+) 0.0 a'
+            val expected = ~((Real.fromInt n) * (Real.fromInt (n-1)) * 0.5)
+        in
+            if Real.abs (sum - expected) > 0.01
+            then print ("ERROR: Failed to get expected sum "
+                        ^ Real.toString expected ^
+                        " (got " ^ Real.toString sum ^ ")\n")
             else ()
         end
             
@@ -716,6 +768,9 @@ functor TestImmutableArrayFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
                 val arr = testTabulation nkeys
             in
                 testRandomReads indices arr;
+                testFoldl nkeys arr;
+                testFoldli nkeys arr;
+                testUpdates indices arr;
                 testEnumeration nkeys arr
             end
     
