@@ -1,16 +1,19 @@
 
-Persistent tries in Standard ML
-===============================
+Trie and persistent trie-based containers in Standard ML
+========================================================
 
-This is an immutable trie library in Standard ML.
+This is a trie library in Standard ML.
 
-The library contains two types of container implementation: a Trie (in
-both "set" and "map" kinds), and a Persistent Hash Map implemented
-using tries internally.
+The library contains implementations the following container
+data structures:
+
+   1. Trie and Trie Map
+   2. Persistent Hash Map (implemented using bitmap tries)
+   3. Persistent Array and Queue (implemented using bitmap tries)
 
 
-1. TRIES
---------
+1. TRIE AND TRIE MAP
+--------------------
 
 A trie is an ordered container. It stores a set of entries of a common
 entry type, which is some sort of sequence (vector, list, string etc),
@@ -101,32 +104,33 @@ And there are specialisations for string entries:
  * StringTrieMap, StringTrie - aliases for StringMTrieMap, StringMTrie
 
 
-2. PERSISTENT HASH MAPS
------------------------
+2. PERSISTENT HASH MAP
+----------------------
 
-This library also contains an implementation of a persistent hash map
+This library contains an implementation of a persistent hash map
 structure. That is, a hash map in which every insertion or removal
 returns a separate hash map, without modifying the one passed in, but
 internally sharing any unmodified parts with it.
 
 Like a classic hash table, the persistent hash map is unordered (keys
-can be enumerated but not in sort order, and do not need to be
-comparable) and requires that a hash function be provided for the key
-type.
+can be enumerated but not in any guaranteed order, and do not need to
+be comparable) and requires that a hash function be provided for the
+key type.
 
 The implementation is a hash-array-mapped trie (HAMT) somewhat like
-that popularised by the Clojure language.
+that popularised by the Clojure language. Hashes are 32-bit words and
+collisions are handled using simple list chaining.
 
 The main signature is:
 
  * PERSISTENT_HASH_MAP (persistent-hash-map.sig) - signature of a
-   polymorphic-value hash map container with arbitrary key type
+   polymorphic-value hash map container with a fixed key type
 
 And this is implemented by
 
  * PersistentHashMapFn (persistent-hash-map-fn.sml) - a functor that
    takes a hash key type and hash function and implements a
-   PERSISTENT_HASH_MAP with that key type.
+   PERSISTENT_HASH_MAP with that key type
 
 There is a specialisation for string keys:
 
@@ -134,8 +138,43 @@ There is a specialisation for string keys:
    string keys
 
 
-BUILD & TEST
-------------
+3. PERSISTENT ARRAY AND QUEUE
+-----------------------------
+
+This library contains implementations of persistent array and queue
+containers. These are immutable containers (like the standard vector)
+that also support update, append, and pop-from-end operations. The
+queue additionally supports prepend and pop-from-start, but in return
+its plain iteration (foldl) is not as fast as the array. For both
+containers, all of the update, append, prepend, and pop operations
+take time independent of the container size.
+
+The implementation uses an array-mapped-trie somewhat like that
+popularised by the Clojure language. Both containers are limited in
+size to 2^32 elements (by the implementation) or the maximum size of
+Int.int (by the API), whichever is smaller. For the queue the
+limitation is on current queue length, not on total number of
+push/pops.
+
+The main signatures are:
+
+ * PERSISTENT_ARRAY (persistent-array.sig) - signature of a
+   polymorphic-value persistent array container
+
+ * PERSISTENT_QUEUE (persistent-queue.sig) - signature of a
+   polymorphic-value persistent queue container
+
+And these are implemented by
+
+ * PersistentArray (persistent-array.sml) - a polymorphic-value
+   persistent array container
+
+ * PersistentQueue (persistent-queue.sml) - a polymorphic-value
+   persistent queue container
+
+
+TO BUILD & TEST
+---------------
 
 Basic unit tests are provided. With the MLton compiler, run
 
@@ -147,6 +186,6 @@ To use in other projects, include trie.mlb from your MLB file.
 AUTHOR
 ------
 
-Copyright 2015-2018 Chris Cannam.
+Copyright 2015-2019 Chris Cannam.
 MIT/X11 licence. See the file COPYING for details.
 
