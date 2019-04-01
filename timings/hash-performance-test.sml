@@ -104,7 +104,8 @@ structure Timing = struct
 end
 
 fun shuffle vec =
-    let val n = Vector.length vec
+    let val _ = print "shuffle entering\n"
+        val n = Vector.length vec
         val arr = Array.tabulate (n, fn i => Vector.sub (vec, i))
         fun shuffle' 0 = ()
           | shuffle' i =
@@ -117,6 +118,7 @@ fun shuffle vec =
                 shuffle' (i-1)
             end
         val _ = shuffle' (n - 1)
+        val _ = print "shuffle done\n"
     in
         Array.vector arr
     end
@@ -658,8 +660,10 @@ signature TEST_IMMUTABLE_ARRAY_ARG = sig
     val name : string
                    
 end
-                                
-functor TestImmutableArrayFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
+
+(* Test all array functions except update, 
+   i.e. the ones also suitable for vectors *)
+functor TestImmutableVectorFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
 
     structure A = Arg.Array
 
@@ -723,26 +727,6 @@ functor TestImmutableArrayFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
             else ()
         end
             
-    fun testUpdates indices a =
-        let val n = Vector.length indices
-            val name = nameFor n "random updates"
-            val a' = 
-                Timing.benchmark
-                    (fn () => Vector.foldl (fn (i, acc) =>
-                                               A.update (acc, i,
-                                                         Real.fromInt (~i)))
-                                           a indices,
-                     name, numberOfRuns, n)
-            val sum = A.foldl (Real.+) 0.0 a'
-            val expected = ~((Real.fromInt n) * (Real.fromInt (n-1)) * 0.5)
-        in
-            if Real.abs (sum - expected) > 0.01
-            then print ("ERROR: Failed to get expected sum "
-                        ^ Real.toString expected ^
-                        " (got " ^ Real.toString sum ^ ")\n")
-            else ()
-        end
-            
     fun testEnumeration n a =
         let val name = nameFor n "enumeration"
             val e = 
@@ -770,9 +754,120 @@ functor TestImmutableArrayFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
                 testRandomReads indices arr;
                 testFoldl nkeys arr;
                 testFoldli nkeys arr;
-                testUpdates indices arr;
                 testEnumeration nkeys arr
             end
+    
+end
+                                
+functor TestImmutableArrayFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
+
+    structure VectorTests = TestImmutableVectorFn(Arg)
+    open VectorTests
+            
+    fun testRandomUpdates indices a =
+        let val n = Vector.length indices
+            val name = nameFor n "random updates"
+            val a' = 
+                Timing.benchmark
+                    (fn () => Vector.foldl (fn (i, acc) =>
+                                               A.update (acc, i,
+                                                         Real.fromInt (~i)))
+                                           a indices,
+                     name, numberOfRuns, n)
+            val sum = A.foldl (Real.+) 0.0 a'
+            val expected = ~((Real.fromInt n) * (Real.fromInt (n-1)) * 0.5)
+        in
+            if Real.abs (sum - expected) > 0.01
+            then print ("ERROR: Failed to get expected sum "
+                        ^ Real.toString expected ^
+                        " (got " ^ Real.toString sum ^ ")\n")
+            else ()
+        end
+            
+    fun test testType nkeys =
+        case testType of
+            TEST_MEMORY => testMemory nkeys
+          | TEST_ALL => 
+            let val indices = Arg.indices nkeys
+                val arr = testTabulation nkeys
+            in
+                testRandomReads indices arr;
+                testRandomUpdates indices arr;
+                testFoldl nkeys arr;
+                testFoldli nkeys arr;
+                testEnumeration nkeys arr
+            end
+    
+end
+
+signature IMMUTABLE_QUEUE = sig
+    type 'a queue
+    val empty : 'a queue
+    val append : 'a queue * 'a -> 'a queue
+    val popStart : 'a queue -> 'a queue * 'a
+    val foldl : ('a * 'b -> 'b) -> 'b -> 'a queue -> 'b
+    val length : 'a queue -> int
+end
+
+signature TEST_IMMUTABLE_QUEUE_ARG = sig
+    structure Queue : IMMUTABLE_QUEUE
+    val name : string
+end
+                                
+functor TestImmutableQueueFn (Arg : TEST_IMMUTABLE_QUEUE_ARG) = struct
+
+    structure Q = Arg.Queue
+
+    val name = Arg.name
+
+    fun nameFor n label =
+        name ^ " | " ^ label
+
+    fun testQueue n q =
+        let val name = nameFor n "queue appends and pops"
+            val lower = Int.div (n, 4)
+            val upper = 3 * lower
+            fun test' (q, acc, 0) = (q, acc)
+              | test' (q, acc, i) =
+                if i > upper
+                then test' (Q.append (q, Real.fromInt i),
+                            acc, i - 1)
+                else let val (q', x) = Q.popStart q
+                     in
+                         if i <= lower
+                         then test' (q', acc + x, i - 1)
+                         else test' (Q.append (q', Real.fromInt i),
+                                     acc + x, i - 1)
+                     end
+            val (q, sum) = Timing.benchmark
+                               (fn () => test' (q, 0.0, n),
+                                name, numberOfRuns, n)
+            val expected =
+                ((Real.fromInt n) * (Real.fromInt (n+1)) * 0.5) -
+                ((Real.fromInt lower) * (Real.fromInt (lower+1)) * 0.5)
+        in
+            if Q.length q > 0
+            then print ("ERROR: Queue not empty after queue test (length is "
+                        ^ (Int.toString (Q.length q)) ^ ")\n")
+            else if Real.abs (sum - expected) > 0.01
+            then print ("ERROR: Failed to get expected sum "
+                        ^ Real.toString expected ^
+                        " (got " ^ Real.toString sum ^ ")\n")
+            else ()
+        end
+
+    fun testMemory n =
+        let fun test' (q, 0) = q
+              | test' (q, i) = test' (Q.append (q, i), i - 1)
+        in
+            ignore (test' (Q.empty, n));
+            print "- | - | - | - | - | -\n"
+        end
+            
+    fun test testType nkeys =
+        case testType of
+            TEST_MEMORY => testMemory nkeys
+          | TEST_ALL => testQueue nkeys Q.empty
     
 end
 
@@ -783,14 +878,14 @@ structure TestPersistentArray = TestImmutableArrayFn
                                       val name = "PersistentArray/int"
                                       end)
 
-structure TestPersistentQueue = TestImmutableArrayFn
+structure TestPersistentQueue = TestImmutableQueueFn
                                     (struct
-                                      structure Array = PersistentQueue
+                                      structure Queue = PersistentQueue
                                       val indices = randomInts
                                       val name = "PersistentQueue/int"
                                       end)
 
-structure TestVector = TestImmutableArrayFn
+structure TestVector = TestImmutableVectorFn
                                     (struct
                                       structure Array = struct
                                       open Vector
@@ -800,7 +895,21 @@ structure TestVector = TestImmutableArrayFn
                                       val indices = randomInts
                                       val name = "Vector/int"
                                       end)
-                                      
+
+structure TestList = TestImmutableQueueFn
+                         (struct
+                           structure Queue = struct
+                             type 'a queue = 'a List.list
+                             val empty = []
+                             fun append (q, x) = q @ [x]
+                             fun popStart [] = raise Size
+                               | popStart (x::xs) = (xs, x)
+                             val foldl = List.foldl
+                             val length = List.length
+                           end
+                           val name = "List/int"
+                           end)
+                                    
 val testStubs = [
     (TestIntHashMap.name, TestIntHashMap.test),
     (TestIntRBMap.name, TestIntRBMap.test),
@@ -811,8 +920,9 @@ val testStubs = [
     (TestStringATrieMap.name, TestStringATrieMap.test),
     (TestStringHashTable.name, TestStringHashTable.test),
     (TestPersistentArray.name, TestPersistentArray.test),
+    (TestVector.name, TestVector.test),
     (TestPersistentQueue.name, TestPersistentQueue.test),
-    (TestVector.name, TestVector.test)
+    (TestList.name, TestList.test)
 ]
 
 val tests =
