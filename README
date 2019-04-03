@@ -4,7 +4,7 @@ Trie and persistent trie-based containers in Standard ML
 
 This is a trie library in Standard ML.
 
-The library contains implementations the following container
+The library contains implementations of the following container
 data structures:
 
    1. Trie and Trie Map
@@ -20,10 +20,10 @@ entry type, which is some sort of sequence (vector, list, string etc),
 storing them in a tree structure according to their common prefixes,
 branching where they diverge.
 
-A trie can also support a map container, in which each entry (or key)
-has an associated value rather than simply being present or absent. A
-plain trie can also be expressed as a trie map whose "value" is of a
-valueless (unit) type.
+A plain trie just records the presence or absence of an entry in a
+set, but a trie can also support a map container, in which each entry
+(or key) has an associated value as well. A plain trie can be
+expressed as a trie map whose value is of a valueless (unit) type.
 
 As with a hash map or typical tree-map structure, membership testing
 is generally fast. Unlike those, with a trie you can also quickly test
@@ -47,51 +47,51 @@ The main signatures are:
  * PATTERN_MATCH_TRIE (pattern-match-trie.sig) - signature extending
    TRIE with the capability of matching sequences with wildcards in
    them. Unlike TRIE, this exposes the types of the individual
-   elements in each entry (e.g. char for a trie with string entries)
+   elements in each entry (e.g. char, for a trie with string entries)
 
  * PATTERN_MATCH_TRIE_MAP (pattern-match-trie-map.sig) - signature
    extending TRIE_MAP with the capability of matching sequences with
    wildcards in them, like PATTERN_MATCH_TRIE
 
 There are three core trie implementations provided, all implementing
-trie-maps:
+trie-maps and provided in list-tries.sml:
 
- * ListMTrieMapFn (list-mtrie-map-fn.sml) - a functor that takes a
-   comparable element type and implements a PATTERN_MATCH_TRIE_MAP in
-   which the entry type is a list of that element. The implementation
-   uses a red-black tree map (from the SML/NJ library) at every trie
-   node. This is better suited to wide, shallow trie structures than
-   narrow, deep ones, but can be surprisingly efficient in both time
-   and space. Insertion and enumeration are relatively cheap and
-   lookup is relatively more expensive.
+ * ListMTrieMapFn - a functor that takes a comparable element type and
+   implements a PATTERN_MATCH_TRIE_MAP in which the entry type is a
+   list of that element. The implementation uses a red-black tree map
+   (from the SML/NJ library) at every trie node. This is better suited
+   to wide, shallow trie structures than narrow, deep ones, but can be
+   surprisingly efficient in both time and space. Insertion and
+   enumeration are relatively cheap and lookup is relatively more
+   expensive.
 
- * ListATrieMapFn (list-atrie-map-fn.sml) - a functor that takes an
-   element type that can be mapped compactly onto a small integer
-   range, and implements a PATTERN_MATCH_TRIE_MAP in which the entry
-   type is a list of that element. The implementation uses an array
-   (or rather a vector) at each node, extending the vector to span the
-   range of inserted values. This may be better suited than
-   ListMTrieMapFn to narrow, deep structures with small numbers of
-   possible values at each node. Lookups are relatively cheap and
-   insertion is relatively more expensive.
+ * ListATrieMapFn - a functor that takes an element type that can be
+   mapped compactly onto a small integer range, and implements a
+   PATTERN_MATCH_TRIE_MAP in which the entry type is a list of that
+   element. The implementation uses an array (or rather a vector) at
+   each node, extending the vector to span the range of inserted
+   values. This may be better suited than ListMTrieMapFn to narrow,
+   deep structures with small numbers of possible values at each
+   node. Lookups are relatively cheap and insertion is relatively more
+   expensive.
 
- * ListBTrieMapFn (list-btrie-map-fn.sml) - a functor that takes an
-   element type that can be mapped compactly onto a small integer
-   range, and implements a PATTERN_MATCH_TRIE_MAP in which the entry
-   type is a list of that element. The implementation uses a
-   bitmap-compressed semi-sparse array at each node. This is only
-   suited to entries whose elements map sparsely into a small range.
+ * ListBTrieMapFn - a functor that takes an element type that can be
+   mapped compactly onto a small integer range, and implements a
+   PATTERN_MATCH_TRIE_MAP in which the entry type is a list of that
+   element. The implementation uses a bitmap-compressed semi-sparse
+   array at each node. This is only suited to entries whose elements
+   map sparsely into a small range.
 
-These functors adapt them into set-type trie structures:
+These functors adapt trie maps into set-type trie structures:
 
  * TrieFn (trie-fn.sml) - a functor that turns a TRIE_MAP into a TRIE
 
  * PatternMatchTrieFn (pattern-match-trie-fn.sml) - a functor that
    turns a PATTERN_MATCH_TRIE_MAP into a PATTERN_MATCH_TRIE
 
- * ListMTrieFn, ListATrieFn, ListBTrieFn (pattern-match-trie-fn.sml) -
-   shorthands that turn an element type directly into a trie set (the
-   set equivalents of *TrieMapFn)
+ * ListMTrieFn, ListATrieFn, ListBTrieFn (list-tries.sml) - shorthands
+   that turn an element type directly into a trie set (the set
+   equivalents of *TrieMapFn)
 
 And there are specialisations for string entries:
 
@@ -108,14 +108,14 @@ And there are specialisations for string entries:
 ----------------------
 
 This library contains an implementation of a persistent hash map
-structure. That is, a hash map in which every insertion or removal
+structure. This is a hash map in which every insertion or removal
 returns a separate hash map, without modifying the one passed in, but
 internally sharing any unmodified parts with it.
 
-Like a classic hash table, the persistent hash map is unordered (keys
-can be enumerated but not in any guaranteed order, and do not need to
-be comparable) and requires that a hash function be provided for the
-key type.
+Like a classic hash table, the persistent hash map is unordered: keys
+can be enumerated, but not in any guaranteed order, and do not need to
+be comparable. It also requires that a hash function be provided for
+the key type.
 
 The implementation is a hash-array-mapped trie (HAMT) somewhat like
 that popularised by the Clojure language. Hashes are 32-bit words and
