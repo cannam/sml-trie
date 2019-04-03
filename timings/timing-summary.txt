@@ -72,13 +72,21 @@ Read (MLton)    1.681645     1.579573     1.64650      1.49127      1.528494
 Mem (Poly)      1901584      1861264      1393812      1515748      1879508
 Mem (MLton)     4041876      4042880      4042436      4042732      4042816
 
-Revision        3d93a7a5d14a 414fc73981fd 599e7967684c cc10509c04f0
-Insert (Poly)   3.29562      2.75177      2.502904     2.46579
-Insert (MLton)  2.67765      2.38360      1.96290      1.84813
-Read (Poly)     1.13555      1.02744      0.915713     0.88955
-Read (MLton)    1.91068      1.49241      1.17906      1.20099
-Mem (Poly)      1798628      1507952      1197952      1139724
-Mem (MLton)     4042720      4042940      4042884      4041444
+Revision        3d93a7a5d14a 414fc73981fd 599e7967684c cc10509c04f0 f9b95610f142
+Insert (Poly)   3.29562      2.75177      2.502904     2.46579      2.05041
+Insert (MLton)  2.67765      2.38360      1.96290      1.84813      1.84812
+Read (Poly)     1.13555      1.02744      0.915713     0.88955      0.95644
+Read (MLton)    1.91068      1.49241      1.17906      1.20099      0.73130
+Mem (Poly)      1798628      1507952      1197952      1139724      1075280
+Mem (MLton)     4042720      4042940      4042884      4041444      3441900
+
+Revision        ccac4c1e0b66 
+Insert (Poly)   1.60341      
+Insert (MLton)  1.57203      
+Read (Poly)     0.87816      
+Read (MLton)    0.75841      
+Mem (Poly)      799312       
+Mem (MLton)     3291704      
 
 Aspirational:
                 Mutable                   Unordered
@@ -160,10 +168,9 @@ cc10509c04f0    Split the node map into two, one for values at this node
                 order only afterwards - so it may be a good thing if it
                 doesn't significantly outperform the previous version!
 
-Further ideas:
+f9b95610f142    "twig" branch, providing chains of elements leading to
+                a value without any branches
 
-* try CHAMP-style split of map: datatype 'a node = NODE of 'a M.map *
-  'a node M.map where the maps are respectively values and subnodes
-  (substantial rework of list-trie-map-fn.sml)
-
-* review documentation of faster implementations!
+ccac4c1e0b66    "twig" branch, adding the ability to specify the key type
+                through behaviour functions rather than by breaking it
+                into a list - helpful with word32 map

@@ -3,13 +3,13 @@
    MIT/X11 licence. See the file COPYING for details. *)
 
 signature ATRIE_ELEMENT = sig
-    type t
+    eqtype t
     val ord : t -> int
     val invOrd : int -> t
 end
 
 functor ATrieNodeMapFn (E : ATRIE_ELEMENT)
-        :> LIST_TRIE_NODE_MAP
+        :> TRIE_NODE_MAP
                where type key = E.t = struct
 
     type key = E.t
@@ -99,16 +99,3 @@ functor ATrieNodeMapFn (E : ATRIE_ELEMENT)
             
 end
 
-(* Turn a type that can be compactly converted into an integer
-   ordering into a trie holding lists of that type. Each level of the
-   trie uses a vector to hold pointers to its sub-nodes, indexed by
-   integer value of the type. Because this is an immutable structure
-   and updating a vector can be slow, this may be inefficient for
-   "wide" tries with many sub-nodes per node and a lot of inserts. It
-   may be more efficient for deep tries, e.g. of character lists, with
-   lots of lookups. *)
-                                                      
-functor ListATrieMapFn (E : ATRIE_ELEMENT)
-	:> PATTERN_MATCH_TRIE_MAP
-	       where type element = E.t where type key = E.t list =
-    ListTrieMapFn(ATrieNodeMapFn(E))

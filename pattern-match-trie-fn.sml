@@ -23,18 +23,3 @@ functor PatternMatchTrieFn (M : PATTERN_MATCH_TRIE_MAP)
         M.foldliPatternMatch (fn (k, v, acc) => f (k, acc)) acc (t, p)
                              
 end
-                                                                        
-functor ListMTrieFn (E : MTRIE_ELEMENT)
-        :> PATTERN_MATCH_TRIE
-               where type element = E.t where type entry = E.t list =
-    PatternMatchTrieFn(ListMTrieMapFn(E))
-                                                                        
-functor ListATrieFn (E : ATRIE_ELEMENT)
-        :> PATTERN_MATCH_TRIE
-               where type element = E.t where type entry = E.t list =
-    PatternMatchTrieFn(ListATrieMapFn(E))
-                                                                        
-functor ListBTrieFn (E : BTRIE_ELEMENT)
-        :> PATTERN_MATCH_TRIE
-               where type element = E.t where type entry = E.t list =
-    PatternMatchTrieFn(ListBTrieMapFn(E))

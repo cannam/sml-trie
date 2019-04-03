@@ -3,14 +3,14 @@
    MIT/X11 licence. See the file COPYING for details. *)
 
 signature BTRIE_ELEMENT = sig
-    type t
+    eqtype t
     val ord : t -> int
     val invOrd : int -> t
     val maxOrd : int
 end
 
 functor BTrieNodeMapFn (E : BTRIE_ELEMENT)
-        :> LIST_TRIE_NODE_MAP
+        :> TRIE_NODE_MAP
                where type key = E.t = struct
                                 
     structure V = BitMappedVector
@@ -28,8 +28,3 @@ functor BTrieNodeMapFn (E : BTRIE_ELEMENT)
                                 
 end
                                           
-functor ListBTrieMapFn (E : BTRIE_ELEMENT)
-	:> PATTERN_MATCH_TRIE_MAP
-	       where type element = E.t where type key = E.t list =
-    ListTrieMapFn(BTrieNodeMapFn(E))
-

@@ -26,11 +26,11 @@ signature PATTERN_MATCH_TRIE = sig
     (* Return all the entries in the trie that match the given
        pattern, in sort order. Will only return entries with exactly
        the same number of elements as values in the pattern *)
-    val patternMatch : (t * pattern) -> entry list
+    val patternMatch : (trie * pattern) -> entry list
 
     (* Fold over all the entries in the trie that match the given
        pattern, in sort order. Will only return entries with exactly
        the same number of elements as values in the pattern *)
-    val foldlPatternMatch : (entry * 'a -> 'a) -> 'a -> (t * pattern) -> 'a
+    val foldlPatternMatch : (entry * 'a -> 'a) -> 'a -> (trie * pattern) -> 'a
 	    
 end
