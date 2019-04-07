@@ -8,6 +8,18 @@ signature STRING_TRIE_MAP = sig
     where type element = char
 end
 
+signature STRING_TRIE = sig
+    include PATTERN_MATCH_TRIE
+    where type entry = string
+    where type element = char
+end
+
+                                
+(* A trie-map using strings as keys. Each level of the trie uses a
+   red-black tree to hold pointers to its sub-nodes. This is
+   probably the best trie to use for strings until you have a good
+   reason to think otherwise. *)
+
 structure StringMTrieMap :> STRING_TRIE_MAP
     = VectorTrieMapFn
           (struct
@@ -20,6 +32,15 @@ structure StringMTrieMap :> STRING_TRIE_MAP
             type key = V.vector
             end)
 
+structure StringMTrie :> STRING_TRIE = PatternMatchTrieFn(StringMTrieMap)
+
+
+(* A trie-map using strings as keys. Each level of the trie uses a
+   vector to hold pointers to its sub-nodes, indexed by integer value
+   of the character at that level. This might be effective for deep
+   tries of strings of ASCII characters with a small vocabulary of
+   characters. *)
+                                     
 structure StringATrieMap :> STRING_TRIE_MAP
     = VectorTrieMapFn
           (struct
@@ -33,6 +54,12 @@ structure StringATrieMap :> STRING_TRIE_MAP
             type key = V.vector
             end)
 
+structure StringATrie :> STRING_TRIE = PatternMatchTrieFn(StringATrieMap)
+
+
+(* A trie-map using strings as keys. Each level of the trie uses a
+   bitmapped vector of characters to hold pointers to its sub-nodes. *)
+                                                         
 structure StringBTrieMap :> STRING_TRIE_MAP
     = VectorTrieMapFn
           (struct
@@ -47,5 +74,8 @@ structure StringBTrieMap :> STRING_TRIE_MAP
             type key = V.vector
             end)
 
-structure StringTrieMap = StringMTrieMap
+structure StringBTrie :> STRING_TRIE = PatternMatchTrieFn(StringBTrieMap)
 
+                                                         
+structure StringTrieMap = StringMTrieMap
+structure StringTrie = StringMTrie
