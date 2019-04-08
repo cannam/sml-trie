@@ -53,8 +53,21 @@ The main signatures are:
    extending TRIE_MAP with the capability of matching sequences with
    wildcards in them, like PATTERN_MATCH_TRIE
 
-There are three core trie implementations provided, all implementing
-trie-maps and provided in list-tries.sml:
+There is a single core trie map implementation provided: TrieMapFn, in
+trie-map-fn.sml. This is a functor parameterised by the node map type
+for the trie (which determines how sub-node relationships are stored)
+and the external key and entry types (which determine the API for the
+trie). All of the external concrete trie-map and trie structures are
+implemented using TrieMapFn internally.
+
+These functors then adapt trie-maps into set-type trie structures:
+
+ * TrieFn (trie-fn.sml) - a functor that turns a TRIE_MAP into a TRIE
+
+ * PatternMatchTrieFn (pattern-match-trie-fn.sml) - a functor that
+   turns a PATTERN_MATCH_TRIE_MAP into a PATTERN_MATCH_TRIE
+
+The following external interfaces are then provided in list-tries.sml:
 
  * ListMTrieMapFn - a functor that takes a comparable element type and
    implements a PATTERN_MATCH_TRIE_MAP in which the entry type is a
@@ -82,24 +95,27 @@ trie-maps and provided in list-tries.sml:
    array at each node. This is only suited to entries whose elements
    map sparsely into a small range.
 
-These functors adapt trie maps into set-type trie structures:
-
- * TrieFn (trie-fn.sml) - a functor that turns a TRIE_MAP into a TRIE
-
- * PatternMatchTrieFn (pattern-match-trie-fn.sml) - a functor that
-   turns a PATTERN_MATCH_TRIE_MAP into a PATTERN_MATCH_TRIE
-
  * ListMTrieFn, ListATrieFn, ListBTrieFn (list-tries.sml) - shorthands
    that turn an element type directly into a trie set (the set
    equivalents of *TrieMapFn)
 
-And there are specialisations for string entries:
+For each of these tries with list entry types, an equivalent trie with
+a vector entry type is also provided, in vector-tries.sml:
 
- * StringMTrieMap, StringATrieMap, StringBTrieMap
-   (string-trie-map.sml) - trie-maps with string key type
+ * VectorMTrieMapFn, VectorATrieMapFn, VectorBTrieMapFn - vector
+   equivalents of ListMTrieMapFn, ListATrieMapFn, ListBTrieMapFn
 
- * StringMTrie, StringATrie, StringBTrie (string-trie.sml) - trie sets
-   with string key type
+ * VectorMTrieFn, VectorATrieFn, VectorBTrieFn - vector equivalents
+   of ListMTrieFn, ListATrieFn, ListBTrieFn
+
+Finally there are specialisations for tries with string entries, found
+in string-tries.sml:
+
+ * StringMTrieMap, StringATrieMap, StringBTrieMap - trie-maps with
+   string key type
+
+ * StringMTrie, StringATrie, StringBTrie - trie sets with string key
+   type
 
  * StringTrieMap, StringTrie - aliases for StringMTrieMap, StringMTrie
 
@@ -141,20 +157,27 @@ There is a specialisation for string keys:
 3. PERSISTENT ARRAY AND QUEUE
 -----------------------------
 
-This library contains implementations of persistent array and queue
-containers. These are immutable containers (like the standard vector)
-that also support update, append, and pop-from-end operations. The
-queue additionally supports prepend and pop-from-start, but in return
-its plain iteration (foldl) is not as fast as the array. For both
-containers, all of the update, append, prepend, and pop operations
-take time independent of the container size.
+This library contains implementations of persistent array and
+double-ended queue containers. These are immutable containers like the
+Basis vector with the addition of update, append, and pop-from-end
+operations. The queue additionally supports prepend and
+pop-from-start, but in return its plain iteration (foldl) is not as
+fast as the array. For both containers, all of the update, append,
+prepend, and pop operations take time independent of the container
+size.
 
-The implementation uses an array-mapped-trie somewhat like that
+Note that these containers are competitive only if both immutability
+and general updating are desired. A vector is faster to tabulate and
+iterate over, a mutable array is faster to update existing elements
+of, and a fifo implemented with two lists is a faster persistent queue
+if updating within the queue is not needed (as it usually isn't).
+
+The implementations use an array-mapped-trie somewhat like that
 popularised by the Clojure language. Both containers are limited in
-size to 2^32 elements (by the implementation) or the maximum size of
-Int.int (by the API), whichever is smaller. For the queue the
-limitation is on current queue length, not on total number of
-push/pops.
+size to 2^32 elements or the maximum size of Int.int, whichever is
+smaller. The former is an implementation limit, the latter an artifact
+of the choice of API. For the queue, the limit is of current queue
+length, not of the total number of append/pop cycles.
 
 The main signatures are:
 

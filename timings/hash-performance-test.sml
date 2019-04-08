@@ -104,8 +104,7 @@ structure Timing = struct
 end
 
 fun shuffle vec =
-    let val _ = print "shuffle entering\n"
-        val n = Vector.length vec
+    let val n = Vector.length vec
         val arr = Array.tabulate (n, fn i => Vector.sub (vec, i))
         fun shuffle' 0 = ()
           | shuffle' i =
@@ -118,7 +117,6 @@ fun shuffle vec =
                 shuffle' (i-1)
             end
         val _ = shuffle' (n - 1)
-        val _ = print "shuffle done\n"
     in
         Array.vector arr
     end
@@ -896,6 +894,20 @@ structure TestVector = TestImmutableVectorFn
                                       val name = "Vector/int"
                                       end)
 
+structure TestFifo = TestImmutableQueueFn
+                         (struct
+                           structure Queue = struct
+                             type 'a queue = 'a Fifo.fifo
+                             (*!!! consider renaming our sig to match Fifo? *)
+                             val empty = Fifo.empty
+                             val append = Fifo.enqueue
+                             val popStart = Fifo.dequeue
+                             val foldl = Fifo.foldl
+                             val length = Fifo.length
+                           end
+                           val name = "Fifo/int"
+                           end)
+                                    
 structure TestList = TestImmutableQueueFn
                          (struct
                            structure Queue = struct
@@ -922,6 +934,7 @@ val testStubs = [
     (TestPersistentArray.name, TestPersistentArray.test),
     (TestVector.name, TestVector.test),
     (TestPersistentQueue.name, TestPersistentQueue.test),
+    (TestFifo.name, TestFifo.test),
     (TestList.name, TestList.test)
 ]
 
