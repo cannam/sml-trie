@@ -11,4 +11,10 @@ test.deps: test.mlb trie.mlb
 clean:
 	rm -f test *.deps
 
+.PHONY:	doc
+doc:	
+	mkdir -p doc
+	$(SCRIPTS)/mlb-expand trie.mlb | grep -v '^ext' > .docfiles
+	smldoc --nowarn -d doc -a .docfiles
+
 -include *.deps

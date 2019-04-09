@@ -8,3 +8,4 @@ mlmon.out
 mlb-coverage.log
 *.o
 MLB/
+doc/
