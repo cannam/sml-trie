@@ -14,13 +14,13 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
     val maxLen = PersistentArray.maxLen
     val maxLenW = Word32.fromInt maxLen
 
-    val empty = {
+    val empty : 'a queue = {
         start = 0w0,
         size = 0w0,
         trie = T.empty
     }
                     
-    fun isEmpty { start, size, trie } =
+    fun isEmpty ({ start, size, trie } : 'a queue) =
         size = 0w0
 
     fun length { start, size, trie } =
@@ -33,7 +33,7 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
             { start = start - 0w1, size = size + 0w1, trie = t }
         end
 
-    fun popStart { start, size, trie } =
+    fun popStart ({ start, size, trie } : 'a queue) : ('a queue * 'a) =
         case T.find (trie, start) of
             NONE => raise Size
           | SOME x =>
@@ -49,7 +49,7 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
             { start = start, size = size + 0w1, trie = t }
         end
 
-    fun popEnd { start, size, trie } =
+    fun popEnd ({ start, size, trie } : 'a queue) : ('a queue * 'a) =
         case T.find (trie, start + size - 0w1) of
             NONE => raise Size
           | SOME x =>

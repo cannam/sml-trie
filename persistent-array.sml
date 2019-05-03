@@ -23,12 +23,12 @@ structure PersistentArray :> PERSISTENT_ARRAY = struct
 
     val maxLen = Word32.toInt maxLenW
 
-    val empty = {
+    val empty : 'a array = {
         size = 0w0,
         trie = T.empty
     }
                     
-    fun isEmpty { size, trie } =
+    fun isEmpty ({ size, trie } : 'a array) =
         size = 0w0
 
     fun length { size, trie } =
