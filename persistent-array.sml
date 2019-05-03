@@ -23,13 +23,15 @@ structure PersistentArray :> PERSISTENT_ARRAY = struct
 
     val maxLen = Word32.toInt maxLenW
 
-    val empty = {
-        size = 0w0,
+    val one = Word32.fromInt 1
+
+    fun mkEmpty () = {
+        size = Word32.fromInt 0,
         trie = T.empty
     }
                     
     fun isEmpty { size, trie } =
-        size = 0w0
+        size = Word32.fromInt 0
 
     fun length { size, trie } =
         Word32.toInt size
@@ -38,16 +40,16 @@ structure PersistentArray :> PERSISTENT_ARRAY = struct
         let val _ = if size = maxLenW then raise Size else ()
             val t = T.insert (trie, size, x)
         in
-            { size = size + 0w1, trie = t }
+            { size = size + one, trie = t }
         end
 
     fun popEnd { size, trie } =
-        case T.find (trie, size - 0w1) of
+        case T.find (trie, size - one) of
             NONE => raise Size
           | SOME x =>
-            let val t = T.remove (trie, size - 0w1)
+            let val t = T.remove (trie, size - one)
             in
-                ({ size = size - 0w1, trie = t }, x)
+                ({ size = size - one, trie = t }, x)
             end
 
     fun sub (v as { size, trie }, i) =
@@ -71,19 +73,19 @@ structure PersistentArray :> PERSISTENT_ARRAY = struct
         T.foldl f acc trie
 
     fun mapi f v =
-        foldli (fn (i, x, acc) => append (acc, f (i, x))) empty v
+        foldli (fn (i, x, acc) => append (acc, f (i, x))) (mkEmpty ()) v
 
     fun map f v =
-        foldl (fn (x, acc) => append (acc, f x)) empty v
+        foldl (fn (x, acc) => append (acc, f x)) (mkEmpty ()) v
 
     fun appi f v =
         foldli (fn (i, x, _) => ignore (f (i, x))) () v
               
     fun app f v =
         foldl (fn (x, _) => ignore (f x)) () v
-
+               
     fun fromList xx =
-        List.foldl (fn (x, acc) => append (acc, x)) empty xx
+        List.foldl (fn (x, acc) => append (acc, x)) (mkEmpty ()) xx
                     
     fun tabulate (n, f) =
         let fun tabulate' (i, v) =
@@ -91,7 +93,10 @@ structure PersistentArray :> PERSISTENT_ARRAY = struct
                 then v
                 else tabulate' (i + 1, append (v, f i))
         in
-            tabulate' (0, empty)
+            tabulate' (0,  {
+        size = Word32.fromInt 0,
+        trie = T.empty
+    })
         end
 
     fun toList v =

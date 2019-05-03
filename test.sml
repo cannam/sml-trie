@@ -504,15 +504,17 @@ functor PersistentArrayTestFn (ARG : PERSISTENT_ARRAY_TEST_FN_ARG) :> TESTS = st
 
     structure A = ARG.A
     val name = ARG.name
+
+    fun empty () = A.tabulate (0, fn _ => "")
                    
     fun tests () = [
         ( "empty",
-          fn () => A.isEmpty (A.empty)
+          fn () => A.isEmpty (empty ())
                    andalso
-                   A.length (A.empty) = 0
+                   A.length (empty ()) = 0
         ),
         ( "toList-empty",
-          fn () => check_lists id (A.toList A.empty, [])
+          fn () => check_lists id (A.toList (empty ()), [])
         ),
         ( "fromList",
           fn () => check_lists id (A.toList (A.fromList []), [])
@@ -521,12 +523,12 @@ functor PersistentArrayTestFn (ARG : PERSISTENT_ARRAY_TEST_FN_ARG) :> TESTS = st
                                    [ "hello", "world" ])
         ),
         ( "append",
-          fn () => check_lists id (A.toList (A.append (A.empty, "hello")),
+          fn () => check_lists id (A.toList (A.append (empty (), "hello")),
                                    [ "hello" ])
                    andalso
                    check_lists id (A.toList (A.append
                                                  (A.append
-                                                      (A.empty, "hello"),
+                                                      (empty (), "hello"),
                                                   "world")),
                                    [ "hello", "world" ])
                                
@@ -622,15 +624,17 @@ structure PersistentQueueTest :> TESTS = struct
 
     structure Q = PersistentQueue
                                                    
+    fun empty () = Q.tabulate (0, fn _ => "")
+                   
     fun tests () =
         (ArrayTestPart.tests ()) @ [
         ( "prepend",
-          fn () => check_lists id (Q.toList (Q.prepend (Q.empty, "hello")),
+          fn () => check_lists id (Q.toList (Q.prepend (empty (), "hello")),
                                    [ "hello" ])
                    andalso
                    check_lists id (Q.toList (Q.prepend
                                                  (Q.prepend
-                                                      (Q.empty, "hello"),
+                                                      (empty (), "hello"),
                                                   "world")),
                                    [ "world", "hello" ])
                                

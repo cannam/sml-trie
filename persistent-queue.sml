@@ -14,23 +14,25 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
     val maxLen = PersistentArray.maxLen
     val maxLenW = Word32.fromInt maxLen
 
-    val empty = {
-        start = 0w0,
-        size = 0w0,
+    val one = Word32.fromInt 1
+
+    fun mkEmpty () = {
+        start = Word32.fromInt 0,
+        size = Word32.fromInt 0,
         trie = T.empty
     }
                     
     fun isEmpty { start, size, trie } =
-        size = 0w0
+        size = Word32.fromInt 0
 
     fun length { start, size, trie } =
         Word32.toInt size
                    
     fun prepend ({ start, size, trie }, x) =
         let val _ = if size = maxLenW then raise Size else ()
-            val t = T.insert (trie, start - 0w1, x)
+            val t = T.insert (trie, start - one, x)
         in
-            { start = start - 0w1, size = size + 0w1, trie = t }
+            { start = start - one, size = size + one, trie = t }
         end
 
     fun popStart { start, size, trie } =
@@ -39,23 +41,23 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
           | SOME x =>
             let val t = T.remove (trie, start)
             in
-                ({ start = start + 0w1, size = size - 0w1, trie = t }, x)
+                ({ start = start + one, size = size - one, trie = t }, x)
             end
             
     fun append ({ start, size, trie }, x) =
         let val _ = if size = maxLenW then raise Size else ()
             val t = T.insert (trie, start + size, x)
         in
-            { start = start, size = size + 0w1, trie = t }
+            { start = start, size = size + one, trie = t }
         end
 
     fun popEnd { start, size, trie } =
-        case T.find (trie, start + size - 0w1) of
+        case T.find (trie, start + size - one) of
             NONE => raise Size
           | SOME x =>
-            let val t = T.remove (trie, start + size - 0w1)
+            let val t = T.remove (trie, start + size - one)
             in
-                ({ start = start, size = size - 0w1, trie = t }, x)
+                ({ start = start, size = size - one, trie = t }, x)
             end
 
     fun sub (v as { start, size, trie }, i) =
@@ -84,10 +86,10 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
         foldli (fn (i, x, acc) => f (x, acc))
 
     fun mapi f v =
-        foldli (fn (i, x, acc) => append (acc, f (i, x))) empty v
+        foldli (fn (i, x, acc) => append (acc, f (i, x))) (mkEmpty ()) v
 
     fun map f v =
-        foldl (fn (x, acc) => append (acc, f x)) empty v
+        foldl (fn (x, acc) => append (acc, f x)) (mkEmpty ()) v
 
     fun appi f v =
         foldli (fn (i, x, _) => ignore (f (i, x))) () v
@@ -95,7 +97,7 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
     fun app f v =
         foldl (fn (x, _) => ignore (f x)) () v
 
-    fun fromList [] = empty
+    fun fromList [] = mkEmpty ()
       | fromList (x::xs) = prepend (fromList xs, x)
                     
     fun tabulate (n, f) =
@@ -104,7 +106,7 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
                 then v
                 else tabulate' (i + 1, append (v, f i))
         in
-            tabulate' (0, empty)
+            tabulate' (0, mkEmpty ())
         end
 
     fun toList v =

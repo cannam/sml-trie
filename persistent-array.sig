@@ -21,7 +21,6 @@ signature PERSISTENT_ARRAY = sig
     val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
     val foldl : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
 
-    val empty : 'a array
     val isEmpty : 'a array -> bool
 
     val append : 'a array * 'a -> 'a array
