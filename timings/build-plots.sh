@@ -2,7 +2,7 @@
 
 set -eu
 
-containers="PersistentHashMap/string RedBlackMap/string HashTable/string PersistentArray/int Vector/int PersistentQueue/int Fifo/int List/int"
+containers="PersistentHashMap/string RedBlackMap/string HashTable/string PersistentArray/int Vector/int Array/int PersistentQueue/int Fifo/int List/int"
 
 outdir=out_$$
 mkdir -p "$outdir"

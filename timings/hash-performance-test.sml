@@ -1040,6 +1040,7 @@ fun usage () =
                 "<test-name> - name of single test suite to run (default is to run them all)\n\n" ^
                 "Test names ending in /memory print no output, and are intended to be run with\n" ^
                 "memory profiling to determine how much space a filled container uses.\n\n" ^
+                "Specify \"all\" for <n> to run a representative selection of sizes in one go.\n\n" ^
                 "Recognised test names are:\n" ^
                 (String.concatWith
                      "; " (map (fn (name, _) => "\"" ^ name ^ "\"") tests)) ^
@@ -1083,18 +1084,29 @@ fun runATest name n =
         then usage ()
         else
             (printHeader n;
-             List.app (fn (tname, t) => if tname = name
-                                        then t n
-                                        else ()) tests)
+             List.app (fn (tname, t) =>
+                          if tname = name
+                          then if !verbosity = TERSE
+                               then (print ("\n" ^ tname ^ "\t"); t n)
+                               else t n
+                          else ()) tests;
+             case !verbosity of
+                 TERSE => print "\n"
+               | _ => ())
     end
+
+fun runATestAllCounts test =
+    app (runATest test) [ 10000, 100000, 1000000, 3000000, 10000000 ]
      
 fun handleArgs args =
     case args of
-        [] => (verbosity := TERSE; runAllTestsAllCounts ())
+        [] => usage ()
+      | ["all"] => (verbosity := TERSE; runAllTestsAllCounts ())
       | [nstr] =>
         (case Int.fromString nstr of
              NONE => usage ()
            | SOME n => runAllTests n)
+      | ["all", testname] => (verbosity := TERSE; runATestAllCounts testname)
       | [nstr, testname] =>
         (case Int.fromString nstr of
              NONE => usage ()
