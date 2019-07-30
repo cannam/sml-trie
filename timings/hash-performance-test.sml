@@ -135,7 +135,7 @@ signature IMMUTABLE_MAP = sig
     val enumerate : 'a map -> (key * 'a) list
 end
 
-signature TEST_IMMUTABLE_ARG = sig
+signature TEST_IMMUTABLE_MAP_ARG = sig
 
     structure Map : IMMUTABLE_MAP
 
@@ -145,7 +145,7 @@ signature TEST_IMMUTABLE_ARG = sig
                         
 end
                                    
-functor TestImmutableFn (Arg : TEST_IMMUTABLE_ARG) = struct
+functor TestImmutableMapFn (Arg : TEST_IMMUTABLE_MAP_ARG) = struct
 
     structure M = Arg.Map
 
@@ -302,7 +302,7 @@ fun distinctStrings strs =
                    strs
     end
                                   
-structure TestStringHashMap = TestImmutableFn
+structure TestStringHashMap = TestImmutableMapFn
                                   (struct
                                     structure Map = struct
                                         open StringHashMap
@@ -314,7 +314,7 @@ structure TestStringHashMap = TestImmutableFn
                                     val name = "PersistentHashMap/string"
                                     end)
                                   
-structure TestStringRBMap = TestImmutableFn
+structure TestStringRBMap = TestImmutableMapFn
                                 (struct
                                   structure Map = struct
                                       open StringRBMap
@@ -329,7 +329,7 @@ structure TestStringRBMap = TestImmutableFn
                                   val name = "RedBlackMap/string"
                                   end)
 
-structure TestStringMTrieMap = TestImmutableFn
+structure TestStringMTrieMap = TestImmutableMapFn
                                   (struct
                                     structure Map = struct
                                         open StringMTrieMap
@@ -340,7 +340,7 @@ structure TestStringMTrieMap = TestImmutableFn
                                     val name = "MTrieMap/string"
                                     end)
 
-structure TestStringATrieMap = TestImmutableFn
+structure TestStringATrieMap = TestImmutableMapFn
                                   (struct
                                     structure Map = struct
                                         open StringATrieMap
@@ -386,7 +386,7 @@ end
 
 structure IntHashMap = PersistentHashMapFn(IntHashKey)
                                                  
-structure TestIntHashMap = TestImmutableFn
+structure TestIntHashMap = TestImmutableMapFn
                                   (struct
                                     structure Map = struct
                                         open IntHashMap
@@ -398,7 +398,7 @@ structure TestIntHashMap = TestImmutableFn
                                     val name = "PersistentHashMap/int"
                                     end)
            
-structure TestIntRBMap = TestImmutableFn
+structure TestIntRBMap = TestImmutableMapFn
                                 (struct
                                   structure Map = struct
                                       open IntRBMap
@@ -423,7 +423,7 @@ signature MUTABLE_MAP = sig
     val enumerate : 'a map -> (key * 'a) list
 end
 
-signature TEST_MUTABLE_ARG = sig
+signature TEST_MUTABLE_MAP_ARG = sig
 
     structure Map : MUTABLE_MAP
 
@@ -433,7 +433,7 @@ signature TEST_MUTABLE_ARG = sig
                         
 end
                                    
-functor TestMutableFn (Arg : TEST_MUTABLE_ARG) = struct
+functor TestMutableMapFn (Arg : TEST_MUTABLE_MAP_ARG) = struct
 
     structure M = Arg.Map
 
@@ -591,7 +591,7 @@ functor TestMutableFn (Arg : TEST_MUTABLE_ARG) = struct
             end
 end
 
-structure TestIntHashTable = TestMutableFn
+structure TestIntHashTable = TestMutableMapFn
                                  (struct
                                    structure Map = struct
                                        open IntHashTable
@@ -619,7 +619,7 @@ structure StringHashTable = HashTableFn(struct
                                          val sameKey = op=
                                          end)
                                  
-structure TestStringHashTable = TestMutableFn
+structure TestStringHashTable = TestMutableMapFn
                                     (struct
                                       structure Map = struct
                                           open StringHashTable
@@ -639,29 +639,36 @@ structure TestStringHashTable = TestMutableFn
                                       val name = "HashTable/string"
                                       end)
 
-signature IMMUTABLE_ARRAY = sig
+signature IMMUTABLE_VECTOR = sig
     type 'a array
     val tabulate : int * (int -> 'a) -> 'a array
     val toList : 'a array -> 'a list
-    val update : 'a array * int * 'a -> 'a array
     val foldl : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
     val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
     val sub : 'a array * int -> 'a
     val length : 'a array -> int
 end
 
-signature TEST_IMMUTABLE_ARRAY_ARG = sig
+signature IMMUTABLE_ARRAY = sig
+    include IMMUTABLE_VECTOR
+    val update : 'a array * int * 'a -> 'a array
+end
 
-    structure Array : IMMUTABLE_ARRAY
-
+signature TEST_IMMUTABLE_VECTOR_ARG = sig
+    structure Array : IMMUTABLE_VECTOR
     val indices : int -> int vector
     val name : string
-                   
+end
+
+signature TEST_IMMUTABLE_ARRAY_ARG = sig
+    structure Array : IMMUTABLE_ARRAY
+    val indices : int -> int vector
+    val name : string
 end
 
 (* Test all array functions except update, 
    i.e. the ones also suitable for vectors *)
-functor TestImmutableVectorFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
+functor TestImmutableVectorFn (Arg : TEST_IMMUTABLE_VECTOR_ARG) = struct
 
     structure A = Arg.Array
 
@@ -761,7 +768,9 @@ functor TestImmutableArrayFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
 
     structure VectorTests = TestImmutableVectorFn(Arg)
     open VectorTests
-            
+
+    structure A = Arg.Array
+             
     fun testRandomUpdates indices a =
         let val n = Vector.length indices
             val name = nameFor n "random updates"
@@ -798,6 +807,72 @@ functor TestImmutableArrayFn (Arg : TEST_IMMUTABLE_ARRAY_ARG) = struct
     
 end
 
+signature MUTABLE_ARRAY = sig
+    type 'a array
+    val tabulate : int * (int -> 'a) -> 'a array
+    val toList : 'a array -> 'a list
+    val update : 'a array * int * 'a -> unit
+    val foldl : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
+    val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
+    val sub : 'a array * int -> 'a
+    val length : 'a array -> int
+end
+
+signature TEST_MUTABLE_ARRAY_ARG = sig
+
+    structure Array : MUTABLE_ARRAY
+
+    val indices : int -> int vector
+    val name : string
+                   
+end
+
+functor TestMutableArrayFn (Arg : TEST_MUTABLE_ARRAY_ARG) = struct
+
+    structure VectorTests = TestImmutableVectorFn(Arg)
+    open VectorTests
+
+    structure A = Arg.Array
+            
+    fun testRandomUpdates indices a =
+        let val n = Vector.length indices
+            val name = nameFor n "random updates"
+            val _ = 
+                Timing.benchmark
+                    (fn () => Vector.app (fn i =>
+                                             A.update (a, i,
+                                                       Real.fromInt (~i)))
+                                         indices,
+                     name, numberOfRuns, n)
+            val sum = A.foldl (Real.+) 0.0 a
+            val expected = ~((Real.fromInt n) * (Real.fromInt (n-1)) * 0.5)
+        in
+            if Real.abs (sum - expected) > 0.01
+            then print ("ERROR: Failed to get expected sum "
+                        ^ Real.toString expected ^
+                        " (got " ^ Real.toString sum ^ ")\n")
+            else ()
+        end
+
+    fun testMemory n =
+        (ignore (testTabulation n);
+         print "- | - | - | - | - | -\n")
+            
+    fun test testType nkeys =
+        case testType of
+            TEST_MEMORY => testMemory nkeys
+          | TEST_ALL => 
+            let val indices = Arg.indices nkeys
+                val arr = testTabulation nkeys
+            in
+                testRandomReads indices arr;
+                testFoldl nkeys arr;
+                testFoldli nkeys arr;
+                testEnumeration nkeys arr;
+                testRandomUpdates indices arr (* modifies arr so must be last *)
+            end
+end
+                                       
 signature IMMUTABLE_QUEUE = sig
     type 'a queue
     val empty : 'a queue
@@ -876,6 +951,16 @@ structure TestPersistentArray = TestImmutableArrayFn
                                       val name = "PersistentArray/int"
                                       end)
 
+structure TestArray = TestMutableArrayFn
+                          (struct
+                            structure Array = struct
+                            open Array
+                            fun toList a = foldr (op::) [] a
+                            end
+                            val indices = randomInts
+                            val name = "Array/int"
+                            end)
+                                    
 structure TestPersistentQueue = TestImmutableQueueFn
                                     (struct
                                       structure Queue = PersistentQueue
@@ -932,6 +1017,7 @@ val testStubs = [
     (TestStringATrieMap.name, TestStringATrieMap.test),
     (TestStringHashTable.name, TestStringHashTable.test),
     (TestPersistentArray.name, TestPersistentArray.test),
+    (TestArray.name, TestArray.test),
     (TestVector.name, TestVector.test),
     (TestPersistentQueue.name, TestPersistentQueue.test),
     (TestFifo.name, TestFifo.test),
