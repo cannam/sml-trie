@@ -2,6 +2,8 @@
 Trie and persistent trie-based containers in Standard ML
 ========================================================
 
+https://hg.sr.ht/~cannam/sml-trie
+
 This is a trie library in Standard ML.
 
 The library contains implementations of the following container

@@ -1,4 +1,6 @@
 
+val numberOfRuns = 3
+
 structure Rand = struct (* based on SML/NJ library *)
 
     val a : Int32.int = 48271
@@ -104,8 +106,14 @@ structure Timing = struct
 end
 
 fun shuffle vec =
-    let val n = Vector.length vec
-        val arr = Array.tabulate (n, fn i => Vector.sub (vec, i))
+    let val _ = print "in shuffle\n"
+        val n = Vector.length vec
+        val _ = print ("there (and n = " ^ Int.toString n ^ ")\n")
+        val arr = Array.array (n, Vector.sub (vec, 0))
+        val _ = print "somewhere\n"
+        val _ = Array.copyVec { src = vec, dst = arr, di = 0 }
+(*        val arr = Array.tabulate (n, fn i => Vector.sub (vec, i))  *)
+        val _ = print "here\n"
         fun shuffle' 0 = ()
           | shuffle' i =
             let val j = Rand.range (0, i) (randomGenerator ())
@@ -117,11 +125,11 @@ fun shuffle vec =
                 shuffle' (i-1)
             end
         val _ = shuffle' (n - 1)
+        val v = Array.vector arr
+        val _ = print "out of shuffle\n"
     in
-        Array.vector arr
+        v
     end
-
-val numberOfRuns = 3
 
 datatype test_type = TEST_MEMORY | TEST_ALL
                        
