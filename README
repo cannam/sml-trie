@@ -22,6 +22,18 @@ entry type, which is some sort of sequence (vector, list, string etc),
 storing them in a tree structure according to their common prefixes,
 branching where they diverge.
 
+                          g - a - t - o - r*
+                        /
+        a* - l - l* - i
+      /                 \
+    .                     a - n - c - e* - s*
+      \ 
+        z - e - b - r - a*
+
+(The asterisk shows nodes marked as entries in the trie rather than
+just potential branches, so this trie contains the six string entries
+"a", "all", "alligator", "alliance", "alliances", and "zebra".)
+
 A plain trie just records the presence or absence of an entry in a
 set, but a trie can also support a map container, in which each entry
 (or key) has an associated value as well. A plain trie can be
