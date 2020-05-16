@@ -64,7 +64,25 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
 
     fun isEmptyBranch (BRANCH (NONE, m)) = M.isEmpty m
       | isEmptyBranch _ = false
-
+(*
+    fun isCanonical n =
+        case n of
+            LEAF _ => true
+          | TWIG (k, _) =>
+            if K.isEmpty k
+            then (print "Not canonical: twig with empty key\n"; false)
+            else true
+          | BRANCH (_, m) =>
+            if M.foldl (fn (mi, acc) => acc orelse isEmptyBranch mi)
+                       false m
+            then
+                (print "Not canonical: branch with empty sub-branch\n"; false)
+            else if M.foldl (fn (mi, acc) => acc orelse not (isCanonical mi))
+                            false m
+            then 
+                (print "Not canonical: branch with non-canonical sub-branch\n"; false)
+            else true
+*)
     fun modify' (n, xx, f : 'a option -> 'a option) =
         if K.isEmpty xx
         then
@@ -138,6 +156,11 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                                   EMPTY => newBranch NONE
                                 | POPULATED n => n,
                               xx, f)
+(*
+            val _ = if not (isCanonical n')
+                    then print "NOT CANONICAL\n"
+                    else ()
+*)
         in
             if isEmptyBranch n'
             then EMPTY
