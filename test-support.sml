@@ -60,7 +60,7 @@ structure TestSupport = struct
                              | IO.Io { name, ... } =>
                                (*!!! can we get more info from Exception? *)
                                report_exception test_name ("IO failure: " ^ name)
-                             | ex => report_exception test_name "Exception caught")
+                             | ex => report_exception test_name ("Exception caught: " ^ exnMessage ex))
                     then NONE
                     else (print ("*** Test \"" ^ test_name ^ "\" failed\n");
                           SOME test_name))

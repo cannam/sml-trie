@@ -79,8 +79,6 @@ functor ATrieNodeMapFn (E : ATRIE_ELEMENT)
                          }
                  end
         end
-
-    fun update (m, k, f) = insert (m, k, f (find (m, k)))
             
     fun remove (m as MAP { base, nonempty, vec }, k) =
         let val i = E.ord k
@@ -96,6 +94,11 @@ functor ATrieNodeMapFn (E : ATRIE_ELEMENT)
                                      vec = Vector.update (vec, i - base, NONE)
                                    }
         end
+
+    fun modify (m, k, f) =
+        case f (find (m, k)) of
+            NONE => remove (m, k)
+          | SOME i => insert (m, k, i)
             
 end
 

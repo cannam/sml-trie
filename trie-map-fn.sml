@@ -15,7 +15,7 @@ signature TRIE_NODE_MAP = sig
     val find : 'a map * key -> 'a option
     val foldl : ('a * 'b -> 'b) -> 'b -> 'a map -> 'b
     val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a map -> 'b
-    val update : 'a map * key * ('a option -> 'a) -> 'a map
+    val modify : 'a map * key * ('a option -> 'a option) -> 'a map
     val remove : 'a map * key -> 'a map
 end
 
@@ -65,109 +65,91 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun isEmptyBranch (BRANCH (NONE, m)) = M.isEmpty m
       | isEmptyBranch _ = false
 
-    fun remove' (n, xx) =
+    fun modify' (n, xx, f : 'a option -> 'a option) =
         if K.isEmpty xx
-        then 
+        then
             case n of
-                LEAF item => newBranch NONE
-              | TWIG (kk, item) => n  (* because kk should always be nonempty *)
-              | BRANCH (iopt, m) => BRANCH (NONE, m)
-        else
+                LEAF existing =>
+                (case f (SOME existing) of
+                     NONE => newBranch NONE
+                   | SOME replacement => LEAF replacement)
+              | TWIG (kk, unrelated) =>
+                (case f NONE of
+                     NONE => TWIG (kk, unrelated)
+                   | SOME new =>
+                     (* switch to inserting the existing item back into
+                        a branch built on the new one *)
+                     modify' (newBranch (SOME new), kk, fn _ => SOME unrelated))
+              | BRANCH (iopt, m) => BRANCH (f iopt, m)
+        else (* xx is nonempty, so we are not at our leaf yet *)
             case n of
-                LEAF _ => n
-              | TWIG (kk, item) => if K.equal (kk, xx)
-                                   then newBranch NONE
-                                   else n
+                LEAF unrelated =>
+                (case f NONE of
+                     NONE => LEAF unrelated
+                   | SOME new =>
+                     modify' (newBranch (SOME unrelated), xx, fn _ => SOME new))
+              | TWIG (kk, existing) =>
+                (if K.equal (kk, xx)
+                 then case f (SOME existing) of
+                          NONE => newBranch NONE
+                        | SOME replacement => TWIG (kk, replacement)
+                 else case f NONE of
+                          NONE => TWIG (kk, existing)
+                        | SOME new => 
+                          if K.head kk = K.head xx (* e.g. XDEF next to XABC *)
+                          then let val nsub = modify' (newBranch NONE, K.tail xx, fn _ => SOME new)
+                               in
+                                   BRANCH (NONE,
+                                           M.modify
+                                               (M.new (), K.head xx,
+                                                (* reinsert existing into new *)
+                                                fn _ => SOME (modify' (nsub,
+                                                                       K.tail kk,
+                                                                       fn _ => SOME existing))))
+                               end
+                          else (* e.g. CDEF next to GHIJ, both known nonempty *)
+                              modify' (modify' (newBranch NONE, kk,
+                                                fn _ => SOME existing),
+                                       xx, fn _ => SOME new))
               | BRANCH (iopt, m) =>
-                let val x = K.head xx
-                in
-                    case M.find (m, x) of
-                        NONE => n
-                      | SOME nsub =>
-                        let val nsub' = remove' (nsub, K.tail xx)
-                        in
-                            if isEmptyBranch nsub'
-                            then BRANCH (iopt, M.remove (m, x))
-                            else BRANCH (iopt, M.update (m, x, fn _ => nsub'))
-                        end
-                end
-                        
-    fun remove (EMPTY, _) = EMPTY
-      | remove (POPULATED n, xx) =
-        let val n' = remove' (n, xx)
+                BRANCH (iopt,
+                        M.modify
+                            (m, K.head xx,
+                             fn NONE =>
+                                (case f NONE of
+                                     NONE => NONE
+                                   | SOME new =>
+                                     SOME (let val xs = K.tail xx
+                                           in
+                                               if K.isEmpty xs
+                                               then LEAF new
+                                               else TWIG (xs, new)
+                                           end))
+                             | SOME nsub =>
+                               let val nsub' = modify' (nsub, K.tail xx, f)
+                               in
+                                   if isEmptyBranch nsub'
+                                   then NONE
+                                   else SOME nsub'
+                               end))
+                               
+    fun modify (n, xx, f) =
+        let val n' = modify' (case n of
+                                  EMPTY => newBranch NONE
+                                | POPULATED n => n,
+                              xx, f)
         in
             if isEmptyBranch n'
             then EMPTY
             else POPULATED n'
         end
 
-    fun modify (n, xx, f) =
-
-        let exception Remove
-            exception Ignore
-                              
-            fun modify' (n, xx, f : 'a option -> 'a option) =
-                if K.isEmpty xx
-                then 
-                    case n of
-                        LEAF item =>
-                        (case f (SOME item) of
-                             NONE => raise Remove
-                           | SOME replacement => LEAF replacement)
-                      | TWIG (kk, item) =>
-                        (case f NONE of
-                             NONE => raise Ignore
-                           | SOME replacement =>
-                             modify' (newBranch (SOME replacement),
-                                      kk, fn _ => SOME item))
-                      | BRANCH (iopt, m) =>
-                        BRANCH (f iopt, m)
-                else
-                    case n of
-                        LEAF item =>
-                        modify' (newBranch (SOME item), xx, f)
-                      | TWIG (kk, item) =>
-                        if K.equal (kk, xx)
-                        then case f (SOME item) of
-                                 NONE => raise Remove
-                               | SOME replacement => TWIG (kk, replacement)
-                        else if K.head kk = K.head xx (* e.g. adding XDEF next to XABC *)
-                        then BRANCH (NONE,
-                                     M.update
-                                         (M.new (), K.head kk,
-                                          fn _ => modify' (modify' (newBranch NONE,
-                                                                    K.tail xx, f),
-                                                           K.tail kk,
-                                                           fn _ => SOME item)))
-                        else modify' (modify' (newBranch NONE, kk,
-                                               fn _ => SOME item),
-                                      xx, f)
-                      | BRANCH (iopt, m) =>
-                        BRANCH (iopt,
-                                M.update (m, K.head xx,
-                                          fn SOME nsub => modify' (nsub, K.tail xx, f)
-                                          | NONE =>
-                                            let val xs = K.tail xx
-                                            in
-                                                case f NONE of
-                                                    NONE => raise Ignore
-                                                  | SOME replacement => 
-                                                    if K.isEmpty xs
-                                                    then LEAF replacement
-                                                    else TWIG (xs, replacement)
-                                            end))
-        in
-            case n of
-                EMPTY => (POPULATED (modify' (newBranch NONE, xx, f))
-                          handle Remove => EMPTY
-                               | Ignore => EMPTY)
-              | POPULATED n => (POPULATED (modify' (n, xx, f))
-                                handle Remove => remove (POPULATED n, xx)
-                                     | Ignore => POPULATED n)
-        end
-
-    fun insert (n, xx, v) =
-        modify (n, xx, fn _ => SOME v)
+    fun insert (nopt, xx, v) =
+        modify (nopt, xx, fn _ => SOME v)
+                        
+    fun remove (EMPTY, _) = EMPTY
+      | remove (nopt, xx) =
+        modify (nopt, xx, fn _ => NONE)
 
     fun find' (n, xx) =
         if K.isEmpty xx
