@@ -44,7 +44,7 @@ functor PersistentHashMapFn (Key : HASH_KEY)
     fun insert (m, k, v) =
         let val h = Key.hashVal k
         in
-            T.update (m, h, addToEntry (h, k, v))
+            T.modify (m, h, fn eopt => SOME (addToEntry (h, k, v) eopt))
         end
 
     fun remove (m, k) =

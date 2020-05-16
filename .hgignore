@@ -9,3 +9,4 @@ mlb-coverage.log
 *.o
 MLB/
 doc/
+out_*
