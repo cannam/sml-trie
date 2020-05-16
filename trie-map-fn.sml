@@ -101,62 +101,70 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             else POPULATED n'
         end
 
-    exception UseRemove
-    exception Ignore
-                              
-    fun modify' (n, xx, f : 'a option -> 'a option) =
-        if K.isEmpty xx
-        then 
-            case n of
-                LEAF item =>
-                (case f (SOME item) of
-                     NONE => raise UseRemove
-                   | SOME replacement => LEAF replacement)
-              | TWIG (kk, item) => modify' (newBranch (f NONE),
-                                            kk, fn _ => SOME item)
-              | BRANCH (iopt, m) => BRANCH (f iopt, m)
-        else
-            case n of
-                LEAF item => modify' (newBranch (SOME item), xx, f)
-              | TWIG (kk, item) =>
-                if K.equal (kk, xx)
-                then case f (SOME item) of
-                         NONE => raise UseRemove
-                       | SOME replacement => TWIG (kk, replacement)
-                else if K.head kk = K.head xx (* e.g. adding XDEF next to XABC *)
-                then BRANCH (NONE,
-                             M.update
-                                 (M.new (), K.head kk,
-                                  fn _ => modify' (modify' (newBranch NONE,
-                                                            K.tail xx, f),
-                                                   K.tail kk,
-                                                   fn _ => SOME item)))
-                else modify' (modify' (newBranch NONE, kk,
-                                       fn _ => SOME item),
-                              xx, f)
-              | BRANCH (iopt, m) =>
-                BRANCH (iopt,
-                        M.update (m, K.head xx,
-                                  fn SOME nsub => modify' (nsub, K.tail xx, f)
-                                   | NONE =>
-                                     let val xs = K.tail xx
-                                     in
-                                         case f NONE of
-                                             NONE => raise Ignore
-                                           | SOME replacement => 
-                                             if K.isEmpty xs
-                                             then LEAF replacement
-                                             else TWIG (xs, replacement)
-                                     end))
-
     fun modify (n, xx, f) =
-        case n of
-            EMPTY => (POPULATED (modify' (newBranch NONE, xx, f))
-                      handle UseRemove => EMPTY
-                           | Ignore => EMPTY)
-          | POPULATED n => (POPULATED (modify' (n, xx, f))
-                            handle UseRemove => remove (POPULATED n, xx)
-                                 | Ignore => POPULATED n)
+
+        let exception Remove
+            exception Ignore
+                              
+            fun modify' (n, xx, f : 'a option -> 'a option) =
+                if K.isEmpty xx
+                then 
+                    case n of
+                        LEAF item =>
+                        (case f (SOME item) of
+                             NONE => raise Remove
+                           | SOME replacement => LEAF replacement)
+                      | TWIG (kk, item) =>
+                        (case f NONE of
+                             NONE => raise Ignore
+                           | SOME replacement =>
+                             modify' (newBranch (SOME replacement),
+                                      kk, fn _ => SOME item))
+                      | BRANCH (iopt, m) =>
+                        BRANCH (f iopt, m)
+                else
+                    case n of
+                        LEAF item =>
+                        modify' (newBranch (SOME item), xx, f)
+                      | TWIG (kk, item) =>
+                        if K.equal (kk, xx)
+                        then case f (SOME item) of
+                                 NONE => raise Remove
+                               | SOME replacement => TWIG (kk, replacement)
+                        else if K.head kk = K.head xx (* e.g. adding XDEF next to XABC *)
+                        then BRANCH (NONE,
+                                     M.update
+                                         (M.new (), K.head kk,
+                                          fn _ => modify' (modify' (newBranch NONE,
+                                                                    K.tail xx, f),
+                                                           K.tail kk,
+                                                           fn _ => SOME item)))
+                        else modify' (modify' (newBranch NONE, kk,
+                                               fn _ => SOME item),
+                                      xx, f)
+                      | BRANCH (iopt, m) =>
+                        BRANCH (iopt,
+                                M.update (m, K.head xx,
+                                          fn SOME nsub => modify' (nsub, K.tail xx, f)
+                                          | NONE =>
+                                            let val xs = K.tail xx
+                                            in
+                                                case f NONE of
+                                                    NONE => raise Ignore
+                                                  | SOME replacement => 
+                                                    if K.isEmpty xs
+                                                    then LEAF replacement
+                                                    else TWIG (xs, replacement)
+                                            end))
+        in
+            case n of
+                EMPTY => (POPULATED (modify' (newBranch NONE, xx, f))
+                          handle Remove => EMPTY
+                               | Ignore => EMPTY)
+              | POPULATED n => (POPULATED (modify' (n, xx, f))
+                                handle Remove => remove (POPULATED n, xx)
+                                     | Ignore => POPULATED n)
+        end
 
     fun insert (n, xx, v) =
         modify (n, xx, fn _ => SOME v)
