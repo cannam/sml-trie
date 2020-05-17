@@ -64,7 +64,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
 
     fun isEmptyBranch (BRANCH (NONE, m)) = M.isEmpty m
       | isEmptyBranch _ = false
-(*
+
     fun isCanonical n =
         case n of
             LEAF _ => true
@@ -72,7 +72,12 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             if K.isEmpty k
             then (print "Not canonical: twig with empty key\n"; false)
             else true
-          | BRANCH (_, m) =>
+          | BRANCH (NONE, m) =>
+            if M.isEmpty m
+            then
+                (print "Not canonical: empty branch\n"; false)
+            else true
+          | BRANCH (_, m) => 
             if M.foldl (fn (mi, acc) => acc orelse isEmptyBranch mi)
                        false m
             then
@@ -82,7 +87,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             then 
                 (print "Not canonical: branch with non-canonical sub-branch\n"; false)
             else true
-*)
+
     fun modify' (n, xx, f : 'a option -> 'a option) =
         if K.isEmpty xx
         then
@@ -115,15 +120,17 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                           NONE => TWIG (kk, existing)
                         | SOME new => 
                           if K.head kk = K.head xx (* e.g. XDEF next to XABC *)
-                          then let val nsub = modify' (newBranch NONE, K.tail xx, fn _ => SOME new)
+                          then let val nsub = modify' (newBranch NONE,
+                                                       K.tail xx,
+                                                       fn _ => SOME new)
+                                   (* reinsert existing into new: *)
+                                   val nsub = modify' (nsub,
+                                                       K.tail kk,
+                                                       fn _ => SOME existing)
                                in
                                    BRANCH (NONE,
-                                           M.modify
-                                               (M.new (), K.head xx,
-                                                (* reinsert existing into new *)
-                                                fn _ => SOME (modify' (nsub,
-                                                                       K.tail kk,
-                                                                       fn _ => SOME existing))))
+                                           M.modify (M.new (), K.head xx,
+                                                     fn _ => SOME nsub))
                                end
                           else (* e.g. CDEF next to GHIJ, both known nonempty *)
                               modify' (modify' (newBranch NONE, kk,
@@ -156,22 +163,22 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                                   EMPTY => newBranch NONE
                                 | POPULATED n => n,
                               xx, f)
-(*
-            val _ = if not (isCanonical n')
-                    then print "NOT CANONICAL\n"
-                    else ()
-*)
         in
             if isEmptyBranch n'
             then EMPTY
-            else POPULATED n'
+            else
+(*                let val _ = if not (isCanonical n')
+                            then print "NOT CANONICAL\n"
+                            else ()
+                in *)
+                    POPULATED n'
+(*                end *)
         end
 
     fun insert (nopt, xx, v) =
         modify (nopt, xx, fn _ => SOME v)
                         
-    fun remove (EMPTY, _) = EMPTY
-      | remove (nopt, xx) =
+    fun remove (nopt, xx) =
         modify (nopt, xx, fn _ => NONE)
 
     fun find' (n, xx) =
