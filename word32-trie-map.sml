@@ -15,6 +15,7 @@ structure Word32NodeMap
              
     fun new () = V.new 32
     fun update (v, k, f) = V.modify (v, k, fn x => SOME (f x))
+    val keyCompare = Int.compare
                        
 end
 

@@ -3,9 +3,7 @@
    MIT/X11 licence. See the file COPYING for details. *)
 
 (** Signature for the map used within a trie node to store branching
-    information. This is a not quite a subset of the SML/NJ ORD_MAP -
-    it adds an update function, and remove does not return the old
-    value.
+    information.
  *)
 signature TRIE_NODE_MAP = sig
     eqtype key
@@ -17,6 +15,7 @@ signature TRIE_NODE_MAP = sig
     val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a map -> 'b
     val modify : 'a map * key * ('a option -> 'a option) -> 'a map
     val remove : 'a map * key -> 'a map
+    val keyCompare : key * key -> order
 end
 
 signature TRIE_KEY = sig
@@ -181,6 +180,10 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun remove (nopt, xx) =
         modify (nopt, xx, fn _ => NONE)
 
+    fun isPrefixOf ([], yy) = true
+      | isPrefixOf (xx, []) = false
+      | isPrefixOf (x::xs, y::ys) = x = y andalso isPrefixOf (xs, ys)
+
     fun find' (n, xx) =
         if K.isEmpty xx
         then 
@@ -194,14 +197,78 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
               | TWIG (kk, item) => (if K.equal (kk, xx)
                                     then SOME item
                                     else NONE)
-              | BRANCH (iopt, m) =>
+              | BRANCH (_, m) =>
                 case M.find (m, K.head xx) of
                     NONE => NONE
                   | SOME nsub => find' (nsub, K.tail xx)
 
+    fun findi (EMPTY, _) = NONE
+      | findi (POPULATED n, xx) =
+        case find' (n, xx) of
+            NONE => NONE
+          | SOME v => SOME (xx, v)
+
     fun find (EMPTY, _) = NONE
       | find (POPULATED n, xx) =
         find' (n, xx)
+
+    fun locateEqual (n, xx, _) =
+        case find' (n, xx) of
+            NONE => NONE
+          | SOME v => SOME (NONE, v)
+
+    fun firstIn (n, rpfx) =
+        case n of
+            LEAF item => SOME (rev rpfx, item)
+          | TWIG (kk, item) => SOME (rev rpfx @ K.explode kk, item)
+          | BRANCH (SOME item, _) => SOME (rev rpfx, item)
+          | BRANCH (NONE, m) =>
+            (*!!! inefficient without custom help from M *)
+            M.foldli (fn (_, _, SOME result) => SOME result
+                      | (k, n', NONE) => firstIn (n', k :: rpfx))
+                     NONE m
+
+    fun locateGreater (n, xx, rpfx) = (*!!! todo: locateLess *)
+        if K.isEmpty xx
+        then
+            case n of
+                LEAF item => SOME (NONE, item)
+              | TWIG (kk, item) =>
+                SOME (SOME (K.implode (rev rpfx @ K.explode kk)), item)
+              | BRANCH (SOME item, m) => SOME (NONE, item)
+              | n => case firstIn (n, rpfx) of
+                         NONE => NONE
+                       | SOME (pfx, item) =>
+                         SOME (SOME (K.implode pfx), item)
+        else
+            case n of
+                LEAF item => NONE
+              | TWIG (kk, item) =>
+                (if isPrefixOf (K.explode xx, K.explode kk)
+                 then SOME (SOME (K.implode (rev rpfx @ K.explode kk)), item)
+                 else NONE)
+              | BRANCH (_, m) =>
+                let val (x, xs) = (K.head xx, K.tail xx)
+                in M.foldli (fn (_, _, SOME result) => SOME result
+                              | (k, n', NONE) =>
+                                case M.keyCompare (k, x) of
+                                    LESS => NONE
+                                  | GREATER =>
+                                    locateGreater(n', K.implode [], k::rpfx)
+                                  | EQUAL =>
+                                    locateGreater(n', xs, k::rpfx))
+                            NONE
+                            m
+                end
+                    
+    fun locate (EMPTY, xx, ord) = NONE
+      | locate (POPULATED n, xx, ord) =
+        case (case ord of GREATER => locateGreater
+                        | LESS => raise Fail "not yet implemented!"
+                        | EQUAL => locateEqual) (n, xx, []) of
+            NONE => NONE
+          | SOME (NONE, item) => SOME (xx, item)
+          | SOME (SOME kk, item) => SOME (kk, item)
                                
     fun lookup (t, k) =
         case find (t, k) of
@@ -251,10 +318,6 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
 
     fun enumerate trie =
         rev (foldli (fn (k, v, acc) => (k, v) :: acc) [] trie)
-
-    fun isPrefixOf ([], yy) = true
-      | isPrefixOf (xx, []) = false
-      | isPrefixOf (x::xs, y::ys) = x = y andalso isPrefixOf (xs, ys)
             
     fun foldliPrefixMatch' f acc (node, e) = 
         (* rpfx is reversed prefix built up so far (using cons) *)
@@ -268,7 +331,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                         (if isPrefixOf (K.explode xx, K.explode kk)
                          then foldli_helper f (rpfx, n, acc)
                          else acc)
-                      | BRANCH (iopt, m) => 
+                      | BRANCH (_, m) => 
                         case M.find (m, K.head xx) of
                             NONE => acc
                           | SOME nsub =>

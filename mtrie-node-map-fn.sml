@@ -32,6 +32,8 @@ functor MTrieNodeMapFn (E : MTRIE_ELEMENT)
           | SOME e => (case f (SOME e) of
                            NONE => remove (m, k)
                          | SOME i => insert (m, k, i))
+
+    val keyCompare = E.compare
                                 
 end
 

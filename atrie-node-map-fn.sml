@@ -99,6 +99,8 @@ functor ATrieNodeMapFn (E : ATRIE_ELEMENT)
         case f (find (m, k)) of
             NONE => remove (m, k)
           | SOME i => insert (m, k, i)
+
+    fun keyCompare (k1, k2) = Int.compare (E.ord k1, E.ord k2)
             
 end
 

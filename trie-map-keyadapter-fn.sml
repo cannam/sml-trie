@@ -57,6 +57,12 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
     fun foldliPrefixMatch f acc (t, k) =
         T.foldliPrefixMatch (fn (k, x, acc) => f (dekey k, x, acc))
                             acc (t, enkey k)
+
+    (*!!! *)
+    fun locate (t, k, order) =
+        case T.locate (t, enkey k, order) of
+            NONE => NONE
+         | SOME (k, x) => SOME (dekey k, x)
 end
 
 signature PATTERN_MATCH_TRIE_MAP_KEYADAPTER_FN_ARG = sig

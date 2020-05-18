@@ -44,7 +44,8 @@ is generally fast. Unlike those, with a trie you can also quickly test
 whether any prefix of a given entry appears in the trie, obtain the
 longest such prefix, and find all entries with a given prefix. Like a
 tree-backed container but not a hash table, a trie is ordered, and can
-be enumerated in the sort order of the entry type.
+be enumerated in a fixed order, typically the sort order of the entry
+type.
 
 This library provides persistent or immutable trie containers, in the
 sense that all updates return a separate trie, without modifying the

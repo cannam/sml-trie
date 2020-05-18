@@ -70,6 +70,9 @@ signature TRIE_MAP = sig
         given prefix, in sort order. The prefix itself does not need
         to be present as a key in the trie *)
     val foldliPrefixMatch : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * key) -> 'b
-    
+
+    (*!!! *)
+    val locate : 'a trie * key * order -> (key * 'a) option
+            
 end
 
