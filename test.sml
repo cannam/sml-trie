@@ -213,7 +213,7 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
     ]
 
 end
-                                     
+
 structure StringMTrieTest = TrieTestFn(struct
                                         structure T = StringMTrie
                                         val name = "string-mtrie"
@@ -227,6 +227,67 @@ structure StringBTrieTest = TrieTestFn(struct
                                         val name = "string-btrie"
                                         end)
 
+functor TrieRangeTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
+
+    open TestSupport
+
+    structure T = ARG.T
+    val name = ARG.name
+
+    val strings = [ "a", "abrasive", "alliance", "alligator",
+                    "asterisk", "asterix", "par", "parp", "po", "poot"
+                  ]
+                              
+    fun test_trie () = List.foldl (fn (s, t) => T.add (t, s))
+				  (T.empty)
+				  strings
+
+    val testdata = [
+        ("mid-present-endpoints", SOME "alligator", SOME "parp",
+         ["alligator", "asterisk", "asterix", "par", "parp"]),
+        ("mid-absent-endpoints", SOME "abrade", SOME "aster",
+         ["abrasive", "alliance", "alligator"]),
+        ("mid-empty", SOME "allied", SOME "allies",
+         []),
+        ("from-start", NONE, SOME "attic",
+         ["a", "abrasive", "alliance", "alligator", "asterisk", "asterix"]),
+        ("to-end", SOME "pat", NONE,
+         ["po", "poot"]),
+        ("from-start-empty", NONE, SOME "aardvark",
+         []),
+        ("to-end-empty", SOME "port", NONE,
+         []),
+        ("all", NONE, NONE,
+         strings)
+    ]
+
+    fun enumerateRange trie (from, to) =
+        [] (*!!!*)
+                                  
+    fun tests () =
+        map (fn (name, from, to, expected) =>
+                (name,
+                 fn () => check_lists
+                              id
+                              (enumerateRange (test_trie ()) (from, to),
+                               expected)))
+            testdata
+                                  
+end
+
+structure StringMTrieRangeTest = TrieRangeTestFn(struct
+                                                  structure T = StringMTrie
+                                                  val name = "string-mtrie-range"
+                                                  end)
+structure StringATrieRangeTest = TrieRangeTestFn(struct
+                                                  structure T = StringATrie
+                                                  val name = "string-atrie-range"
+                                                  end)
+structure StringBTrieRangeTest = TrieRangeTestFn(struct
+                                                  structure T = StringBTrie
+                                                  val name = "string-btrie-range"
+                                                  end)
+                                                
 structure BitMappedVectorTest :> TESTS = struct
 
     open TestSupport
@@ -709,6 +770,9 @@ fun main () =
             (StringATrieTest.name, StringATrieTest.tests ()),
             (BitMappedVectorTest.name, BitMappedVectorTest.tests ()),
             (StringBTrieTest.name, StringBTrieTest.tests ()),
+            (StringMTrieRangeTest.name, StringMTrieRangeTest.tests ()),
+            (StringATrieRangeTest.name, StringATrieRangeTest.tests ()),
+            (StringBTrieRangeTest.name, StringBTrieRangeTest.tests ()),
             (HashMapTest.name, HashMapTest.tests ()),
             (PersistentArrayTest.name, PersistentArrayTest.tests ()),
             (PersistentQueueTest.name, PersistentQueueTest.tests ())

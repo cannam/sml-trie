@@ -297,24 +297,58 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         end
 
     (* rpfx is reversed prefix built up so far (using cons) *)
-    fun foldli_helper f (rpfx, n, acc) =
+    fun foldliNode f (rpfx, n, acc) =
         let fun f' (pfx, item, acc) = f (K.implode pfx, item, acc)
         in
             case n of
                 LEAF item => f' (rev rpfx, item, acc)
               | TWIG (kk, item) => f' ((rev rpfx) @ (K.explode kk), item, acc)
               | BRANCH (iopt, m) =>
-                M.foldli (fn (x, n, acc) => foldli_helper f (x :: rpfx, n, acc))
+                M.foldli (fn (x, n, acc) => foldliNode f (x :: rpfx, n, acc))
                          (case iopt of
                               NONE => acc
                             | SOME item => f' (rev rpfx, item, acc))
                          m
         end
-                      
+(*!!!
+    fun foldliNodeRange f (rpfx, n, leftConstraint, rightConstraint, acc) =
+        let fun f' (pfx, item, acc) = f (K.implode pfx, item, acc)
+            fun hd' [] = NONE
+              | hd' (x::_) = SOME x
+        in
+            case (n, leftConstraint, rightConstraint) of
+                (LEAF item, [], _) =>
+                f' (rev rpfx, item, acc)
+              | (LEAF item, _, _) =>
+                acc
+              | (TWIG (kk, item), [], []) =>
+                f' ((rev rpfx) @ (K.explode kk), item, acc)
+              | (TWIG (kk, item), lc, rc) =>
+                let val kk' = K.explode kk
+                in
+                    (*!!! no, this is wrong - definition of rightConstraint is not clear *)
+                    if (isPrefixOf (lc, kk')) andalso not (isPrefixOf (rc, kk'))
+                    then f' ((rev rpfx) @ kk', item, acc)
+                    else acc
+                end
+              | (BRANCH (iopt, m), [], []) =>
+                foldliNode f (rpfx, n, acc)
+              | (BRANCH (iopt, m), lc, rc) =>
+                M.foldli (fn (x, n, acc) =>
+                             (*... hmm *)
+                             case (hd' lc, hd' rc) of
+                                 (NONE, NONE) =>
+                                 foldliNode f (x :: rpfx, n, acc)
+                               | (SOME l, NONE) =>
+                                 (case M.keyCompare (
+                
+*)
+        
+            
     fun foldli f acc t =
         case t of
             EMPTY => acc
-          | POPULATED n => foldli_helper f ([], n, acc)
+          | POPULATED n => foldliNode f ([], n, acc)
 
     fun enumerate trie =
         rev (foldli (fn (k, v, acc) => (k, v) :: acc) [] trie)
@@ -323,13 +357,13 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         (* rpfx is reversed prefix built up so far (using cons) *)
         let fun fold' (rpfx, n, xx, acc) =
                 if K.isEmpty xx
-                then foldli_helper f (rpfx, n, acc)
+                then foldliNode f (rpfx, n, acc)
                 else
                     case n of
                         LEAF item => acc
                       | TWIG (kk, item) =>
                         (if isPrefixOf (K.explode xx, K.explode kk)
-                         then foldli_helper f (rpfx, n, acc)
+                         then foldliNode f (rpfx, n, acc)
                          else acc)
                       | BRANCH (_, m) => 
                         case M.find (m, K.head xx) of
