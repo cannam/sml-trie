@@ -311,15 +311,67 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                          m
         end
 
-    fun foldliNodeRange f (rpfx, n, leftConstraint, rightConstraint, acc) =
-        acc
-        
-(*!!!
-    fun foldliNodeRange f (rpfx, n, leftConstraint, rightConstraint, acc) =
-        let fun f' (pfx, item, acc) = f (K.implode pfx, item, acc)
+    fun foldliNodeRange f (rpfx, n, leftConstraintK, rightConstraintK, acc) =
+        let val leftConstraint = Option.map K.explode leftConstraintK
+            val rightConstraint = Option.map K.explode rightConstraintK
+
+            fun f' (pfx, item, acc) =
+                f (K.implode pfx, item, acc)
+
             fun hd' [] = NONE
               | hd' (x::_) = SOME x
+
+            (* When foldliNodeRange is entered, leftConstraint and
+               rightConstraint may be NONE (no constraint), SOME []
+               (constraint at start of this node), or SOME other
+               (constraint on sub-node). For leftConstraint there is
+               no distinction between NONE and SOME [], so we can just
+               pass the optional list or [] if there was none. For
+               rightConstraint, there is a distinction, but it is that
+               we don't want to call the node traversal function at
+               all if the constraint is SOME []. So we can similarly
+               just pass the optional list, passing [] if there was
+               none but not calling at all if there was one and it was
+               empty. So we don't need an option in these functions -
+               an empty list represents "no constraint" rather than a
+               constraint at the start of the node.
+
+               We use the names leftConstraint/rightConstraint to
+               refer to the option types and lc/rc to refer to these
+               unwrapped versions. *)
+                                  
+            fun leaf (item, lc, _) =
+                case lc of
+                    [] => f' (rev rpfx, item, acc)
+                  | _ => acc
+
+            fun twig (kk, item, lc, rc) =
+                let val kk' = K.explode kk
+                in
+                    if (isPrefixOf (lc, kk') andalso
+                        (*!!! no, it should be if rc is null or sorts > kk' *)
+                        (null rc orelse not (isPrefixOf (rc, kk'))))
+                    then f' ((rev rpfx) @ kk', item, acc)
+                    else acc
+                end
+
+            fun branch (iopt, m, lc, rc) =
+                foldliNode f (rpfx, n, acc) (*!!! todo *)
         in
+            case rightConstraint of
+                SOME [] => acc
+              | _ =>
+                let val lc = Option.getOpt (leftConstraint, [])
+                    val rc = Option.getOpt (rightConstraint, [])
+                in
+                    case n of
+                        LEAF item => leaf (item, lc, rc)
+                      | TWIG (kk, item) => twig (kk, item, lc, rc)
+                      | BRANCH (iopt, m) => branch (iopt, m, lc, rc)
+                end
+        end
+            
+(*!!!                       
             case (n, leftConstraint, rightConstraint) of
                 (LEAF item, [], _) =>
                 f' (rev rpfx, item, acc)
@@ -330,7 +382,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
               | (TWIG (kk, item), lc, rc) =>
                 let val kk' = K.explode kk
                 in
-                    (*!!! no, this is wrong - definition of rightConstraint is not clear *)
+                    ( *!!! no, this is wrong - definition of rightConstraint is not clear * )
                     if (isPrefixOf (lc, kk')) andalso not (isPrefixOf (rc, kk'))
                     then f' ((rev rpfx) @ kk', item, acc)
                     else acc
@@ -347,7 +399,6 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                                  (case M.keyCompare (
                 
 *)
-
     fun foldliRange f acc (t, leftConstraint, rightConstraint) =
         case t of
             EMPTY => acc
