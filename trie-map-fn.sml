@@ -371,7 +371,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                         let val accept =
                                 (null lc orelse M.keyCompare (x, hd lc) <> LESS)
                                 andalso
-                                (null rc orelse M.keyCompare (x, hd rc) = LESS)
+                                (null rc orelse M.keyCompare (x, hd rc) <> GREATER)
                         in
                             if not accept then
                                 (print "branch -> map entry -> reject\n";
@@ -420,8 +420,8 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
 
     fun foldliRange f acc (t, leftConstraint, rightConstraint) =
         case t of
-            EMPTY => (print "empty root\n"; acc)
-          | POPULATED n => (print "non-empty root\n"; 
+            EMPTY => (print "\nempty root\n"; acc)
+          | POPULATED n => (print "\nnon-empty root\n"; 
             foldliNodeRange f ([], n, leftConstraint, rightConstraint, acc))
             
     fun foldli f acc t =
