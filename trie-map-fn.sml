@@ -315,10 +315,18 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         let val leftConstraint = Option.map K.explode leftConstraintK
             val rightConstraint = Option.map K.explode rightConstraintK
 
+            val _ = case leftConstraintK of
+                        NONE => print "no left constraint\n"
+                      | SOME _ => print "have left constraint\n"
+
+            val _ = case rightConstraintK of
+                        NONE => print "no right constraint\n"
+                      | SOME _ => print "have right constraint\n"
+                                             
             fun f' (pfx, item, acc) =
                 f (K.implode pfx, item, acc)
 
-            fun hd' [] = NONE
+            fun hd' [] = NONE (*!!! no? *)
               | hd' (x::_) = SOME x
 
             (* When foldliNodeRange is entered, leftConstraint and
@@ -342,8 +350,8 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                                   
             fun leaf (item, lc, _) =
                 case lc of
-                    [] => f' (rev rpfx, item, acc)
-                  | _ => acc
+                    [] => (print "leaf -> accept\n"; f' (rev rpfx, item, acc))
+                  | _ => (print "leaf -> reject\n"; acc)
 
             fun twig (kk, item, lc, rc) =
                 let val kk' = K.explode kk
@@ -351,12 +359,51 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                     if (isPrefixOf (lc, kk') andalso
                         (*!!! no, it should be if rc is null or sorts > kk' *)
                         (null rc orelse not (isPrefixOf (rc, kk'))))
-                    then f' ((rev rpfx) @ kk', item, acc)
-                    else acc
+                    then (print "twig -> accept\n";  f' ((rev rpfx) @ kk', item, acc))
+                    else (print "twig -> reject\n"; acc)
                 end
 
-            fun branch (iopt, m, lc, rc) =
-                foldliNode f (rpfx, n, acc) (*!!! todo *)
+            fun branch (iopt, m, [], []) =
+                foldliNode f (rpfx, n, acc)
+              | branch (iopt, m, lc, rc) =
+                M.foldli
+                    (fn (x, n, acc) =>
+                        let val accept =
+                                (null lc orelse M.keyCompare (x, hd lc) <> LESS)
+                                andalso
+                                (null rc orelse M.keyCompare (x, hd rc) = LESS)
+                        in
+                            if not accept then
+                                (print "branch -> map entry -> reject\n";
+                                 acc)
+                            else
+                                (print "branch -> map entry -> accept and recurse\n";
+                                foldliNodeRange
+                                    f
+                                    (x :: rpfx,
+                                     n,
+                                     (*!!! to refactor once working *)
+                                     case lc of
+                                         [] => NONE
+                                       | (c::cc) =>
+                                         if c = x
+                                         then SOME (K.implode cc)
+                                         else NONE,
+                                     case rc of
+                                         [] => NONE
+                                       | (c::cc) =>
+                                         if c = x
+                                         then SOME (K.implode cc)
+                                         else NONE,
+                                    acc))
+                        end)
+                    (case iopt of
+                         NONE => acc
+                       | SOME item =>
+                         case lc of
+                             [] => f' (rev rpfx, item, acc)
+                           | _ => acc)
+                    m
         in
             case rightConstraint of
                 SOME [] => acc
@@ -370,40 +417,12 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                       | BRANCH (iopt, m) => branch (iopt, m, lc, rc)
                 end
         end
-            
-(*!!!                       
-            case (n, leftConstraint, rightConstraint) of
-                (LEAF item, [], _) =>
-                f' (rev rpfx, item, acc)
-              | (LEAF item, _, _) =>
-                acc
-              | (TWIG (kk, item), [], []) =>
-                f' ((rev rpfx) @ (K.explode kk), item, acc)
-              | (TWIG (kk, item), lc, rc) =>
-                let val kk' = K.explode kk
-                in
-                    ( *!!! no, this is wrong - definition of rightConstraint is not clear * )
-                    if (isPrefixOf (lc, kk')) andalso not (isPrefixOf (rc, kk'))
-                    then f' ((rev rpfx) @ kk', item, acc)
-                    else acc
-                end
-              | (BRANCH (iopt, m), [], []) =>
-                foldliNode f (rpfx, n, acc)
-              | (BRANCH (iopt, m), lc, rc) =>
-                M.foldli (fn (x, n, acc) =>
-                             (*... hmm *)
-                             case (hd' lc, hd' rc) of
-                                 (NONE, NONE) =>
-                                 foldliNode f (x :: rpfx, n, acc)
-                               | (SOME l, NONE) =>
-                                 (case M.keyCompare (
-                
-*)
+
     fun foldliRange f acc (t, leftConstraint, rightConstraint) =
         case t of
-            EMPTY => acc
-          | POPULATED n =>
-            foldliNodeRange f ([], n, leftConstraint, rightConstraint, acc)
+            EMPTY => (print "empty root\n"; acc)
+          | POPULATED n => (print "non-empty root\n"; 
+            foldliNodeRange f ([], n, leftConstraint, rightConstraint, acc))
             
     fun foldli f acc t =
         case t of
