@@ -30,5 +30,10 @@ functor TrieFn (M : TRIE_MAP)
 
     fun foldlPrefixMatch f acc (t, e) =
         M.foldliPrefixMatch (fn (k, v, acc) => f (k, acc)) acc (t, e)
-                          
+
+    (*!!! *)
+    fun foldlRange f acc (t, leftConstraint, rightConstraint) =
+        M.foldliRange (fn (k, v, acc) => f (k, acc)) acc
+                      (t, leftConstraint, rightConstraint)
+                      
 end

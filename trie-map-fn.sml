@@ -310,6 +310,10 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                             | SOME item => f' (rev rpfx, item, acc))
                          m
         end
+
+    fun foldliNodeRange f (rpfx, n, leftConstraint, rightConstraint, acc) =
+        acc
+        
 (*!!!
     fun foldliNodeRange f (rpfx, n, leftConstraint, rightConstraint, acc) =
         let fun f' (pfx, item, acc) = f (K.implode pfx, item, acc)
@@ -343,7 +347,12 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                                  (case M.keyCompare (
                 
 *)
-        
+
+    fun foldliRange f acc (t, leftConstraint, rightConstraint) =
+        case t of
+            EMPTY => acc
+          | POPULATED n =>
+            foldliNodeRange f ([], n, leftConstraint, rightConstraint, acc)
             
     fun foldli f acc t =
         case t of

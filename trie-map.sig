@@ -73,6 +73,9 @@ signature TRIE_MAP = sig
 
     (*!!! *)
     val locate : 'a trie * key * order -> (key * 'a) option
-            
+
+                                                     (*!!! *)
+    val foldliRange : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * key option * key option) -> 'b
+                                                     
 end
 

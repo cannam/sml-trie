@@ -50,6 +50,9 @@ signature TRIE = sig
     val foldlPrefixMatch : (entry * 'a -> 'a) -> 'a -> (trie * entry) -> 'a 
 
   (*!!! + union / intersection / merge *)
+
+    (*!!! *)
+    val foldlRange : (entry * 'a -> 'a) -> 'a -> (trie * entry option * entry option) -> 'a
                                                                           
 end
 

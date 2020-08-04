@@ -262,7 +262,7 @@ functor TrieRangeTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
     ]
 
     fun enumerateRange trie (from, to) =
-        [] (*!!!*)
+        rev (T.foldlRange (fn (e, acc) => e :: acc) [] (trie, from, to))
                                   
     fun tests () =
         map (fn (name, from, to, expected) =>

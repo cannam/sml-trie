@@ -63,6 +63,13 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
         case T.locate (t, enkey k, order) of
             NONE => NONE
          | SOME (k, x) => SOME (dekey k, x)
+                               
+    (*!!! *)
+    fun foldliRange f acc (t, leftConstraint, rightConstraint) =
+        T.foldliRange (fn (k, x, acc) => f (dekey k, x, acc))
+                      acc (t,
+                           Option.map enkey leftConstraint,
+                           Option.map enkey rightConstraint)
 end
 
 signature PATTERN_MATCH_TRIE_MAP_KEYADAPTER_FN_ARG = sig
