@@ -326,9 +326,6 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             fun f' (pfx, item, acc) =
                 f (K.implode pfx, item, acc)
 
-            fun hd' [] = NONE (*!!! no? *)
-              | hd' (x::_) = SOME x
-
             (* When foldliNodeRange is entered, leftConstraint and
                rightConstraint may be NONE (no constraint), SOME []
                (constraint at start of this node), or SOME other
@@ -379,10 +376,17 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
               | branch (iopt, m, lc, rc) =
                 M.foldli
                     (fn (x, n, acc) =>
-                        let val accept =
+                        let val acceptL =
                                 (null lc orelse M.keyCompare (x, hd lc) <> LESS)
-                                andalso
+                            val _ = if not acceptL then
+                                        (print "branch -> map entry -> failed left-accept test\n")
+                                    else (print "branch -> map entry -> passed left-accept test\n")
+                            val acceptR =
                                 (null rc orelse M.keyCompare (x, hd rc) <> GREATER)
+                            val _ = if not acceptR then
+                                        (print "branch -> map entry -> failed right-accept test\n")
+                                    else (print "branch -> map entry -> passed right-accept test\n")
+                            val accept = (acceptL andalso acceptR)
                         in
                             if not accept then
                                 (print "branch -> map entry -> reject\n";
@@ -417,7 +421,20 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                     m
         in
             case rightConstraint of
-                SOME [] => acc
+                SOME [] =>
+                (* if we have a leaf or branch-with-item, we should
+                   accept the item - since our ranges are inclusive -
+                   but we shouldn't recurse or follow a twig *)
+                let val lc = Option.getOpt (leftConstraint, [])
+                in
+                    if null lc
+                    then case n of
+                             LEAF item => leaf (item, lc, NONE)
+                           | TWIG _ => acc
+                           | BRANCH (NONE, _) => acc
+                           | BRANCH (SOME item, _) => f' (rev rpfx, item, acc)
+                    else acc
+                end
               | _ =>
                 let val lc = Option.getOpt (leftConstraint, [])
                     val rc = Option.getOpt (rightConstraint, [])
