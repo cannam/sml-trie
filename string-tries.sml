@@ -25,15 +25,7 @@ structure StringMTrieMap :> STRING_TRIE_MAP
           (struct
             structure M = MTrieNodeMapFn(struct
 			                  type t = char
-                                                       (*			                  val compare = Char.compare *)
-                                          fun compare (c1, c2) =
-                                              let val _ = print ("compare: " ^
-                                                                 Char.toString c1 ^
-                                                                 " with " ^
-                                                                 Char.toString c2 ^ "\n")
-                                              in
-                                                  Char.compare (c1, c2)
-                                              end
+                                          val compare = Char.compare
 			                  end)
             structure V = CharVector
             type element = char

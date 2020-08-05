@@ -312,19 +312,17 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         end
 
     fun foldliNodeRange f (rpfx, n, leftConstraintK, rightConstraintK, acc) =
-        let val leftConstraint = Option.map K.explode leftConstraintK
-            val rightConstraint = Option.map K.explode rightConstraintK
-
-            val _ = case leftConstraintK of
-                        NONE => print "no left constraint\n"
-                      | SOME _ => print "have left constraint\n"
-
-            val _ = case rightConstraintK of
-                        NONE => print "no right constraint\n"
-                      | SOME _ => print "have right constraint\n"
-                                             
-            fun f' (pfx, item, acc) =
+        let fun f' (pfx, item, acc) =
                 f (K.implode pfx, item, acc)
+
+            fun kkCompare (kk, kk') =
+                case (kk, kk') of
+                    ([], []) => EQUAL
+                  | ([],  _) => LESS
+                  | (_,  []) => GREATER
+                  | (k::ks, k'::ks') => case M.keyCompare (k, k') of
+                                            EQUAL => kkCompare (ks, ks')
+                                          | other => other
 
             (* When foldliNodeRange is entered, leftConstraint and
                rightConstraint may be NONE (no constraint), SOME []
@@ -345,20 +343,8 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                refer to the option types and lc/rc to refer to these
                unwrapped versions. *)
                                   
-            fun leaf (item, lc, _) =
-                case lc of
-                    [] => (print "leaf -> accept\n"; f' (rev rpfx, item, acc))
-                  | _ => (print "leaf -> reject\n"; acc)
-
-            fun kkCompare (kk, kk') =
-                case (kk, kk') of
-                    ([], []) => EQUAL
-                  | ([],  _) => LESS
-                  | (_,  []) => GREATER
-                  | (k::ks, k'::ks') => 
-                    case M.keyCompare (k, k') of
-                        EQUAL => kkCompare (ks, ks')
-                      | other => other
+            fun leaf (item, [], _) = f' (rev rpfx, item, acc)
+              | leaf _ = acc
                              
             fun twig (kk, item, lc, rc) =
                 let val kk' = K.explode kk
@@ -367,91 +353,68 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                                  (null rc orelse kkCompare (kk', rc) <> GREATER)
                 in
                     if accept
-                    then (print "twig -> accept\n";  f' ((rev rpfx) @ kk', item, acc))
-                    else (print "twig -> reject\n"; acc)
+                    then f' ((rev rpfx) @ kk', item, acc)
+                    else acc
                 end
 
-            fun branch (iopt, m, [], []) =
-                foldliNode f (rpfx, n, acc)
+            fun branch (iopt, m, [], []) = foldliNode f (rpfx, n, acc)
               | branch (iopt, m, lc, rc) =
                 M.foldli
                     (fn (x, n, acc) =>
-                        let val acceptL =
+                        let val accept =
                                 (null lc orelse M.keyCompare (x, hd lc) <> LESS)
-                            val _ = if not acceptL then
-                                        (print "branch -> map entry -> failed left-accept test\n")
-                                    else (print "branch -> map entry -> passed left-accept test\n")
-                            val acceptR =
+                                andalso
                                 (null rc orelse M.keyCompare (x, hd rc) <> GREATER)
-                            val _ = if not acceptR then
-                                        (print "branch -> map entry -> failed right-accept test\n")
-                                    else (print "branch -> map entry -> passed right-accept test\n")
-                            val accept = (acceptL andalso acceptR)
+                            fun subConstraint (x, []) = NONE
+                              | subConstraint (x, c::cs) =
+                                if c = x
+                                then SOME (K.implode cs)
+                                else NONE
                         in
-                            if not accept then
-                                (print "branch -> map entry -> reject\n";
-                                 acc)
-                            else
-                                (print "branch -> map entry -> accept and recurse\n";
-                                foldliNodeRange
-                                    f
-                                    (x :: rpfx,
-                                     n,
-                                     (*!!! to refactor once working *)
-                                     case lc of
-                                         [] => NONE
-                                       | (c::cc) =>
-                                         if c = x
-                                         then SOME (K.implode cc)
-                                         else NONE,
-                                     case rc of
-                                         [] => NONE
-                                       | (c::cc) =>
-                                         if c = x
-                                         then SOME (K.implode cc)
-                                         else NONE,
-                                    acc))
+                            if not accept then acc
+                            else foldliNodeRange f (x :: rpfx, n,
+                                                    subConstraint (x, lc),
+                                                    subConstraint (x, rc),
+                                                    acc)
                         end)
                     (case iopt of
                          NONE => acc
-                       | SOME item =>
-                         case lc of
-                             [] => f' (rev rpfx, item, acc)
-                           | _ => acc)
+                       | SOME item => case lc of
+                                          [] => f' (rev rpfx, item, acc)
+                                        | _ => acc)
                     m
+
+            val leftConstraint = Option.map K.explode leftConstraintK
+            val rightConstraint = Option.map K.explode rightConstraintK
+
+            val lc = Option.getOpt (leftConstraint, [])
+            val rc = Option.getOpt (rightConstraint, [])
         in
             case rightConstraint of
                 SOME [] =>
                 (* if we have a leaf or branch-with-item, we should
                    accept the item - since our ranges are inclusive -
                    but we shouldn't recurse or follow a twig *)
-                let val lc = Option.getOpt (leftConstraint, [])
-                in
-                    if null lc
-                    then case n of
-                             LEAF item => leaf (item, lc, NONE)
-                           | TWIG _ => acc
-                           | BRANCH (NONE, _) => acc
-                           | BRANCH (SOME item, _) => f' (rev rpfx, item, acc)
-                    else acc
-                end
+                (if null lc
+                 then case n of
+                          LEAF item => leaf (item, lc, NONE)
+                        | TWIG _ => acc
+                        | BRANCH (NONE, _) => acc
+                        | BRANCH (SOME item, _) => f' (rev rpfx, item, acc)
+                 else acc)
               | _ =>
-                let val lc = Option.getOpt (leftConstraint, [])
-                    val rc = Option.getOpt (rightConstraint, [])
-                in
-                    case n of
-                        LEAF item => leaf (item, lc, rc)
-                      | TWIG (kk, item) => twig (kk, item, lc, rc)
-                      | BRANCH (iopt, m) => branch (iopt, m, lc, rc)
-                end
+                (case n of
+                     LEAF item => leaf (item, lc, rc)
+                   | TWIG (kk, item) => twig (kk, item, lc, rc)
+                   | BRANCH (iopt, m) => branch (iopt, m, lc, rc))
         end
 
     fun foldliRange f acc (t, leftConstraint, rightConstraint) =
         case t of
-            EMPTY => (print "\nempty root\n"; acc)
-          | POPULATED n => (print "\nnon-empty root\n"; 
-            foldliNodeRange f ([], n, leftConstraint, rightConstraint, acc))
-            
+            EMPTY => acc
+          | POPULATED n =>
+            foldliNodeRange f ([], n, leftConstraint, rightConstraint, acc)
+                            
     fun foldli f acc t =
         case t of
             EMPTY => acc
