@@ -253,7 +253,7 @@ functor TrieRangeTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
          ["a", "abrasive", "alliance", "alligator", "asterisk", "asterix"]),
         ("to-end", SOME "pat", NONE,
          ["po", "poot"]),
-        ("from-start-empty", NONE, SOME "aardvark",
+        ("from-start-empty", NONE, SOME "",
          []),
         ("to-end-empty", SOME "port", NONE,
          []),
