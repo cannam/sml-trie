@@ -353,12 +353,23 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                     [] => (print "leaf -> accept\n"; f' (rev rpfx, item, acc))
                   | _ => (print "leaf -> reject\n"; acc)
 
+            fun kkCompare (kk, kk') =
+                case (kk, kk') of
+                    ([], []) => EQUAL
+                  | ([],  _) => LESS
+                  | (_,  []) => GREATER
+                  | (k::ks, k'::ks') => 
+                    case M.keyCompare (k, k') of
+                        EQUAL => kkCompare (ks, ks')
+                      | other => other
+                             
             fun twig (kk, item, lc, rc) =
                 let val kk' = K.explode kk
+                    val accept = (null lc orelse kkCompare (kk', lc) <> LESS)
+                                 andalso
+                                 (null rc orelse kkCompare (kk', rc) <> GREATER)
                 in
-                    if (isPrefixOf (lc, kk') andalso
-                        (*!!! no, it should be if rc is null or sorts > kk' *)
-                        (null rc orelse not (isPrefixOf (rc, kk'))))
+                    if accept
                     then (print "twig -> accept\n";  f' ((rev rpfx) @ kk', item, acc))
                     else (print "twig -> reject\n"; acc)
                 end

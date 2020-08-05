@@ -235,7 +235,8 @@ functor TrieRangeTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
     val name = ARG.name
 
     val strings = [ "a", "abrasive", "alliance", "alligator",
-                    "asterisk", "asterix", "par", "parp", "po", "poot"
+                    "asterisk", "asterix", "par", "parp", "part",
+                    "po", "poot"
                   ]
                               
     fun test_trie () = List.foldl (fn (s, t) => T.add (t, s))
@@ -245,8 +246,10 @@ functor TrieRangeTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
     val testdata = [
         ("mid-present-endpoints", SOME "alligator", SOME "parp",
          ["alligator", "asterisk", "asterix", "par", "parp"]),
-        ("mid-absent-endpoints", SOME "abrade", SOME "aster",
+        ("mid-absent-endpoints-1", SOME "abrade", SOME "aster",
          ["abrasive", "alliance", "alligator"]),
+        ("mid-absent-endpoints-2", SOME "alliances", SOME "parse",
+         ["alligator", "asterisk", "asterix", "par", "parp"]),
         ("mid-empty", SOME "allied", SOME "allies",
          []),
         ("from-start", NONE, SOME "attic",
