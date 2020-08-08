@@ -62,6 +62,9 @@ signature TRIE = sig
     val enumerateRange : trie * range -> entry list
                                                                        
   (*!!! + union / intersection / merge *)
+                                                                              
+    (*!!! *)
+    val locate : trie * entry * order -> entry option
                                                                           
 end
 

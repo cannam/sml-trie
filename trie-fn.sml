@@ -38,5 +38,8 @@ functor TrieFn (M : TRIE_MAP)
 
     fun enumerateRange (t, range) =
         keysOf (M.enumerateRange (t, range))
-                      
+
+    fun locate (t, e, order) =
+        Option.map (fn (k, v) => k) (M.locate (t, e, order))
+               
 end
