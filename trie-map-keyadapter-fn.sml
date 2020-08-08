@@ -36,6 +36,9 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
     fun contains (t, k) = T.contains (t, enkey k)
     fun find (t, k) = T.find (t, enkey k)
     fun lookup (t, k) = T.lookup (t, enkey k)
+
+    fun prefixOf (t, k) =
+        dekey (T.prefixOf (t, enkey k))
                                  
     val foldl = T.foldl
 
@@ -45,19 +48,27 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
     fun enumerate t =
         map (fn (k, x) => (dekey k, x)) (T.enumerate t)
 
-    fun prefixOf (t, k) =
-        dekey (T.prefixOf (t, enkey k))
+    fun foldliPrefix f acc (t, k) =
+        T.foldliPrefix (fn (k, x, acc) => f (dekey k, x, acc))
+                       acc (t, enkey k)
 
-    fun prefixMatch (t, k) =
-        map (fn (k, x) => (dekey k, x)) (T.prefixMatch (t, enkey k))
+    fun enumeratePrefix (t, k) =
+        map (fn (k, x) => (dekey k, x)) (T.enumeratePrefix (t, enkey k))
 
-    fun foldlPrefixMatch f acc (t, k) =
-        T.foldlPrefixMatch f acc (t, enkey k)
+    type range = key option * key option
 
-    fun foldliPrefixMatch f acc (t, k) =
-        T.foldliPrefixMatch (fn (k, x, acc) => f (dekey k, x, acc))
-                            acc (t, enkey k)
+    fun foldliRange f acc (t, (leftConstraint, rightConstraint)) =
+        T.foldliRange (fn (k, x, acc) => f (dekey k, x, acc))
+                      acc (t,
+                           (Option.map enkey leftConstraint,
+                            Option.map enkey rightConstraint))
 
+    fun enumerateRange (t, (leftConstraint, rightConstraint)) =
+        map (fn (k, x) => (dekey k, x))
+            (T.enumerateRange (t,
+                               (Option.map enkey leftConstraint,
+                                Option.map enkey rightConstraint)))
+                      
     (*!!! *)
     fun locate (t, k, order) =
         case T.locate (t, enkey k, order) of
@@ -97,10 +108,10 @@ functor PatternMatchTrieMapKeyAdapterFn (A : PATTERN_MATCH_TRIE_MAP_KEYADAPTER_F
                            
     open T 
 
-    fun patternMatch (t, p) =
-        map (fn (k, x) => (A.dekey k, x)) (A.T.patternMatch (t, p))
+    fun foldliPattern f =
+        A.T.foldliPattern (fn (k, x, acc) => f (A.dekey k, x, acc))
 
-    fun foldliPatternMatch f =
-        A.T.foldliPatternMatch (fn (k, x, acc) => f (A.dekey k, x, acc))
+    fun enumeratePattern (t, p) =
+        map (fn (k, x) => (A.dekey k, x)) (A.T.enumeratePattern (t, p))
                              
 end

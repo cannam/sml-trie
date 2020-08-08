@@ -46,6 +46,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     type element = K.element
     type key = K.key
     type pattern = element option list
+    type range = key option * key option
 
     datatype 'a node = LEAF of 'a
                      | TWIG of key * 'a (* key nonempty, else it's a leaf *)
@@ -310,41 +311,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                             | SOME item => f' (rev rpfx, item, acc))
                          m
         end
-(*!!!
-    fun foldliNodeRange f (rpfx, n, leftConstraint, rightConstraint, acc) =
-        let fun f' (pfx, item, acc) = f (K.implode pfx, item, acc)
-            fun hd' [] = NONE
-              | hd' (x::_) = SOME x
-        in
-            case (n, leftConstraint, rightConstraint) of
-                (LEAF item, [], _) =>
-                f' (rev rpfx, item, acc)
-              | (LEAF item, _, _) =>
-                acc
-              | (TWIG (kk, item), [], []) =>
-                f' ((rev rpfx) @ (K.explode kk), item, acc)
-              | (TWIG (kk, item), lc, rc) =>
-                let val kk' = K.explode kk
-                in
-                    (*!!! no, this is wrong - definition of rightConstraint is not clear *)
-                    if (isPrefixOf (lc, kk')) andalso not (isPrefixOf (rc, kk'))
-                    then f' ((rev rpfx) @ kk', item, acc)
-                    else acc
-                end
-              | (BRANCH (iopt, m), [], []) =>
-                foldliNode f (rpfx, n, acc)
-              | (BRANCH (iopt, m), lc, rc) =>
-                M.foldli (fn (x, n, acc) =>
-                             (*... hmm *)
-                             case (hd' lc, hd' rc) of
-                                 (NONE, NONE) =>
-                                 foldliNode f (x :: rpfx, n, acc)
-                               | (SOME l, NONE) =>
-                                 (case M.keyCompare (
-                
-*)
-        
-            
+                            
     fun foldli f acc t =
         case t of
             EMPTY => acc
@@ -353,7 +320,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun enumerate trie =
         rev (foldli (fn (k, v, acc) => (k, v) :: acc) [] trie)
             
-    fun foldliPrefixMatch' f acc (node, e) = 
+    fun foldliPrefix' f acc (node, e) = 
         (* rpfx is reversed prefix built up so far (using cons) *)
         let fun fold' (rpfx, n, xx, acc) =
                 if K.isEmpty xx
@@ -374,18 +341,122 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             fold' ([], node, e, acc)
         end
 
-    fun foldliPrefixMatch f acc (trie, e) =
+    fun foldliPrefix f acc (trie, e) =
         case trie of
             EMPTY => acc
-          | POPULATED n => foldliPrefixMatch' f acc (n, e)
+          | POPULATED n => foldliPrefix' f acc (n, e)
             
-    fun foldlPrefixMatch f acc (trie, e) =
-        foldliPrefixMatch (fn (k, v, acc) => f (v, acc)) acc (trie, e)
-            
-    fun prefixMatch (trie, e) =
-        rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
+    fun enumeratePrefix (trie, e) =
+        rev (foldliPrefix (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
-    fun foldliPatternMatch' f acc (node, p) =
+    fun foldliNodeRange f (rpfx, n, leftConstraintK, rightConstraintK, acc) =
+        let fun f' (pfx, item, acc) =
+                f (K.implode pfx, item, acc)
+
+            fun kkCompare (kk, kk') =
+                case (kk, kk') of
+                    ([], []) => EQUAL
+                  | ([],  _) => LESS
+                  | (_,  []) => GREATER
+                  | (k::ks, k'::ks') => case M.keyCompare (k, k') of
+                                            EQUAL => kkCompare (ks, ks')
+                                          | other => other
+
+            (* When foldliNodeRange is entered, leftConstraint and
+               rightConstraint may be NONE (no constraint), SOME []
+               (constraint at start of this node), or SOME other
+               (constraint on sub-node). For leftConstraint there is
+               no distinction between NONE and SOME [], so we can just
+               pass the optional list or [] if there was none. For
+               rightConstraint, there is a distinction, but it is that
+               we don't want to call the node traversal function at
+               all if the constraint is SOME []. So we can similarly
+               just pass the optional list, passing [] if there was
+               none but not calling at all if there was one and it was
+               empty. So we don't need an option in these functions -
+               an empty list represents "no constraint" rather than a
+               constraint at the start of the node.
+
+               We use the names leftConstraint/rightConstraint to
+               refer to the option types and lc/rc to refer to these
+               unwrapped versions. *)
+                                  
+            fun leaf (item, [], _) = f' (rev rpfx, item, acc)
+              | leaf _ = acc
+                             
+            fun twig (kk, item, lc, rc) =
+                let val kk' = K.explode kk
+                    val accept = (null lc orelse kkCompare (kk', lc) <> LESS)
+                                 andalso
+                                 (null rc orelse kkCompare (kk', rc) <> GREATER)
+                in
+                    if accept
+                    then f' ((rev rpfx) @ kk', item, acc)
+                    else acc
+                end
+
+            fun branch (iopt, m, [], []) = foldliNode f (rpfx, n, acc)
+              | branch (iopt, m, lc, rc) =
+                M.foldli
+                    (fn (x, n, acc) =>
+                        let val accept =
+                                (null lc orelse M.keyCompare (x, hd lc) <> LESS)
+                                andalso
+                                (null rc orelse M.keyCompare (x, hd rc) <> GREATER)
+                            fun subConstraint (x, []) = NONE
+                              | subConstraint (x, c::cs) =
+                                if c = x
+                                then SOME (K.implode cs)
+                                else NONE
+                        in
+                            if not accept then acc
+                            else foldliNodeRange f (x :: rpfx, n,
+                                                    subConstraint (x, lc),
+                                                    subConstraint (x, rc),
+                                                    acc)
+                        end)
+                    (case iopt of
+                         NONE => acc
+                       | SOME item => case lc of
+                                          [] => f' (rev rpfx, item, acc)
+                                        | _ => acc)
+                    m
+
+            val leftConstraint = Option.map K.explode leftConstraintK
+            val rightConstraint = Option.map K.explode rightConstraintK
+
+            val lc = Option.getOpt (leftConstraint, [])
+            val rc = Option.getOpt (rightConstraint, [])
+        in
+            case rightConstraint of
+                SOME [] =>
+                (* if we have a leaf or branch-with-item, we should
+                   accept the item - since our ranges are inclusive -
+                   but we shouldn't recurse or follow a twig *)
+                (if null lc
+                 then case n of
+                          LEAF item => leaf (item, lc, NONE)
+                        | TWIG _ => acc
+                        | BRANCH (NONE, _) => acc
+                        | BRANCH (SOME item, _) => f' (rev rpfx, item, acc)
+                 else acc)
+              | _ =>
+                (case n of
+                     LEAF item => leaf (item, lc, rc)
+                   | TWIG (kk, item) => twig (kk, item, lc, rc)
+                   | BRANCH (iopt, m) => branch (iopt, m, lc, rc))
+        end
+
+    fun foldliRange f acc (t, (leftConstraint, rightConstraint)) =
+        case t of
+            EMPTY => acc
+          | POPULATED n =>
+            foldliNodeRange f ([], n, leftConstraint, rightConstraint, acc)
+
+    fun enumerateRange (trie, range) =
+        rev (foldliRange (fn (k, v, acc) => (k, v) :: acc) [] (trie, range))
+
+    fun foldliPattern' f acc (node, p) =
         let fun f' (pfx, item, acc) = f (K.implode pfx, item, acc)
             fun fold' (rpfx, n, xx, acc) =
                 case (n, xx) of
@@ -412,13 +483,13 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             fold' ([], node, p, acc)
         end
 
-    fun foldliPatternMatch f acc (trie, p) =
+    fun foldliPattern f acc (trie, p) =
         case trie of
             EMPTY => acc
-          | POPULATED node => foldliPatternMatch' f acc (node, p)
+          | POPULATED node => foldliPattern' f acc (node, p)
             
-    fun patternMatch (trie, p) =
-        rev (foldliPatternMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
+    fun enumeratePattern (trie, p) =
+        rev (foldliPattern (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
                                           
     fun prefixOf (trie, e) =
         let fun prefix' (n, xx, best, acc) =

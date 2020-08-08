@@ -26,12 +26,6 @@ signature TRIE = sig
        not present, the returned trie will be unchanged *)
     val remove : trie * entry -> trie
 
-    (* Fold over all the entries in the trie, in sort order *)
-    val foldl : (entry * 'a -> 'a) -> 'a -> trie -> 'a
-
-    (* Return a list of all entries in the trie, in sort order *)
-    val enumerate : trie -> entry list
-
     (* Return the longest prefix of the given value that is present as
        an entry in the trie. The given value does not need to be
        present as an entry in the trie; if it is present, it will be
@@ -39,17 +33,38 @@ signature TRIE = sig
        no prefix of the given entry in the trie, return an empty entry *)
     val prefixOf : trie * entry -> entry
 
-    (* Return a list of all entries in the trie that have the given
-       entry as a prefix, in sort order. The prefix itself does not
-       need to be present as an entry in the trie *)
-    val prefixMatch : trie * entry -> entry list
+    (* Fold over all the entries in the trie, in sort order *)
+    val foldl : (entry * 'a -> 'a) -> 'a -> trie -> 'a
+
+    (* Return a list of all entries in the trie, in sort order *)
+    val enumerate : trie -> entry list
 
     (* Fold over all the entries in the trie that have the given
        prefix, in sort order. The prefix itself does not need to be
        present as an entry in the trie *)
-    val foldlPrefixMatch : (entry * 'a -> 'a) -> 'a -> (trie * entry) -> 'a 
+    val foldlPrefix : (entry * 'a -> 'a) -> 'a -> (trie * entry) -> 'a 
 
+    (* Return a list of all entries in the trie that have the given
+       entry as a prefix, in sort order. The prefix itself does not
+       need to be present as an entry in the trie *)
+    val enumeratePrefix : trie * entry -> entry list
+
+    (* Inclusive range of entries (first, last). If either is NONE,
+       then the range is unbounded on that side *)
+    type range = entry option * entry option
+                                                      
+    (** Fold over all the entries in the trie that are found within
+        the given range, in sort order *)
+    val foldlRange : (entry * 'a -> 'a) -> 'a -> (trie * range) -> 'a
+
+    (** Return a list of all entries in the trie that are found within
+        the given range, in sort order *)
+    val enumerateRange : trie * range -> entry list
+                                                                       
   (*!!! + union / intersection / merge *)
+                                                                              
+    (*!!! *)
+    val locate : trie * entry * order -> entry option
                                                                           
 end
 
