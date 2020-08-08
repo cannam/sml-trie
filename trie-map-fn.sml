@@ -185,6 +185,15 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
       | isPrefixOf (xx, []) = false
       | isPrefixOf (x::xs, y::ys) = x = y andalso isPrefixOf (xs, ys)
 
+    fun compareKeys (kk, kk') =
+        case (kk, kk') of
+            ([], []) => EQUAL
+          | ([],  _) => LESS
+          | (_,  []) => GREATER
+          | (k::ks, k'::ks') => case M.keyCompare (k, k') of
+                                    EQUAL => compareKeys (ks, ks')
+                                  | other => other
+
     fun find' (n, xx) =
         if K.isEmpty xx
         then 
@@ -213,11 +222,6 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
       | find (POPULATED n, xx) =
         find' (n, xx)
 
-    fun locateEqual (n, xx, _) =
-        case find' (n, xx) of
-            NONE => NONE
-          | SOME v => SOME (NONE, v)
-
     fun firstIn (n, rpfx) =
         case n of
             LEAF item => SOME (rev rpfx, item)
@@ -231,23 +235,14 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
 
     fun locateGreater (n, xx, rpfx) = (*!!! todo: locateLess *)
         if K.isEmpty xx
-        then
-            case n of
-                LEAF item => SOME (NONE, item)
-              | TWIG (kk, item) =>
-                SOME (SOME (K.implode (rev rpfx @ K.explode kk)), item)
-              | BRANCH (SOME item, m) => SOME (NONE, item)
-              | n => case firstIn (n, rpfx) of
-                         NONE => NONE
-                       | SOME (pfx, item) =>
-                         SOME (SOME (K.implode pfx), item)
+        then firstIn (n, rpfx)
         else
             case n of
                 LEAF item => NONE
               | TWIG (kk, item) =>
-                (if isPrefixOf (K.explode xx, K.explode kk)
-                 then SOME (SOME (K.implode (rev rpfx @ K.explode kk)), item)
-                 else NONE)
+                (case compareKeys (K.explode xx, K.explode kk) of
+                     GREATER => NONE
+                   | _ => SOME (rev rpfx @ K.explode kk, item))
               | BRANCH (_, m) =>
                 let val (x, xs) = (K.head xx, K.tail xx)
                 in M.foldli (fn (_, _, SOME result) => SOME result
@@ -261,15 +256,31 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                             NONE
                             m
                 end
-                    
+
+    fun locateLess (n, xx, rpfx) =
+        if K.isEmpty xx
+        then
+            case n of
+                LEAF item => SOME (rev rpfx, item)
+              | BRANCH (SOME item, _) => SOME (rev rpfx, item)
+              | _ => NONE
+        else
+            case n of
+                LEAF item => SOME (rev rpfx, item)
+              | TWIG (kk, item) => 
+                (case compareKeys (K.explode xx, K.explode kk) of
+                     LESS => NONE
+                   | _ => SOME (rev rpfx @ K.explode kk, item))
+              | BRANCH (_, m) => NONE (*!!! todo *)
+                                     
     fun locate (EMPTY, xx, ord) = NONE
       | locate (POPULATED n, xx, ord) =
-        case (case ord of GREATER => locateGreater
-                        | LESS => raise Fail "not yet implemented!"
-                        | EQUAL => locateEqual) (n, xx, []) of
-            NONE => NONE
-          | SOME (NONE, item) => SOME (xx, item)
-          | SOME (SOME kk, item) => SOME (kk, item)
+        case ord of
+            LESS => Option.map (fn (kk, item) => (K.implode kk, item))
+                               (locateLess (n, xx, []))
+          | EQUAL => findi (POPULATED n, xx)
+          | GREATER => Option.map (fn (kk, item) => (K.implode kk, item))
+                                  (locateGreater (n, xx, []))
                                
     fun lookup (t, k) =
         case find (t, k) of
@@ -353,15 +364,6 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         let fun f' (pfx, item, acc) =
                 f (K.implode pfx, item, acc)
 
-            fun kkCompare (kk, kk') =
-                case (kk, kk') of
-                    ([], []) => EQUAL
-                  | ([],  _) => LESS
-                  | (_,  []) => GREATER
-                  | (k::ks, k'::ks') => case M.keyCompare (k, k') of
-                                            EQUAL => kkCompare (ks, ks')
-                                          | other => other
-
             (* When foldliNodeRange is entered, leftConstraint and
                rightConstraint may be NONE (no constraint), SOME []
                (constraint at start of this node), or SOME other
@@ -386,9 +388,9 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                              
             fun twig (kk, item, lc, rc) =
                 let val kk' = K.explode kk
-                    val accept = (null lc orelse kkCompare (kk', lc) <> LESS)
+                    val accept = (null lc orelse compareKeys (kk', lc) <> LESS)
                                  andalso
-                                 (null rc orelse kkCompare (kk', rc) <> GREATER)
+                                 (null rc orelse compareKeys (kk', rc) <> GREATER)
                 in
                     if accept
                     then f' ((rev rpfx) @ kk', item, acc)

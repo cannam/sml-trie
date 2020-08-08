@@ -314,7 +314,9 @@ functor TrieLocateTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
     val testdata = [
         ("present-twig", "alligator", SOME "alligator", SOME "alligator", SOME "alligator"),
         ("present-branch", "par", SOME "par", SOME "par", SOME "par"),
-        ("between-twigs", "alliances", SOME "alliance", NONE, SOME "alligator"),
+        ("between-twigs-1", "alliances", SOME "alliance", NONE, SOME "alligator"),
+        ("between-twigs-2", "alliam", SOME "abrasive", NONE, SOME "alliance"),
+        ("between-twigs-3", "abra", SOME "a", NONE, SOME "abrasive"),
         ("within-branch", "parry", SOME "parp", NONE, SOME "part"),
         ("between-branch-item-and-subnodes", "pare", SOME "par", NONE, SOME "parp"),
         ("at-start", "a", SOME "a", SOME "a", SOME "a"),
