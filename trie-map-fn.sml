@@ -233,7 +233,17 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                       | (k, n', NONE) => firstIn (n', k :: rpfx))
                      NONE m
 
-    fun locateGreater (n, xx, rpfx) = (*!!! todo: locateLess *)
+    fun lastIn (n, rpfx) =
+        case n of
+            LEAF item => SOME (rev rpfx, item)
+          | TWIG (kk, item) => SOME (rev rpfx @ K.explode kk, item)
+          | BRANCH (_, m) =>
+            (*!!! inefficient without custom help from M *)
+            case M.foldli (fn (k, n', _) => SOME (k, n')) NONE m of
+                NONE => NONE
+              | SOME (k, n') => lastIn (n', k :: rpfx)
+                     
+    fun locateGreater (n, xx, rpfx) =
         if K.isEmpty xx
         then firstIn (n, rpfx)
         else
@@ -249,10 +259,8 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                               | (k, n', NONE) =>
                                 case M.keyCompare (k, x) of
                                     LESS => NONE
-                                  | GREATER =>
-                                    locateGreater(n', K.implode [], k::rpfx)
-                                  | EQUAL =>
-                                    locateGreater(n', xs, k::rpfx))
+                                  | GREATER => firstIn (n', k::rpfx)
+                                  | EQUAL => locateGreater(n', xs, k::rpfx))
                             NONE
                             m
                 end
@@ -271,7 +279,21 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                 (case compareKeys (K.explode xx, K.explode kk) of
                      LESS => NONE
                    | _ => SOME (rev rpfx @ K.explode kk, item))
-              | BRANCH (_, m) => NONE (*!!! todo *)
+              | BRANCH (iopt, m) =>
+                let val (x, xs) = (K.head xx, K.tail xx)
+                in M.foldli (fn (k, n', acc) =>
+                                case M.keyCompare (k, x) of
+                                    LESS => lastIn (n', k::rpfx)
+                                  | GREATER => acc
+                                  | EQUAL =>
+                                    (case locateLess(n', xs, k::rpfx) of
+                                         NONE => acc
+                                       | other => other))
+                            (case iopt of
+                                 NONE => NONE
+                               | SOME item => SOME (rev rpfx, item))
+                            m
+                end
                                      
     fun locate (EMPTY, xx, ord) = NONE
       | locate (POPULATED n, xx, ord) =

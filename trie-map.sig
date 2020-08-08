@@ -39,6 +39,15 @@ signature TRIE_MAP = sig
     (** Look for a key and return its corresponding value, raising
         Subscript if the key is not present in the trie *)
     val lookup : 'a trie * key -> 'a
+                                                                              
+    (** Look for the closest key to the given one and return it with
+        its corresponding value. If order is EQUAL, then a result is
+        returned only if the given key is actually in the trie (the
+        same as find); if order is LESS or GREATER, the given key is
+        still returned if it exists, but otherwise the next key
+        comparing respectively less or greater than it is returned, if
+        there is one *)
+    val locate : 'a trie * key * order -> (key * 'a) option
 
     (** Return the longest prefix of the given key that is present as
         a key in the trie. The given key does not need to be present
@@ -68,8 +77,8 @@ signature TRIE_MAP = sig
         does not need to be present as a key in the trie *)
     val enumeratePrefix : 'a trie * key -> (key * 'a) list
 
-    (* Inclusive range of keys (first, last). If either is NONE, then
-       the range is unbounded on that side *)
+    (** Inclusive range of keys (first, last). If either is NONE, then
+        the range is unbounded on that side *)
     type range = key option * key option
                                                       
     (** Fold over all the key-value pairs in the trie that are found
@@ -79,10 +88,6 @@ signature TRIE_MAP = sig
     (** Return a list of all key-value pairs in the trie that are
         found within the given key range, in sort order by key *)
     val enumerateRange : 'a trie * range -> (key * 'a) list
-                                                                              
-    (*!!! *)
-    val locate : 'a trie * key * order -> (key * 'a) option
-
                                                      
 end
 
