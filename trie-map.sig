@@ -39,15 +39,6 @@ signature TRIE_MAP = sig
     (** Look for a key and return its corresponding value, raising
         Subscript if the key is not present in the trie *)
     val lookup : 'a trie * key -> 'a
-                                   
-    (** Fold over all the values in the trie, in sort order *)
-    val foldl : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b
-
-    (** Fold over all the key-value pairs in the trie, in sort order *)
-    val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a trie -> 'b
-
-    (** Return a list of all key-value pairs in the trie, in sort order *)
-    val enumerate : 'a trie -> (key * 'a) list
 
     (** Return the longest prefix of the given key that is present as
         a key in the trie. The given key does not need to be present
@@ -55,27 +46,43 @@ signature TRIE_MAP = sig
         longest prefix, and so it will be returned. If there is no
         prefix of the given key in the trie, return an empty key *)
     val prefixOf : 'a trie * key -> key
+                                   
+    (** Fold over all the values in the trie, in sort order by key *)
+    val foldl : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b
 
-    (** Return a list of all entries in the trie that have the given
-        key as a prefix, in sort order. The prefix itself does not
-        need to be present as a key in the trie *)
-    val prefixMatch : 'a trie * key -> (key * 'a) list
+    (** Fold over all the key-value pairs in the trie, in sort order
+        by key *)
+    val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a trie -> 'b
 
-    (** Fold over all the values in the trie that have the given
-        prefix, in sort order. The prefix itself does not need to be
-        present as a key in the trie *)
-    val foldlPrefixMatch : ('a * 'b -> 'b) -> 'b -> ('a trie * key) -> 'b
+    (** Return a list of all key-value pairs in the trie, in sort order
+        by key *)
+    val enumerate : 'a trie -> (key * 'a) list
 
     (** Fold over all the key-value pairs in the trie that have the
-        given prefix, in sort order. The prefix itself does not need
-        to be present as a key in the trie *)
-    val foldliPrefixMatch : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * key) -> 'b
+        given prefix, in sort order by key. The prefix itself does not
+        need to be present as a key in the trie *)
+    val foldliPrefix : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * key) -> 'b
 
+    (** Return a list of all key-value pairs in the trie that have the
+        given key as a prefix, in sort order by key. The prefix itself
+        does not need to be present as a key in the trie *)
+    val enumeratePrefix : 'a trie * key -> (key * 'a) list
+
+    (* Inclusive range of keys (first, last). If either is NONE, then
+       the range is unbounded on that side *)
+    type range = key option * key option
+                                                      
+    (** Fold over all the key-value pairs in the trie that are found
+        within the given key range, in sort order by key *)
+    val foldliRange : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * range) -> 'b
+
+    (** Return a list of all key-value pairs in the trie that are
+        found within the given key range, in sort order by key *)
+    val enumerateRange : 'a trie * range -> (key * 'a) list
+                                                                              
     (*!!! *)
     val locate : 'a trie * key * order -> (key * 'a) option
 
-                                                     (*!!! *)
-    val foldliRange : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * key option * key option) -> 'b
                                                      
 end
 

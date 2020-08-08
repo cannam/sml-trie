@@ -16,10 +16,10 @@ functor PatternMatchTrieFn (M : PATTERN_MATCH_TRIE_MAP)
     fun keysOf kvl =
         map (fn (k, v) => k) kvl
 
-    fun patternMatch (t, p) =
-        keysOf (M.patternMatch (t, p))
+    fun foldlPattern f acc (t, p) =
+        M.foldliPattern (fn (k, v, acc) => f (k, acc)) acc (t, p)
 
-    fun foldlPatternMatch f acc (t, p) =
-        M.foldliPatternMatch (fn (k, v, acc) => f (k, acc)) acc (t, p)
+    fun enumeratePattern (t, p) =
+        keysOf (M.enumeratePattern (t, p))
                              
 end

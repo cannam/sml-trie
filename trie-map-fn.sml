@@ -46,6 +46,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     type element = K.element
     type key = K.key
     type pattern = element option list
+    type range = key option * key option
 
     datatype 'a node = LEAF of 'a
                      | TWIG of key * 'a (* key nonempty, else it's a leaf *)
@@ -310,6 +311,43 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                             | SOME item => f' (rev rpfx, item, acc))
                          m
         end
+                            
+    fun foldli f acc t =
+        case t of
+            EMPTY => acc
+          | POPULATED n => foldliNode f ([], n, acc)
+
+    fun enumerate trie =
+        rev (foldli (fn (k, v, acc) => (k, v) :: acc) [] trie)
+            
+    fun foldliPrefix' f acc (node, e) = 
+        (* rpfx is reversed prefix built up so far (using cons) *)
+        let fun fold' (rpfx, n, xx, acc) =
+                if K.isEmpty xx
+                then foldliNode f (rpfx, n, acc)
+                else
+                    case n of
+                        LEAF item => acc
+                      | TWIG (kk, item) =>
+                        (if isPrefixOf (K.explode xx, K.explode kk)
+                         then foldliNode f (rpfx, n, acc)
+                         else acc)
+                      | BRANCH (_, m) => 
+                        case M.find (m, K.head xx) of
+                            NONE => acc
+                          | SOME nsub =>
+                            fold' ((K.head xx) :: rpfx, nsub, (K.tail xx), acc)
+        in
+            fold' ([], node, e, acc)
+        end
+
+    fun foldliPrefix f acc (trie, e) =
+        case trie of
+            EMPTY => acc
+          | POPULATED n => foldliPrefix' f acc (n, e)
+            
+    fun enumeratePrefix (trie, e) =
+        rev (foldliPrefix (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
 
     fun foldliNodeRange f (rpfx, n, leftConstraintK, rightConstraintK, acc) =
         let fun f' (pfx, item, acc) =
@@ -409,53 +447,16 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                    | BRANCH (iopt, m) => branch (iopt, m, lc, rc))
         end
 
-    fun foldliRange f acc (t, leftConstraint, rightConstraint) =
+    fun foldliRange f acc (t, (leftConstraint, rightConstraint)) =
         case t of
             EMPTY => acc
           | POPULATED n =>
             foldliNodeRange f ([], n, leftConstraint, rightConstraint, acc)
-                            
-    fun foldli f acc t =
-        case t of
-            EMPTY => acc
-          | POPULATED n => foldliNode f ([], n, acc)
 
-    fun enumerate trie =
-        rev (foldli (fn (k, v, acc) => (k, v) :: acc) [] trie)
-            
-    fun foldliPrefixMatch' f acc (node, e) = 
-        (* rpfx is reversed prefix built up so far (using cons) *)
-        let fun fold' (rpfx, n, xx, acc) =
-                if K.isEmpty xx
-                then foldliNode f (rpfx, n, acc)
-                else
-                    case n of
-                        LEAF item => acc
-                      | TWIG (kk, item) =>
-                        (if isPrefixOf (K.explode xx, K.explode kk)
-                         then foldliNode f (rpfx, n, acc)
-                         else acc)
-                      | BRANCH (_, m) => 
-                        case M.find (m, K.head xx) of
-                            NONE => acc
-                          | SOME nsub =>
-                            fold' ((K.head xx) :: rpfx, nsub, (K.tail xx), acc)
-        in
-            fold' ([], node, e, acc)
-        end
+    fun enumerateRange (trie, range) =
+        rev (foldliRange (fn (k, v, acc) => (k, v) :: acc) [] (trie, range))
 
-    fun foldliPrefixMatch f acc (trie, e) =
-        case trie of
-            EMPTY => acc
-          | POPULATED n => foldliPrefixMatch' f acc (n, e)
-            
-    fun foldlPrefixMatch f acc (trie, e) =
-        foldliPrefixMatch (fn (k, v, acc) => f (v, acc)) acc (trie, e)
-            
-    fun prefixMatch (trie, e) =
-        rev (foldliPrefixMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, e))
-
-    fun foldliPatternMatch' f acc (node, p) =
+    fun foldliPattern' f acc (node, p) =
         let fun f' (pfx, item, acc) = f (K.implode pfx, item, acc)
             fun fold' (rpfx, n, xx, acc) =
                 case (n, xx) of
@@ -482,13 +483,13 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             fold' ([], node, p, acc)
         end
 
-    fun foldliPatternMatch f acc (trie, p) =
+    fun foldliPattern f acc (trie, p) =
         case trie of
             EMPTY => acc
-          | POPULATED node => foldliPatternMatch' f acc (node, p)
+          | POPULATED node => foldliPattern' f acc (node, p)
             
-    fun patternMatch (trie, p) =
-        rev (foldliPatternMatch (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
+    fun enumeratePattern (trie, p) =
+        rev (foldliPattern (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
                                           
     fun prefixOf (trie, e) =
         let fun prefix' (n, xx, best, acc) =

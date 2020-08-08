@@ -13,6 +13,8 @@ functor TrieFn (M : TRIE_MAP)
     type trie = unit M.trie
     type t = trie
 
+    type range = entry option * entry option
+
     fun keysOf kvl =
         map (fn (k, v) => k) kvl
             
@@ -25,15 +27,16 @@ functor TrieFn (M : TRIE_MAP)
     fun enumerate t =
         keysOf (M.enumerate t)
 
-    fun prefixMatch (t, e) =
-        keysOf (M.prefixMatch (t, e))
+    fun foldlPrefix f acc (t, e) =
+        M.foldliPrefix (fn (k, v, acc) => f (k, acc)) acc (t, e)
 
-    fun foldlPrefixMatch f acc (t, e) =
-        M.foldliPrefixMatch (fn (k, v, acc) => f (k, acc)) acc (t, e)
+    fun enumeratePrefix (t, e) =
+        keysOf (M.enumeratePrefix (t, e))
 
-    (*!!! *)
-    fun foldlRange f acc (t, leftConstraint, rightConstraint) =
-        M.foldliRange (fn (k, v, acc) => f (k, acc)) acc
-                      (t, leftConstraint, rightConstraint)
+    fun foldlRange f acc (t, range) =
+        M.foldliRange (fn (k, v, acc) => f (k, acc)) acc (t, range)
+
+    fun enumerateRange (t, range) =
+        keysOf (M.enumerateRange (t, range))
                       
 end

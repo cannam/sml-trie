@@ -112,25 +112,25 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
                        T.isEmpty e1 andalso T.isEmpty e2
                    end
         ),
-        ( "prefixMatch-empty",
-          fn () => check_lists id (T.prefixMatch (T.empty, "parp"), [])
+        ( "enumeratePrefix-empty",
+          fn () => check_lists id (T.enumeratePrefix (T.empty, "parp"), [])
         ),
-        ( "prefixMatch-matches",
-          fn () => check_lists id (T.prefixMatch (test_trie (), "pa"),
+        ( "enumeratePrefix-matches",
+          fn () => check_lists id (T.enumeratePrefix (test_trie (), "pa"),
 			           [ "par", "parp" ])
 	           andalso
-	           check_lists id (T.prefixMatch (test_trie (), "par"),
+	           check_lists id (T.enumeratePrefix (test_trie (), "par"),
 			           [ "par", "parp" ])
         ),
-        ( "prefixMatch-no-matches",
-          fn () => check_lists id (T.prefixMatch (test_trie (), "quiz"), [ ])
+        ( "enumeratePrefix-no-matches",
+          fn () => check_lists id (T.enumeratePrefix (test_trie (), "quiz"), [ ])
                    andalso
-                   check_lists id (T.prefixMatch (test_trie (), "aaa"), [ ])
+                   check_lists id (T.enumeratePrefix (test_trie (), "aaa"), [ ])
                    andalso
-                   check_lists id (T.prefixMatch (test_trie (), "zzz"), [ ])
+                   check_lists id (T.enumeratePrefix (test_trie (), "zzz"), [ ])
         ),
-        ( "prefixMatch-all-matches",
-          fn () => check_lists id (T.prefixMatch (test_trie (), ""),
+        ( "enumeratePrefix-all-matches",
+          fn () => check_lists id (T.enumeratePrefix (test_trie (), ""),
                                    sorted strings)
         ),
         ( "prefixOf-empty",
@@ -152,59 +152,59 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
 		                   (T.prefixOf (test_trie (), "quiz"), "")
                                   ]
         ),
-        ( "patternMatch-empty",
-          fn () => check_lists id (T.patternMatch (T.empty, []), [])
+        ( "enumeratePattern-empty",
+          fn () => check_lists id (T.enumeratePattern (T.empty, []), [])
                    andalso
-                   check_lists id (T.patternMatch (T.empty, [SOME #"p"]), [])
+                   check_lists id (T.enumeratePattern (T.empty, [SOME #"p"]), [])
                    andalso
-                   check_lists id (T.patternMatch (T.empty, [NONE]), [])
+                   check_lists id (T.enumeratePattern (T.empty, [NONE]), [])
         ),
-        ( "patternMatch-nil",
-          fn () => check_lists id (T.patternMatch (test_trie (), []), [])
+        ( "enumeratePattern-nil",
+          fn () => check_lists id (T.enumeratePattern (test_trie (), []), [])
         ),
-        ( "patternMatch-literal",
-          fn () => check_lists id (T.patternMatch
+        ( "enumeratePattern-literal",
+          fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"p", SOME #"a", SOME #"r"]),
 		                   ["par"])
         ),
-        ( "patternMatch-one",
-          fn () => check_lists id (T.patternMatch
+        ( "enumeratePattern-one",
+          fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"p", NONE, SOME #"r"]),
 		                   ["par"])
         ),
-        ( "patternMatch-some",
-	  fn () => check_lists id (T.patternMatch
+        ( "enumeratePattern-some",
+	  fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"a", NONE, NONE, NONE, NONE,
 					 NONE, NONE, SOME #"e"]),
 		                   ["abrasive", "alliance"])
         ),
-        ( "patternMatch-no-literal",
-          fn () => check_lists id (T.patternMatch
+        ( "enumeratePattern-no-literal",
+          fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"a", SOME #"l", SOME #"l"]),
 		                   [])
         ),
-        ( "patternMatch-none",
-          fn () => check_lists id (T.patternMatch
+        ( "enumeratePattern-none",
+          fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"q", NONE]),
 		                   [])
                    andalso
-                   check_lists id (T.patternMatch
+                   check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [NONE, SOME #"q"]),
 		                   [])
                    andalso
-                   check_lists id (T.patternMatch
+                   check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [NONE, SOME #"A"]),
 		                   [])
         ),
-        ( "patternMatch-overlong",
-          fn () => check_lists id (T.patternMatch
+        ( "enumeratePattern-overlong",
+          fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [NONE, NONE, NONE, NONE, NONE,
                                          NONE, NONE, NONE, NONE, NONE]),
@@ -264,22 +264,19 @@ functor TrieRangeTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
          strings)
     ]
 
-    fun enumerateRange trie (from, to) =
-        rev (T.foldlRange (fn (e, acc) => e :: acc) [] (trie, from, to))
-                                  
     fun tests () =
         [ ("empty-all",
-           fn () => null (enumerateRange T.empty (NONE, NONE))),
+           fn () => null (T.enumerateRange (T.empty, (NONE, NONE)))),
           ("empty-left",
-           fn () => null (enumerateRange T.empty (NONE, SOME "x"))),
+           fn () => null (T.enumerateRange (T.empty, (NONE, SOME "x")))),
           ("empty-right",
-           fn () => null (enumerateRange T.empty (SOME "x", NONE)))
+           fn () => null (T.enumerateRange (T.empty, (SOME "x", NONE))))
         ] @
         (map (fn (name, from, to, expected) =>
                  (name,
                   fn () => check_lists
                                id
-                               (enumerateRange (test_trie ()) (from, to),
+                               (T.enumerateRange (test_trie (), (from, to)),
                                 expected)))
              testdata)
 
