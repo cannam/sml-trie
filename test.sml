@@ -52,6 +52,8 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
 		                    (T.contains (t, "parp"), true),
 		                    (T.contains (t, "part"), false),
 		                    (T.contains (t, "quiz"), false),
+		                    (T.contains (t, "z"), false),
+		                    (T.contains (t, "parpy"), false),
 		                    (T.contains (t, ""), false)]
                    end
         ),
@@ -72,8 +74,13 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
                                (T.enumerate
                                     (T.remove
                                          (T.remove
-                                              (T.remove (test_trie (), "zebr"),
-                                               "zebras"),
+                                              (T.remove
+                                                   (T.remove
+                                                        (T.remove (test_trie (),
+                                                                   "zebr"),
+                                                         "zebras"),
+                                                    "z"),
+                                               "parpy"),
                                           "flarp")),
                                 T.enumerate
                                     (test_trie ()))

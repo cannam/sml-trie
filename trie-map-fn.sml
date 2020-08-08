@@ -228,7 +228,6 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
           | TWIG (kk, item) => SOME (rev rpfx @ K.explode kk, item)
           | BRANCH (SOME item, _) => SOME (rev rpfx, item)
           | BRANCH (NONE, m) =>
-            (*!!! inefficient without custom help from M *)
             M.foldli (fn (_, _, SOME result) => SOME result
                       | (k, n', NONE) => firstIn (n', k :: rpfx))
                      NONE m
@@ -238,7 +237,6 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             LEAF item => SOME (rev rpfx, item)
           | TWIG (kk, item) => SOME (rev rpfx @ K.explode kk, item)
           | BRANCH (_, m) =>
-            (*!!! inefficient without custom help from M *)
             case M.foldli (fn (k, n', _) => SOME (k, n')) NONE m of
                 NONE => NONE
               | SOME (k, n') => lastIn (n', k :: rpfx)
