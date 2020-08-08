@@ -329,7 +329,9 @@ functor TrieLocateTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
         ("at-start", "a", SOME "a", SOME "a", SOME "a"),
         ("before-start", "", NONE, NONE, SOME "a"),
         ("at-end", "poot", SOME "poot", SOME "poot", SOME "poot"),
-        ("past-end", "port", SOME "poot", NONE, NONE)
+        ("past-end", "port", SOME "poot", NONE, NONE),
+        ("present-leaf", "parp", SOME "parp", SOME "parp", SOME "parp"),
+        ("overrunning-leaf", "parpy", SOME "parp", NONE, SOME "part")
     ]
 
     fun result_to_string NONE = "<none>"
