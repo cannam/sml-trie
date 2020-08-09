@@ -222,85 +222,88 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
       | find (POPULATED n, xx) =
         find' (n, xx)
 
-    fun firstIn (n, rpfx) =
-        case n of
-            LEAF item => SOME (rev rpfx, item)
-          | TWIG (kk, item) => SOME (rev rpfx @ K.explode kk, item)
-          | BRANCH (SOME item, _) => SOME (rev rpfx, item)
-          | BRANCH (NONE, m) =>
-            M.foldli (fn (_, _, SOME result) => SOME result
-                      | (k, n', NONE) => firstIn (n', k :: rpfx))
-                     NONE m
-
-    fun lastIn (n, rpfx) =
-        case n of
-            LEAF item => SOME (rev rpfx, item)
-          | TWIG (kk, item) => SOME (rev rpfx @ K.explode kk, item)
-          | BRANCH (_, m) =>
-            case M.foldli (fn (k, n', _) => SOME (k, n')) NONE m of
-                NONE => NONE
-              | SOME (k, n') => lastIn (n', k :: rpfx)
-                     
     fun locateGreater (n, xx, rpfx) =
-        if K.isEmpty xx
-        then firstIn (n, rpfx)
-        else
-            case n of
-                LEAF item => NONE
-              | TWIG (kk, item) =>
-                (case compareKeys (K.explode xx, K.explode kk) of
-                     GREATER => NONE
-                   | _ => SOME (rev rpfx @ K.explode kk, item))
-              | BRANCH (_, m) =>
-                let val (x, xs) = (K.head xx, K.tail xx)
-                in M.foldli (fn (_, _, SOME result) => SOME result
-                              | (k, n', NONE) =>
-                                case M.keyCompare (k, x) of
-                                    LESS => NONE
-                                  | GREATER => firstIn (n', k::rpfx)
-                                  | EQUAL => locateGreater(n', xs, k::rpfx))
-                            NONE
-                            m
-                end
+        let fun firstIn (n, rpfx) =
+                case n of
+                    LEAF item => SOME (rpfx, item)
+                  | TWIG (kk, item) => SOME (rev (K.explode kk) @ rpfx, item)
+                  | BRANCH (SOME item, _) => SOME (rpfx, item)
+                  | BRANCH (NONE, m) =>
+                    M.foldli (fn (_, _, SOME result) => SOME result
+                             | (k, n', NONE) => firstIn (n', k::rpfx))
+                             NONE m
+        in
+            if K.isEmpty xx
+            then firstIn (n, rpfx)
+            else
+                case n of
+                    LEAF item => NONE
+                  | TWIG (kk, item) =>
+                    if compareKeys (K.explode xx, K.explode kk) <> GREATER
+                    then firstIn (n, rpfx)
+                    else NONE
+                  | BRANCH (_, m) =>
+                    let val (x, xs) = (K.head xx, K.tail xx)
+                    in M.foldli (fn (_, _, SOME result) => SOME result
+                                  | (k, n', NONE) =>
+                                  case M.keyCompare (k, x) of
+                                      LESS => NONE
+                                    | GREATER => firstIn (n', k::rpfx)
+                                    | EQUAL => locateGreater(n', xs, k::rpfx))
+                                NONE
+                                m
+                    end
+        end
 
     fun locateLess (n, xx, rpfx) =
-        if K.isEmpty xx
-        then
-            case n of
-                LEAF item => SOME (rev rpfx, item)
-              | BRANCH (SOME item, _) => SOME (rev rpfx, item)
-              | _ => NONE
-        else
-            case n of
-                LEAF item => SOME (rev rpfx, item)
-              | TWIG (kk, item) => 
-                (case compareKeys (K.explode xx, K.explode kk) of
-                     LESS => NONE
-                   | _ => SOME (rev rpfx @ K.explode kk, item))
-              | BRANCH (iopt, m) =>
-                let val (x, xs) = (K.head xx, K.tail xx)
-                in M.foldli (fn (k, n', acc) =>
-                                case M.keyCompare (k, x) of
-                                    LESS => lastIn (n', k::rpfx)
-                                  | GREATER => acc
-                                  | EQUAL =>
-                                    (case locateLess(n', xs, k::rpfx) of
-                                         NONE => acc
-                                       | other => other))
-                            (case iopt of
-                                 NONE => NONE
-                               | SOME item => SOME (rev rpfx, item))
-                            m
-                end
+        let fun lastIn (n, rpfx) =
+                case n of
+                    LEAF item => SOME (rpfx, item)
+                  | TWIG (kk, item) => SOME (rev (K.explode kk) @ rpfx, item)
+                  | BRANCH (_, m) =>
+                    case M.foldli (fn (k, n', _) => SOME (k, n')) NONE m of
+                        NONE => NONE
+                      | SOME (k, n') => lastIn (n', k::rpfx)
+        in
+            if K.isEmpty xx
+            then
+                case n of
+                    LEAF item => SOME (rpfx, item)
+                  | BRANCH (SOME item, _) => SOME (rpfx, item)
+                  | _ => NONE
+            else
+                case n of
+                    LEAF item => SOME (rpfx, item)
+                  | TWIG (kk, item) =>
+                    if compareKeys (K.explode xx, K.explode kk) <> LESS
+                    then lastIn (n, rpfx)
+                    else NONE
+                  | BRANCH (iopt, m) =>
+                    let val (x, xs) = (K.head xx, K.tail xx)
+                    in M.foldli (fn (k, n', acc) =>
+                                    case M.keyCompare (k, x) of
+                                        LESS => lastIn (n', k::rpfx)
+                                      | GREATER => acc
+                                      | EQUAL =>
+                                        (case locateLess(n', xs, k::rpfx) of
+                                             NONE => acc
+                                           | other => other))
+                                (case iopt of
+                                     NONE => NONE
+                                   | SOME item => SOME (rpfx, item))
+                                m
+                    end
+        end
                                      
     fun locate (EMPTY, xx, ord) = NONE
       | locate (POPULATED n, xx, ord) =
-        case ord of
-            LESS => Option.map (fn (kk, item) => (K.implode kk, item))
-                               (locateLess (n, xx, []))
-          | EQUAL => findi (POPULATED n, xx)
-          | GREATER => Option.map (fn (kk, item) => (K.implode kk, item))
-                                  (locateGreater (n, xx, []))
+        let val conv = Option.map (fn (kk, item) => (K.implode (rev kk), item))
+        in
+            case ord of
+                LESS => conv (locateLess (n, xx, []))
+              | EQUAL => findi (POPULATED n, xx)
+              | GREATER => conv (locateGreater (n, xx, []))
+        end
                                
     fun lookup (t, k) =
         case find (t, k) of
