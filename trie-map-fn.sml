@@ -517,31 +517,31 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         let fun prefix' (n, xx, best, acc) =
                 if K.isEmpty xx
                 then case n of
-                         LEAF item => acc
+                         LEAF item => SOME acc
                        | TWIG (kk, item) => best
                        | BRANCH (NONE, m) => best
-                       | BRANCH (SOME item, m) => acc
+                       | BRANCH (SOME item, m) => SOME acc
                 else case n of
-                         LEAF item => acc
+                         LEAF item => SOME acc
                        | TWIG (kk, item) =>
                          if K.equal (kk, xx) orelse
                             isPrefixOf (K.explode kk, K.explode xx)
-                         then rev (K.explode kk) @ acc
+                         then SOME (rev (K.explode kk) @ acc)
                          else best
                        | BRANCH (iopt, m) =>
                          let val (x, xs) = (K.head xx, K.tail xx)
                              val best = case iopt of NONE => best
-                                                   | SOME _ => acc
+                                                   | SOME _ => SOME acc
                          in
                              case M.find (m, x) of
                                  NONE => best
                                | SOME nsub => prefix' (nsub, xs, best, x::acc)
                          end
         in
-            K.implode
+            Option.map (K.implode o rev)
                 (case trie of
-                     EMPTY => []
-                   | POPULATED node => rev (prefix' (node, e, [], [])))
+                     EMPTY => NONE
+                   | POPULATED node => prefix' (node, e, NONE, []))
         end
 
 end

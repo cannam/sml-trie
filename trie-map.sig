@@ -53,8 +53,8 @@ signature TRIE_MAP = sig
         a key in the trie. The given key does not need to be present
         as a key in the trie. If it is present, it will be its own
         longest prefix, and so it will be returned. If there is no
-        prefix of the given key in the trie, return an empty key *)
-    val prefixOf : 'a trie * key -> key
+        prefix of the given key in the trie, return NONE *)
+    val prefixOf : 'a trie * key -> key option
                                    
     (** Fold over all the values in the trie, in sort order by key *)
     val foldl : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b

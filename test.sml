@@ -30,6 +30,9 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
 				  (T.empty)
 				  strings
 
+    fun result_to_string NONE = "<none>"
+      | result_to_string (SOME r) = r
+
     fun tests () = [
 	( "enumerate-empty",
           fn () => check_lists id (T.enumerate (T.empty), [])
@@ -148,29 +151,46 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
                                    sorted strings)
         ),
         ( "prefixOf-empty",
-          fn () => check_pairs id [(T.prefixOf (T.empty, "parp"), ""),
-                                   (T.prefixOf (T.empty, ""), "")
-                                  ]
+          fn () => check_pairs result_to_string
+                               [(T.prefixOf (T.empty, "parp"), NONE),
+                                (T.prefixOf (T.empty, ""), NONE)
+                               ]
         ),
 	( "prefixOf",
-          fn () => check_pairs id [(T.prefixOf (test_trie (), "par"), "par"),
-		                   (T.prefixOf (test_trie (), "parp"), "parp"),
-		                   (T.prefixOf (test_trie (), "part"), "par"),
-		                   (T.prefixOf (test_trie (), "abras"), "a"),
-		                   (T.prefixOf (test_trie (), "abrasiveness"), "abrasive"),
-		                   (T.prefixOf (test_trie (), "parpy"), "parp"),
-		                   (T.prefixOf (test_trie (), "zebras"), "zebra"),
-		                   (T.prefixOf (test_trie (), "zebra"), "zebra")
-                                  ]
+          fn () => check_pairs result_to_string
+                               [(T.prefixOf (test_trie (), "par"), SOME "par"),
+		                (T.prefixOf (test_trie (), "parp"), SOME "parp"),
+		                (T.prefixOf (test_trie (), "part"), SOME "par"),
+		                (T.prefixOf (test_trie (), "abras"), SOME "a"),
+		                (T.prefixOf (test_trie (), "abrasiveness"), SOME "abrasive"),
+		                (T.prefixOf (test_trie (), "parpy"), SOME "parp"),
+		                (T.prefixOf (test_trie (), "zebras"), SOME "zebra"),
+		                (T.prefixOf (test_trie (), "zebra"), SOME "zebra")
+                               ]
         ),
 	( "prefixOf-no-matches",
-          fn () => check_pairs id [(T.prefixOf (test_trie (), "AAA"), ""),
-		                   (T.prefixOf (test_trie (), "pa"), ""),
-		                   (T.prefixOf (test_trie (), "quiz"), ""),
-		                   (T.prefixOf (test_trie (), "zebr"), ""),
-		                   (T.prefixOf (test_trie (), "z"), ""),
-		                   (T.prefixOf (test_trie (), ""), "")
-                                  ]
+          fn () => check_pairs result_to_string
+                               [(T.prefixOf (test_trie (), "AAA"), NONE),
+		                (T.prefixOf (test_trie (), "pa"), NONE),
+		                (T.prefixOf (test_trie (), "quiz"), NONE),
+		                (T.prefixOf (test_trie (), "zebr"), NONE),
+		                (T.prefixOf (test_trie (), "z"), NONE),
+		                (T.prefixOf (test_trie (), ""), NONE)
+                               ]
+        ),
+	( "prefixOf-with-empty-content",
+          fn () =>
+             let val t = T.add (test_trie (), "")
+             in
+                 check_pairs result_to_string
+                             [(T.prefixOf (t, "AAA"), SOME ""),
+		              (T.prefixOf (t, "pa"), SOME ""),
+		              (T.prefixOf (t, "quiz"), SOME ""),
+		              (T.prefixOf (t, "zebr"), SOME ""),
+		              (T.prefixOf (t, "z"), SOME ""),
+		              (T.prefixOf (t, ""), SOME "")
+                             ]
+             end
         ),
         ( "enumeratePattern-empty",
           fn () => check_lists id (T.enumeratePattern (T.empty, []), [])

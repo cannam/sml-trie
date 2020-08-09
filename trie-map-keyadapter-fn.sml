@@ -38,7 +38,7 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
     fun lookup (t, k) = T.lookup (t, enkey k)
 
     fun prefixOf (t, k) =
-        dekey (T.prefixOf (t, enkey k))
+        Option.map dekey (T.prefixOf (t, enkey k))
                                  
     val foldl = T.foldl
 

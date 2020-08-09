@@ -38,9 +38,8 @@ signature TRIE = sig
         as an entry in the trie. The given value does not need to be
         present as an entry in the trie; if it is present, it will be
         its own longest prefix, and so it will be returned. If there
-        is no prefix of the given entry in the trie, return an empty
-        entry *)
-    val prefixOf : trie * entry -> entry
+        is no prefix of the given entry in the trie, return NONE *)
+    val prefixOf : trie * entry -> entry option
 
     (** Fold over all the entries in the trie, in sort order *)
     val foldl : (entry * 'a -> 'a) -> 'a -> trie -> 'a
