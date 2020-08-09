@@ -128,6 +128,9 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
 	           andalso
 	           check_lists id (T.enumeratePrefix (test_trie (), "par"),
 			           [ "par", "parp" ])
+	           andalso
+	           check_lists id (T.enumeratePrefix (test_trie (), "alligat"),
+			           [ "alligator" ])
         ),
         ( "enumeratePrefix-no-matches",
           fn () => check_lists id (T.enumeratePrefix (test_trie (), "quiz"), [ ])
@@ -135,6 +138,10 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
                    check_lists id (T.enumeratePrefix (test_trie (), "aaa"), [ ])
                    andalso
                    check_lists id (T.enumeratePrefix (test_trie (), "zzz"), [ ])
+                   andalso
+                   check_lists id (T.enumeratePrefix (test_trie (), "parpy"), [ ])
+                   andalso
+                   check_lists id (T.enumeratePrefix (test_trie (), "alligators"), [ ])
         ),
         ( "enumeratePrefix-all-matches",
           fn () => check_lists id (T.enumeratePrefix (test_trie (), ""),
@@ -150,13 +157,19 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
 		                   (T.prefixOf (test_trie (), "parp"), "parp"),
 		                   (T.prefixOf (test_trie (), "part"), "par"),
 		                   (T.prefixOf (test_trie (), "abras"), "a"),
-		                   (T.prefixOf (test_trie (), "abrasiveness"), "abrasive")
+		                   (T.prefixOf (test_trie (), "abrasiveness"), "abrasive"),
+		                   (T.prefixOf (test_trie (), "parpy"), "parp"),
+		                   (T.prefixOf (test_trie (), "zebras"), "zebra"),
+		                   (T.prefixOf (test_trie (), "zebra"), "zebra")
                                   ]
         ),
 	( "prefixOf-no-matches",
           fn () => check_pairs id [(T.prefixOf (test_trie (), "AAA"), ""),
 		                   (T.prefixOf (test_trie (), "pa"), ""),
-		                   (T.prefixOf (test_trie (), "quiz"), "")
+		                   (T.prefixOf (test_trie (), "quiz"), ""),
+		                   (T.prefixOf (test_trie (), "zebr"), ""),
+		                   (T.prefixOf (test_trie (), "z"), ""),
+		                   (T.prefixOf (test_trie (), ""), "")
                                   ]
         ),
         ( "enumeratePattern-empty",
@@ -169,11 +182,29 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
         ( "enumeratePattern-nil",
           fn () => check_lists id (T.enumeratePattern (test_trie (), []), [])
         ),
-        ( "enumeratePattern-literal",
+        ( "enumeratePattern-literal-branch",
           fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"p", SOME #"a", SOME #"r"]),
 		                   ["par"])
+        ),
+        ( "enumeratePattern-literal-leaf",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [SOME #"p", SOME #"a", SOME #"r", SOME #"p"]),
+		                   ["parp"])
+        ),
+        ( "enumeratePattern-literal-twig",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [SOME #"z", SOME #"e", SOME #"b", SOME #"r", SOME #"a"]),
+		                   ["zebra"])
+        ),
+        ( "enumeratePattern-twig",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [NONE, NONE, SOME #"b", NONE, SOME #"a"]),
+		                   ["zebra"])
         ),
         ( "enumeratePattern-one",
           fn () => check_lists id (T.enumeratePattern
@@ -181,17 +212,41 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
                                         [SOME #"p", NONE, SOME #"r"]),
 		                   ["par"])
         ),
-        ( "enumeratePattern-some",
+        ( "enumeratePattern-some-twigs",
 	  fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"a", NONE, NONE, NONE, NONE,
 					 NONE, NONE, SOME #"e"]),
 		                   ["abrasive", "alliance"])
         ),
+        ( "enumeratePattern-some-branch",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [NONE, NONE, NONE, NONE]),
+		                   ["parp", "poot"])
+        ),
         ( "enumeratePattern-no-literal",
           fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"a", SOME #"l", SOME #"l"]),
+		                   [])
+        ),
+        ( "enumeratePattern-no-prefix-twig",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [SOME #"z", SOME #"e", SOME #"b"]),
+		                   [])
+        ),
+        ( "enumeratePattern-no-prefix-twig-2",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [SOME #"z"]),
+		                   [])
+        ),
+        ( "enumeratePattern-no-prefix-branch",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [SOME #"p", SOME #"a"]),
 		                   [])
         ),
         ( "enumeratePattern-none",
@@ -250,14 +305,31 @@ functor TrieRangeTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
 				  (T.empty)
 				  strings
 
+(*!!! how should foldliRange behave if given constraints in the wrong
+      order? i.e. left > right? *)
+                                  
     val testdata = [
-        ("mid-present-endpoints", SOME "alligator", SOME "parp",
+        ("mid-present-endpoints-1", SOME "alligator", SOME "parp",
          ["alligator", "asterisk", "asterix", "par", "parp"]),
+        ("mid-present-endpoints-2", SOME "asterix", SOME "par",
+         ["asterix", "par"]),
+        ("mid-present-endpoints-3", SOME "par", SOME "par",
+         ["par"]),
         ("mid-absent-endpoints-1", SOME "abrade", SOME "aster",
          ["abrasive", "alliance", "alligator"]),
         ("mid-absent-endpoints-2", SOME "alliances", SOME "parse",
          ["alligator", "asterisk", "asterix", "par", "parp"]),
-        ("mid-empty", SOME "allied", SOME "allies",
+        ("mid-absent-endpoints-3", SOME "parpy", SOME "party",
+         ["part"]),
+        ("mid-absent-endpoints-4", SOME "abr", SOME "allig",
+         ["abrasive", "alliance"]),
+        ("mid-empty-1", SOME "allied", SOME "allies",
+         []),
+        ("mid-empty-2", SOME "allig", SOME "alliga",
+         []),
+        ("mid-empty-3", SOME "pare", SOME "park",
+         []),
+        ("mid-empty-4", SOME "parry", SOME "parse",
          []),
         ("from-start", NONE, SOME "attic",
          ["a", "abrasive", "alliance", "alligator", "asterisk", "asterix"]),

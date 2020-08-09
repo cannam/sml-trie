@@ -483,7 +483,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             fun fold' (rpfx, n, xx, acc) =
                 case (n, xx) of
                     (LEAF item, []) => f' (rev rpfx, item, acc)
-                  | (TWIG (kk, item), []) => f' (rev rpfx, item, acc)
+                  | (TWIG (kk, item), []) => acc
                   | (BRANCH (NONE, _), []) => acc
                   | (BRANCH (SOME item, _), []) => f' (rev rpfx, item, acc)
                   | (LEAF _, xx) => acc
@@ -518,7 +518,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                 if K.isEmpty xx
                 then case n of
                          LEAF item => acc
-                       | TWIG (kk, item) => acc
+                       | TWIG (kk, item) => best
                        | BRANCH (NONE, m) => best
                        | BRANCH (SOME item, m) => acc
                 else case n of
