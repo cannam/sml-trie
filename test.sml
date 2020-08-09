@@ -30,9 +30,6 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
 				  (T.empty)
 				  strings
 
-    fun result_to_string NONE = "<none>"
-      | result_to_string (SOME r) = r
-
     fun tests () = [
 	( "enumerate-empty",
           fn () => check_lists id (T.enumerate (T.empty), [])
@@ -151,13 +148,13 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
                                    sorted strings)
         ),
         ( "prefixOf-empty",
-          fn () => check_pairs result_to_string
+          fn () => check_pairs stringopt_to_string
                                [(T.prefixOf (T.empty, "parp"), NONE),
                                 (T.prefixOf (T.empty, ""), NONE)
                                ]
         ),
 	( "prefixOf",
-          fn () => check_pairs result_to_string
+          fn () => check_pairs stringopt_to_string
                                [(T.prefixOf (test_trie (), "par"), SOME "par"),
 		                (T.prefixOf (test_trie (), "parp"), SOME "parp"),
 		                (T.prefixOf (test_trie (), "part"), SOME "par"),
@@ -169,7 +166,7 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
                                ]
         ),
 	( "prefixOf-no-matches",
-          fn () => check_pairs result_to_string
+          fn () => check_pairs stringopt_to_string
                                [(T.prefixOf (test_trie (), "AAA"), NONE),
 		                (T.prefixOf (test_trie (), "pa"), NONE),
 		                (T.prefixOf (test_trie (), "quiz"), NONE),
@@ -182,7 +179,7 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
           fn () =>
              let val t = T.add (test_trie (), "")
              in
-                 check_pairs result_to_string
+                 check_pairs stringopt_to_string
                              [(T.prefixOf (t, "AAA"), SOME ""),
 		              (T.prefixOf (t, "pa"), SOME ""),
 		              (T.prefixOf (t, "quiz"), SOME ""),
@@ -426,25 +423,22 @@ functor TrieLocateTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
         ("overrunning-leaf", "parpy", SOME "parp", NONE, SOME "part")
     ]
 
-    fun result_to_string NONE = "<none>"
-      | result_to_string (SOME r) = r
-                       
     fun tests () =
         (map (fn (name, key, expectedLess, _, _) =>
                  (name ^ "-less",
-                  fn () => check result_to_string
+                  fn () => check stringopt_to_string
                                  (T.locate (test_trie (), key, LESS),
                                   expectedLess)))
              testdata) @
         (map (fn (name, key, _, expectedEqual, _) =>
                  (name ^ "-equal",
-                  fn () => check result_to_string
+                  fn () => check stringopt_to_string
                                  (T.locate (test_trie (), key, EQUAL),
                                   expectedEqual)))
              testdata) @
         (map (fn (name, key, _, _, expectedGreater) =>
                  (name ^ "-greater",
-                  fn () => check result_to_string
+                  fn () => check stringopt_to_string
                                  (T.locate (test_trie (), key, GREATER),
                                   expectedGreater)))
              testdata)
@@ -470,8 +464,10 @@ structure BitMappedVectorTest :> TESTS = struct
     structure V = BitMappedVector
     val name = "bitmapped-vector"
 
-    fun stringOptToString NONE = "<none>"
-      | stringOptToString (SOME s) = s
+    fun test_v () = V.tabulate
+                        (4,
+                         fn 0 => SOME "hello" | 1 => NONE
+                          | 2 => SOME "world" | _ => NONE)
                    
     fun tests () = [
         ( "new",
@@ -503,19 +499,13 @@ structure BitMappedVectorTest :> TESTS = struct
                          (V.isEmpty (V.tabulate (0, fn _ => NONE)), true)
         ),
         ( "tabulate-length",
-          fn () => let val v = V.tabulate
-                                   (4,
-                                    fn 0 => SOME "hello" | 1 => NONE
-                                     | 2 => SOME "world" | _ => NONE)
+          fn () => let val v = test_v ()
                    in
                        check Int.toString (V.length v, 4)
                    end
         ),
         ( "tabulate-contents",
-          fn () => let val v = V.tabulate
-                                   (4,
-                                    fn 0 => SOME "hello" | 1 => NONE
-                                     | 2 => SOME "world" | _ => NONE)
+          fn () => let val v = test_v ()
                    in
                        check_pairs id [(V.sub (v, 0), "hello"),
                                        (V.sub (v, 2), "world")]
@@ -529,29 +519,37 @@ structure BitMappedVectorTest :> TESTS = struct
           fn () => check Int.toString
                          (List.length (V.enumerate (V.new 0)), 0)
                    andalso
-                   check_lists stringOptToString
-                               (V.enumerate (V.new 3),
-                                [ NONE, NONE, NONE ])
+                   check_lists stringopt_to_string
+                               (V.enumerate (V.new 3), [ NONE, NONE, NONE ])
         ),
         ( "enumerate",
-          fn () => let val v = V.tabulate
-                                   (4,
-                                    fn 0 => SOME "hello" | 1 => NONE
-                                     | 2 => SOME "world" | _ => NONE)
+          fn () => let val v = test_v ()
                    in check_lists (fn NONE => "*" | SOME s => s)
                                   (V.enumerate v,
                                    [ SOME "hello", NONE,
                                      SOME "world", NONE ])
                    end
         ),
+        ( "foldl",
+          fn () => let val v = test_v ()
+                   in check_lists id (V.foldl (op::) [] v, ["world", "hello"])
+                   end
+        ),
+        ( "foldli",
+          fn () => let val v = test_v ()
+                   in check_lists (fn (i, s) => Int.toString i ^ ": " ^ s)
+                                  (V.foldli (fn (i, x, acc) => (i, x)::acc) [] v,
+                                   [(2, "world"), (0, "hello")])
+                   end
+        ),
         ( "update",
           fn () => let val v = V.new 4
                    in
-                       check_lists stringOptToString
+                       check_lists stringopt_to_string
                                    (V.enumerate (V.update (v, 0, "0")),
                                     [ SOME "0", NONE, NONE, NONE ])
                        andalso
-                       check_lists stringOptToString
+                       check_lists stringopt_to_string
                                    (V.enumerate
                                         (V.update
                                              (V.update
@@ -564,22 +562,19 @@ structure BitMappedVectorTest :> TESTS = struct
         ( "remove-empty",
           fn () => let val v = V.new 4
                    in
-                       check_lists stringOptToString
+                       check_lists stringopt_to_string
                                    (V.enumerate (V.remove (v, 2)),
                                     [ NONE, NONE, NONE, NONE ])
                    end
         ),
         ( "remove",
-          fn () => let val v = V.tabulate
-                                   (4,
-                                    fn 0 => SOME "hello" | 1 => NONE
-                                     | 2 => SOME "world" | _ => NONE)
+          fn () => let val v = test_v ()
                    in
-                       check_lists stringOptToString
+                       check_lists stringopt_to_string
                                    (V.enumerate (V.remove (v, 2)),
                                     [ SOME "hello", NONE, NONE, NONE ])
                        andalso
-                       check_lists stringOptToString
+                       check_lists stringopt_to_string
                                    (V.enumerate (V.remove (v, 0)),
                                     [ NONE, NONE, SOME "world", NONE ])
                        andalso

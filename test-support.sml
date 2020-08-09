@@ -8,6 +8,9 @@ structure TestSupport = struct
     type test_suite = string * test list
 
     fun id x = x
+
+    fun stringopt_to_string NONE = "<none>"
+      | stringopt_to_string (SOME s) = s
                                     
     fun report converter (obtained, expected) =
         print ("--- Expected: " ^ (converter expected)
