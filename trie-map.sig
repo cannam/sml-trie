@@ -62,6 +62,14 @@ signature TRIE_MAP = sig
     (** Fold over all the key-value pairs in the trie, in sort order
         by key *)
     val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a trie -> 'b
+                                   
+    (** Fold over all the values in the trie, in reverse of sort order
+        by key *)
+    val foldr : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b
+
+    (** Fold over all the key-value pairs in the trie, in reverse of
+        sort order by key *)
+(*    val foldri : (key * 'a * 'b -> 'b) -> 'b -> 'a trie -> 'b *)
 
     (** Return a list of all key-value pairs in the trie, in sort order
         by key *)
