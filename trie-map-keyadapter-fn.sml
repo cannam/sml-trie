@@ -41,15 +41,23 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
         Option.map dekey (T.prefixOf (t, enkey k))
                                  
     val foldl = T.foldl
+    val foldr = T.foldr
 
     fun foldli f =
         T.foldli (fn (k, x, acc) => f (dekey k, x, acc))
+
+    fun foldri f =
+        T.foldri (fn (k, x, acc) => f (dekey k, x, acc))
 
     fun enumerate t =
         map (fn (k, x) => (dekey k, x)) (T.enumerate t)
 
     fun foldliPrefix f acc (t, k) =
         T.foldliPrefix (fn (k, x, acc) => f (dekey k, x, acc))
+                       acc (t, enkey k)
+
+    fun foldriPrefix f acc (t, k) =
+        T.foldriPrefix (fn (k, x, acc) => f (dekey k, x, acc))
                        acc (t, enkey k)
 
     fun enumeratePrefix (t, k) =

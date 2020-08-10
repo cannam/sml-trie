@@ -44,6 +44,16 @@ functor ATrieNodeMapFn (E : ATRIE_ELEMENT)
                         | (i, SOME x, acc) => f (E.invOrd (i + base), x, acc))
                       acc vec
 
+    fun foldr f acc (MAP { vec, ... }) =
+        Vector.foldr (fn (NONE, acc) => acc
+                       | (SOME x, acc) => f (x, acc))
+                     acc vec
+
+    fun foldri f acc (MAP { base, vec, ... }) =
+        Vector.foldri (fn (i, NONE, acc) => acc
+                        | (i, SOME x, acc) => f (E.invOrd (i + base), x, acc))
+                      acc vec
+
     fun insert (m as MAP { base, nonempty, vec }, k, x) =
         let val i = E.ord k
         in

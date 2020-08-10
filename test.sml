@@ -798,6 +798,13 @@ functor PersistentArrayTestFn (ARG : PERSISTENT_ARRAY_TEST_FN_ARG) :> TESTS = st
                                          (A.fromList [ "hello", "world" ]),
                                 [ (1, "world"), (0, "hello") ])
         ),
+        ( "foldri",
+          fn () => check_lists (fn (i, s) => Int.toString i ^ ":" ^ s)
+                               (A.foldri (fn (i, x, acc) => (i, x) :: acc)
+                                         []
+                                         (A.fromList [ "hello", "world" ]),
+                                [ (0, "hello"), (1, "world") ])
+        ),
         ( "map",
           fn () => check_lists id
                                (A.toList (A.map (implode o rev o explode)

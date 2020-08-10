@@ -63,12 +63,17 @@ structure PersistentArray :> PERSISTENT_ARRAY = struct
                  { size = size, trie = t }
              end
 
-    fun foldli f acc { size, trie } =
-        T.foldli (fn (w, x, acc) => f (Word32.toInt w, x, acc))
-                 acc trie
-
     fun foldl f acc { size, trie } =
         T.foldl f acc trie
+
+    fun foldli f acc { size, trie } =
+        T.foldli (fn (w, x, acc) => f (Word32.toInt w, x, acc)) acc trie
+
+    fun foldr f acc { size, trie } =
+        T.foldr f acc trie
+
+    fun foldri f acc { size, trie } =
+        T.foldri (fn (w, x, acc) => f (Word32.toInt w, x, acc)) acc trie
 
     fun mapi f v =
         foldli (fn (i, x, acc) => append (acc, f (i, x))) empty v

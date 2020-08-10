@@ -104,7 +104,25 @@ functor PersistentHashMapFn (Key : HASH_KEY)
                                        f (k, v, acc)) acc values)
                 acc m
 
+    fun foldr f acc m =
+        T.foldr (fn (entry, acc) =>
+                    case entry of
+                        ONE (k, v) => f (v, acc)
+                      | MANY values => 
+                        List.foldr (fn ((k, v), acc) =>
+                                       f (v, acc)) acc values)
+                acc m
+
+    fun foldri f acc m =
+        T.foldr (fn (entry, acc) =>
+                    case entry of
+                        ONE (k, v) => f (k, v, acc)
+                      | MANY values => 
+                        List.foldr (fn ((k, v), acc) =>
+                                       f (k, v, acc)) acc values)
+                acc m
+
     fun enumerate m =
-        rev (foldli (fn (k, v, acc) => (k, v) :: acc) [] m)
+        foldri (fn (k, v, acc) => (k, v) :: acc) [] m
                 
 end

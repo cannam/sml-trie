@@ -44,6 +44,10 @@ signature TRIE = sig
     (** Fold over all the entries in the trie, in sort order *)
     val foldl : (entry * 'a -> 'a) -> 'a -> trie -> 'a
 
+    (** Fold over all the entries in the trie, in reverse of sort
+        order *)
+    val foldr : (entry * 'a -> 'a) -> 'a -> trie -> 'a
+
     (** Return a list of all entries in the trie, in sort order *)
     val enumerate : trie -> entry list
 
@@ -51,6 +55,11 @@ signature TRIE = sig
         prefix, in sort order. The prefix itself does not need to be
         present as an entry in the trie *)
     val foldlPrefix : (entry * 'a -> 'a) -> 'a -> (trie * entry) -> 'a 
+
+    (** Fold over all the entries in the trie that have the given
+        prefix, in reverse of sort order. The prefix itself does not
+        need to be present as an entry in the trie *)
+    val foldrPrefix : (entry * 'a -> 'a) -> 'a -> (trie * entry) -> 'a 
 
     (** Return a list of all entries in the trie that have the given
         entry as a prefix, in sort order. The prefix itself does not

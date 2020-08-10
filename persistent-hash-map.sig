@@ -49,6 +49,12 @@ signature PERSISTENT_HASH_MAP = sig
 
     (** Fold over all the key-value pairs in the hash map, in sort order *)
     val foldli : (hash_key * 'a * 'b -> 'b) -> 'b -> 'a hash_map -> 'b
+                                            
+    (** Fold over all the values in the hash map, in sort order *)
+    val foldr : ('a * 'b -> 'b) -> 'b -> 'a hash_map -> 'b
+
+    (** Fold over all the key-value pairs in the hash map, in sort order *)
+    val foldri : (hash_key * 'a * 'b -> 'b) -> 'b -> 'a hash_map -> 'b
 
     (** Return a list of all key-value pairs in the hash map, in sort order *)
     val enumerate : 'a hash_map -> (hash_key * 'a) list

@@ -69,7 +69,7 @@ signature TRIE_MAP = sig
 
     (** Fold over all the key-value pairs in the trie, in reverse of
         sort order by key *)
-(*    val foldri : (key * 'a * 'b -> 'b) -> 'b -> 'a trie -> 'b *)
+    val foldri : (key * 'a * 'b -> 'b) -> 'b -> 'a trie -> 'b
 
     (** Return a list of all key-value pairs in the trie, in sort order
         by key *)
@@ -79,6 +79,11 @@ signature TRIE_MAP = sig
         given prefix, in sort order by key. The prefix itself does not
         need to be present as a key in the trie *)
     val foldliPrefix : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * key) -> 'b
+
+    (** Fold over all the key-value pairs in the trie that have the
+        given prefix, in reverse of sort order by key. The prefix
+        itself does not need to be present as a key in the trie *)
+    val foldriPrefix : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * key) -> 'b
 
     (** Return a list of all key-value pairs in the trie that have the
         given key as a prefix, in sort order by key. The prefix itself

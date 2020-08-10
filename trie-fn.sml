@@ -20,15 +20,21 @@ functor TrieFn (M : TRIE_MAP)
 
     fun foldl f acc t =
         M.foldli (fn (k, v, acc) => f (k, acc)) acc t
+
+    fun foldr f acc t =
+        M.foldri (fn (k, v, acc) => f (k, acc)) acc t
                  
     fun enumerate t =
-        rev (M.foldli (fn (k, v, acc) => k :: acc) [] t)
+        M.foldri (fn (k, v, acc) => k :: acc) [] t
 
     fun foldlPrefix f acc (t, e) =
         M.foldliPrefix (fn (k, v, acc) => f (k, acc)) acc (t, e)
 
+    fun foldrPrefix f acc (t, e) =
+        M.foldriPrefix (fn (k, v, acc) => f (k, acc)) acc (t, e)
+
     fun enumeratePrefix (t, e) =
-        rev (M.foldliPrefix (fn (k, v, acc) => k :: acc) [] (t, e))
+        M.foldriPrefix (fn (k, v, acc) => k :: acc) [] (t, e)
 
     fun foldlRange f acc (t, range) =
         M.foldliRange (fn (k, v, acc) => f (k, acc)) acc (t, range)
