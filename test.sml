@@ -542,6 +542,18 @@ structure BitMappedVectorTest :> TESTS = struct
                                    [(2, "world"), (0, "hello")])
                    end
         ),
+        ( "foldr",
+          fn () => let val v = test_v ()
+                   in check_lists id (V.foldr (op::) [] v, ["hello", "world"])
+                   end
+        ),
+        ( "foldri",
+          fn () => let val v = test_v ()
+                   in check_lists (fn (i, s) => Int.toString i ^ ": " ^ s)
+                                  (V.foldri (fn (i, x, acc) => (i, x)::acc) [] v,
+                                   [(0, "hello"), (2, "world")])
+                   end
+        ),
         ( "update",
           fn () => let val v = V.new 4
                    in
