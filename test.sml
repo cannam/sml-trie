@@ -30,6 +30,8 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
 				  (T.empty)
 				  strings
 
+(*!!! + ensure we check foldl/foldr, e.g. for enumerate tests run them three times, once calling enumerate and the other two synthesising using foldl/foldr? *)
+                                  
     fun tests () = [
 	( "enumerate-empty",
           fn () => check_lists id (T.enumerate (T.empty), [])
@@ -357,7 +359,9 @@ functor TrieRangeTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
         ("to-end-empty", SOME "port", NONE,
          []),
         ("all", NONE, NONE,
-         strings)
+         strings),
+        ("wrong-order", SOME "party", SOME "alligator",
+         [])
     ]
 
     fun tests () =

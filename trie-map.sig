@@ -42,11 +42,11 @@ signature TRIE_MAP = sig
                                                                               
     (** Look for the closest key to the given one and return it with
         its corresponding value. If order is EQUAL, then a result is
-        returned only if the given key is actually in the trie (the
-        same as find); if order is LESS or GREATER, the given key is
-        still returned if it exists, but otherwise the next key
-        comparing respectively less or greater than it is returned, if
-        there is one *)
+        returned only if the given key is actually in the trie (like
+        find); if order is LESS or GREATER, the given key is still
+        returned if it exists, but otherwise the next key comparing
+        respectively less or greater than it is returned, if there is
+        one *)
     val locate : 'a trie * key * order -> (key * 'a) option
 
     (** Return the longest prefix of the given key that is present as
