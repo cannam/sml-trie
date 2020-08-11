@@ -224,6 +224,11 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
       | find (POPULATED n, xx) =
         find' (n, xx)
 
+    (* We use the name rpfx throughout this file to refer to a
+       reversed prefix of a key built up using cons as we descend
+       through the trie. It can be converted back into a key with
+       (K.implode o rev). *)
+
     fun locateGreater (n, xx, rpfx) =
         let fun firstIn (n, rpfx) =
                 case n of
@@ -282,6 +287,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                     else NONE
                   | BRANCH (iopt, m) =>
                     let val (x, xs) = (K.head xx, K.tail xx)
+                 (*!!! should use foldr: *)
                     in M.foldli (fn (k, n', acc) =>
                                     case M.keyCompare (k, x) of
                                         LESS => lastIn (n', k::rpfx)
@@ -323,10 +329,11 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                     LEAF item => f (item, acc)
                   | TWIG (kk, item) => f (item, acc)
                   | BRANCH (iopt, m) =>
-                    M.foldl fold' (case iopt of
-                                       NONE => acc
-                                     | SOME item => f (item, acc))
-                            m
+                    let val acc = case iopt of
+                                      NONE => acc
+                                    | SOME item => f (item, acc)
+                    in M.foldl fold' acc m
+                    end
         in
             fold'
         end
@@ -356,7 +363,6 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             EMPTY => acc
           | POPULATED n => foldrNode f (n, acc)
 
-    (* rpfx is reversed prefix built up so far (using cons) *)
     fun foldliNode f =
         let fun f' (rpfx, item, acc) = f (K.implode (rev rpfx), item, acc)
             fun foldli' (rpfx, n, acc) =
@@ -375,7 +381,6 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             foldli'
         end
        
-    (* rpfx is reversed prefix built up so far (using cons) *)
     fun foldriNode f =
         let fun f' (rpfx, item, acc) = f (K.implode (rev rpfx), item, acc)
             fun foldri' (rpfx, n, acc) =
@@ -409,17 +414,16 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun enumerate trie =
         foldri (fn (k, v, acc) => (k, v) :: acc) [] trie
             
-    fun foldiPrefix folder f =
-        (* rpfx is reversed prefix built up so far (using cons) *)
+    fun foldiPrefix nodeFolder f =
         let fun foldi' (rpfx, xx, n, acc) =
                 if K.isEmpty xx
-                then foldliNode f (rpfx, n, acc)
+                then nodeFolder f (rpfx, n, acc)
                 else
                     case n of
                         LEAF item => acc
                       | TWIG (kk, item) =>
                         (if isPrefixOf (K.explode xx, K.explode kk)
-                         then foldliNode f (rpfx, n, acc)
+                         then nodeFolder f (rpfx, n, acc)
                          else acc)
                       | BRANCH (_, m) => 
                         case M.find (m, K.head xx) of
@@ -433,12 +437,12 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun foldliPrefix f acc (trie, e) =
         case trie of
             EMPTY => acc
-          | POPULATED n => foldiPrefix M.foldli f ([], e, n, acc)
+          | POPULATED n => foldiPrefix foldliNode f ([], e, n, acc)
 
     fun foldriPrefix f acc (trie, e) =
         case trie of
             EMPTY => acc
-          | POPULATED n => foldiPrefix M.foldri f ([], e, n, acc)
+          | POPULATED n => foldiPrefix foldriNode f ([], e, n, acc)
             
     fun enumeratePrefix (trie, e) =
         foldriPrefix (fn (k, v, acc) => (k, v) :: acc) [] (trie, e)
