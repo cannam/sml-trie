@@ -28,6 +28,12 @@ signature PATTERN_MATCH_TRIE_MAP = sig
        exactly the same number of elements as values in the pattern *)
     val foldliPattern : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * pattern) -> 'b
 
+    (* Fold over all the key-value pairs in the trie that match the
+       given pattern, in reverse of sort order. Will only return
+       entries with exactly the same number of elements as values in
+       the pattern *)
+    val foldriPattern : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * pattern) -> 'b
+
     (* Return all the key-value pairs in the trie that match the given
        pattern, in sort order. Will only return entries with exactly
        the same number of elements as values in the pattern *)

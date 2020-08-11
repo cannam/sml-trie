@@ -545,7 +545,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun enumerateRange (trie, range) =
         rev (foldliRange (fn (k, v, acc) => (k, v) :: acc) [] (trie, range))
 
-    fun foldliPattern' f acc (node, p) =
+    fun foldiPattern' mapFolder f acc (node, p) =
         let fun f' (pfx, item, acc) = f (K.implode pfx, item, acc)
             fun fold' (rpfx, n, xx, acc) =
                 case (n, xx) of
@@ -561,7 +561,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                     then f' (rev rpfx @ K.explode kk, item, acc)
                     else acc
                   | (BRANCH (_, m), NONE::xs) =>
-                    M.foldli (fn (x, n, acc) =>
+                    mapFolder (fn (x, n, acc) =>
                                  fold' (x :: rpfx, n, xs, acc))
                              acc m
                   | (BRANCH (_, m), (SOME x)::xs) =>
@@ -575,10 +575,15 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun foldliPattern f acc (trie, p) =
         case trie of
             EMPTY => acc
-          | POPULATED node => foldliPattern' f acc (node, p)
+          | POPULATED node => foldiPattern' M.foldli f acc (node, p)
+
+    fun foldriPattern f acc (trie, p) =
+        case trie of
+            EMPTY => acc
+          | POPULATED node => foldiPattern' M.foldri f acc (node, p)
             
     fun enumeratePattern (trie, p) =
-        rev (foldliPattern (fn (k, v, acc) => (k, v) :: acc) [] (trie, p))
+        foldriPattern (fn (k, v, acc) => (k, v) :: acc) [] (trie, p)
                                           
     fun prefixOf (trie, e) =
         let fun prefix' (n, xx, best, acc) =

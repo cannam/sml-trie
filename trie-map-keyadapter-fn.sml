@@ -119,6 +119,9 @@ functor PatternMatchTrieMapKeyAdapterFn (A : PATTERN_MATCH_TRIE_MAP_KEYADAPTER_F
     fun foldliPattern f =
         A.T.foldliPattern (fn (k, x, acc) => f (A.dekey k, x, acc))
 
+    fun foldriPattern f =
+        A.T.foldriPattern (fn (k, x, acc) => f (A.dekey k, x, acc))
+
     fun enumeratePattern (t, p) =
         map (fn (k, x) => (A.dekey k, x)) (A.T.enumeratePattern (t, p))
                              
