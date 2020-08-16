@@ -237,7 +237,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                   | BRANCH (SOME item, _) => SOME (rpfx, item)
                   | BRANCH (NONE, m) =>
                     M.foldli (fn (_, _, SOME result) => SOME result
-                             | (k, n', NONE) => firstIn (n', k::rpfx))
+                               | (k, n', NONE) => firstIn (n', k::rpfx))
                              NONE m
         in
             if K.isEmpty xx
@@ -269,7 +269,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                   | TWIG (kk, item) => SOME (rev (K.explode kk) @ rpfx, item)
                   | BRANCH (_, m) =>
                     case M.foldli (fn (k, n', _) => SOME (k, n')) NONE m of
-                        NONE => NONE
+                        NONE => NONE (*!!! this isn't right, shouldn't this now be using the branch item itself? need to exercise with a test *)
                       | SOME (k, n') => lastIn (n', k::rpfx)
         in
             if K.isEmpty xx
@@ -287,19 +287,18 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                     else NONE
                   | BRANCH (iopt, m) =>
                     let val (x, xs) = (K.head xx, K.tail xx)
-                 (*!!! should use foldr: *)
-                    in M.foldli (fn (k, n', acc) =>
-                                    case M.keyCompare (k, x) of
-                                        LESS => lastIn (n', k::rpfx)
-                                      | GREATER => acc
-                                      | EQUAL =>
-                                        (case locateLess(n', xs, k::rpfx) of
-                                             NONE => acc
-                                           | other => other))
-                                (case iopt of
-                                     NONE => NONE
-                                   | SOME item => SOME (rpfx, item))
-                                m
+                    in case M.foldri (fn (_, _, SOME result) => SOME result
+                                       | (k, n', NONE) =>
+                                       case M.keyCompare (k, x) of
+                                           LESS => lastIn (n', k::rpfx)
+                                         | GREATER => NONE
+                                         | EQUAL => locateLess(n', xs, k::rpfx))
+                                     NONE m of
+                           SOME result => SOME result
+                         | NONE => 
+                           case iopt of
+                               NONE => NONE
+                             | SOME item => SOME (rpfx, item)
                     end
         end
                                      
