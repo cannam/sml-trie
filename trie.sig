@@ -73,6 +73,10 @@ signature TRIE = sig
     (** Fold over all the entries in the trie that are found within
         the given range, in sort order *)
     val foldlRange : (entry * 'a -> 'a) -> 'a -> (trie * range) -> 'a
+                                                      
+    (** Fold over all the entries in the trie that are found within
+        the given range, in reverse of sort order *)
+    val foldrRange : (entry * 'a -> 'a) -> 'a -> (trie * range) -> 'a
 
     (** Return a list of all entries in the trie that are found within
         the given range, in sort order *)

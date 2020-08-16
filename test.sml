@@ -373,13 +373,28 @@ functor TrieRangeTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
            fn () => null (T.enumerateRange (T.empty, (SOME "x", NONE))))
         ] @
         (map (fn (name, from, to, expected) =>
-                 (name,
+                 (name ^ "-enumerate",
                   fn () => check_lists
                                id
                                (T.enumerateRange (test_trie (), (from, to)),
                                 expected)))
+             testdata) @
+        (map (fn (name, from, to, expected) =>
+                 (name ^ "-foldl",
+                  fn () => check_lists
+                               id
+                               (rev (T.foldlRange (op::) []
+                                                  (test_trie (), (from, to))),
+                                expected)))
+             testdata) @
+        (map (fn (name, from, to, expected) =>
+                 (name ^ "-foldr",
+                  fn () => check_lists
+                               id
+                               (T.foldrRange (op::) []
+                                             (test_trie (), (from, to)),
+                                expected)))
              testdata)
-
 end
 
 structure StringMTrieRangeTest = TrieRangeTestFn(struct

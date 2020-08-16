@@ -39,8 +39,11 @@ functor TrieFn (M : TRIE_MAP)
     fun foldlRange f acc (t, range) =
         M.foldliRange (fn (k, v, acc) => f (k, acc)) acc (t, range)
 
+    fun foldrRange f acc (t, range) =
+        M.foldriRange (fn (k, v, acc) => f (k, acc)) acc (t, range)
+
     fun enumerateRange (t, range) =
-        rev (M.foldliRange (fn (k, v, acc) => k :: acc) [] (t, range))
+        M.foldriRange (fn (k, v, acc) => k :: acc) [] (t, range)
 
     fun locate (t, e, order) =
         Option.map (fn (k, v) => k) (M.locate (t, e, order))

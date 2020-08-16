@@ -97,6 +97,10 @@ signature TRIE_MAP = sig
     (** Fold over all the key-value pairs in the trie that are found
         within the given key range, in sort order by key *)
     val foldliRange : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * range) -> 'b
+                                                      
+    (** Fold over all the key-value pairs in the trie that are found
+        within the given key range, in reverse of sort order by key *)
+    val foldriRange : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * range) -> 'b
 
     (** Return a list of all key-value pairs in the trie that are
         found within the given key range, in sort order by key *)

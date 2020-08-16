@@ -447,11 +447,11 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun enumeratePrefix (trie, e) =
         foldriPrefix (fn (k, v, acc) => (k, v) :: acc) [] (trie, e)
 
-    fun foldliNodeRange f (rpfx, n, leftConstraintK, rightConstraintK, acc) =
+    fun foldiNodeRange right f (rpfx, n, leftConstraintK, rightConstraintK, acc) =
         let fun f' (pfx, item, acc) =
                 f (K.implode pfx, item, acc)
 
-            (* When foldliNodeRange is entered, leftConstraint and
+            (* When foldiNodeRange is entered, leftConstraint and
                rightConstraint may be NONE (no constraint), SOME []
                (constraint at start of this node), or SOME other
                (constraint on sub-node). For leftConstraint there is
@@ -472,45 +472,71 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                                   
             fun leaf (item, [], _) = f' (rev rpfx, item, acc)
               | leaf _ = acc
+
+            fun acceptTwig (kk, lc, rc) =
+                 (null lc orelse compareKeys (kk, lc) <> LESS)
+                 andalso
+                 (null rc orelse compareKeys (kk, rc) <> GREATER)
                              
             fun twig (kk, item, lc, rc) =
                 let val kk' = K.explode kk
-                    val accept = (null lc orelse compareKeys (kk', lc) <> LESS)
-                                 andalso
-                                 (null rc orelse compareKeys (kk', rc) <> GREATER)
                 in
-                    if accept
+                    if acceptTwig (kk', lc, rc)
                     then f' ((rev rpfx) @ kk', item, acc)
                     else acc
                 end
 
-            fun branch (iopt, m, [], []) = foldliNode f (rpfx, n, acc)
-              | branch (iopt, m, lc, rc) =
+            fun subConstraint (x, []) = NONE
+              | subConstraint (x, c::cs) = if c = x
+                                           then SOME (K.implode cs)
+                                           else NONE
+
+            fun acceptMapElement (x, lc, rc) =
+                (null lc orelse M.keyCompare (x, hd lc) <> LESS)
+                andalso
+                (null rc orelse M.keyCompare (x, hd rc) <> GREATER)
+
+            fun branchl (iopt, m, [], []) =
+                foldliNode f (rpfx, n, acc)
+              | branchl (iopt, m, lc, rc) =
                 M.foldli
                     (fn (x, n, acc) =>
-                        let val accept =
-                                (null lc orelse M.keyCompare (x, hd lc) <> LESS)
-                                andalso
-                                (null rc orelse M.keyCompare (x, hd rc) <> GREATER)
-                            fun subConstraint (x, []) = NONE
-                              | subConstraint (x, c::cs) =
-                                if c = x
-                                then SOME (K.implode cs)
-                                else NONE
-                        in
-                            if not accept then acc
-                            else foldliNodeRange f (x :: rpfx, n,
-                                                    subConstraint (x, lc),
-                                                    subConstraint (x, rc),
-                                                    acc)
-                        end)
+                        if not (acceptMapElement (x, lc, rc)) then acc
+                        else foldiNodeRange false
+                                            f (x :: rpfx, n,
+                                               subConstraint (x, lc),
+                                               subConstraint (x, rc),
+                                               acc))
                     (case iopt of
                          NONE => acc
                        | SOME item => case lc of
                                           [] => f' (rev rpfx, item, acc)
                                         | _ => acc)
                     m
+                                                    
+            fun branchr (iopt, m, [], []) =
+                foldriNode f (rpfx, n, acc)
+              | branchr (iopt, m, lc, rc) =
+                let val acc =
+                        M.foldri
+                            (fn (x, n, acc) =>
+                                if not (acceptMapElement (x, lc, rc)) then acc
+                                else foldiNodeRange true
+                                                    f (x :: rpfx, n,
+                                                       subConstraint (x, lc),
+                                                       subConstraint (x, rc),
+                                                       acc))
+                            acc m
+                in
+                    case iopt of
+                        NONE => acc
+                      | SOME item => case lc of
+                                         [] => f' (rev rpfx, item, acc)
+                                       | _ => acc
+                end
 
+            val branch = if right then branchr else branchl
+                    
             val leftConstraint = Option.map K.explode leftConstraintK
             val rightConstraint = Option.map K.explode rightConstraintK
 
@@ -540,10 +566,18 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         case t of
             EMPTY => acc
           | POPULATED n =>
-            foldliNodeRange f ([], n, leftConstraint, rightConstraint, acc)
+            foldiNodeRange false
+                           f ([], n, leftConstraint, rightConstraint, acc)
+
+    fun foldriRange f acc (t, (leftConstraint, rightConstraint)) =
+        case t of
+            EMPTY => acc
+          | POPULATED n =>
+            foldiNodeRange true
+                           f ([], n, leftConstraint, rightConstraint, acc)
 
     fun enumerateRange (trie, range) =
-        rev (foldliRange (fn (k, v, acc) => (k, v) :: acc) [] (trie, range))
+        foldriRange (fn (k, v, acc) => (k, v) :: acc) [] (trie, range)
 
     fun foldiPattern' mapFolder f acc (node, p) =
         let fun f' (pfx, item, acc) = f (K.implode pfx, item, acc)

@@ -36,6 +36,8 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
     fun contains (t, k) = T.contains (t, enkey k)
     fun find (t, k) = T.find (t, enkey k)
     fun lookup (t, k) = T.lookup (t, enkey k)
+    fun locate (t, k, order) = Option.map (fn (k, x) => (dekey k, x))
+                                          (T.locate (t, enkey k, order))
 
     fun prefixOf (t, k) =
         Option.map dekey (T.prefixOf (t, enkey k))
@@ -71,17 +73,17 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
                            (Option.map enkey leftConstraint,
                             Option.map enkey rightConstraint))
 
+    fun foldriRange f acc (t, (leftConstraint, rightConstraint)) =
+        T.foldriRange (fn (k, x, acc) => f (dekey k, x, acc))
+                      acc (t,
+                           (Option.map enkey leftConstraint,
+                            Option.map enkey rightConstraint))
+
     fun enumerateRange (t, (leftConstraint, rightConstraint)) =
         map (fn (k, x) => (dekey k, x))
             (T.enumerateRange (t,
                                (Option.map enkey leftConstraint,
                                 Option.map enkey rightConstraint)))
-                      
-    (*!!! *)
-    fun locate (t, k, order) =
-        case T.locate (t, enkey k, order) of
-            NONE => NONE
-         | SOME (k, x) => SOME (dekey k, x)
 end
 
 signature PATTERN_MATCH_TRIE_MAP_KEYADAPTER_FN_ARG = sig
