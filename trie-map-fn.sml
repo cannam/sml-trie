@@ -229,6 +229,72 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
        through the trie. It can be converted back into a key with
        (K.implode o rev). *)
 
+    fun locate' (folder, order) =
+        let fun boundaryItem (n, rpfx) =
+                case n of
+                    LEAF item => SOME (rpfx, item)
+                  | TWIG (kk, item) => SOME (rev (K.explode kk) @ rpfx, item)
+                  | BRANCH (SOME item, m) =>
+                    (* In a canonical structure (which we are supposed
+                       to be) a branch always has at least one
+                       subnode, so we only have to consider the branch
+                       item if we are looking for the first item in
+                       the branch (in which case it's it) - otherwise
+                       we go straight to the subnodes *)
+                    if order = LESS
+                    then boundaryItem (BRANCH (NONE, m), rpfx)
+                    else SOME (rpfx, item)
+                  | BRANCH (NONE, m) =>
+                    folder (fn (_, _, SOME result) => SOME result
+                             | (k, n', NONE) => boundaryItem (n', k::rpfx))
+                           NONE m
+
+            fun locate'' (n, xx, rpfx) =
+                if K.isEmpty xx
+                then if order = GREATER
+                     then boundaryItem (n, rpfx)
+                     else case n of
+                              LEAF item => SOME (rpfx, item)
+                            | BRANCH (SOME item, _) => SOME (rpfx, item)
+                            | _ => NONE
+                else
+                    case n of
+                        LEAF item =>
+                        if order = LESS
+                        then SOME (rpfx, item)
+                        else NONE
+                      | TWIG (kk, item) =>
+                        if compareKeys (K.explode xx, K.explode kk) <> order
+                        then boundaryItem (n, rpfx)
+                        else NONE
+                      | BRANCH (iopt, m) =>
+                        let val (x, xs) = (K.head xx, K.tail xx)
+                        in case folder (fn (_, _, SOME result) => SOME result
+                                         | (k, n', NONE) =>
+                                           case M.keyCompare (k, x) of
+                                               EQUAL => locate'' (n', xs, k::rpfx)
+                                             | other =>
+                                               if other = order
+                                               then boundaryItem (n', k::rpfx)
+                                               else NONE)
+                                       NONE
+                                       m
+                            of SOME result => SOME result
+                             | NONE =>
+                               if order = GREATER
+                               then NONE
+                               else Option.map (fn item => (rpfx, item)) iopt
+                        end
+        in
+            locate''
+        end
+
+    (*!!! when these are working, remove & rewrite locate below accordingly *)
+    fun locateGreater (n, xx, rpfx) = locate' (M.foldli, GREATER) (n, xx, rpfx)
+    fun locateLess (n, xx, rpfx) = locate' (M.foldri, LESS) (n, xx, rpfx)
+
+                             
+(*            
     fun locateGreater (n, xx, rpfx) =
         let fun firstIn (n, rpfx) =
                 case n of
@@ -268,9 +334,10 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                     LEAF item => SOME (rpfx, item)
                   | TWIG (kk, item) => SOME (rev (K.explode kk) @ rpfx, item)
                   | BRANCH (_, m) =>
-                    case M.foldli (fn (k, n', _) => SOME (k, n')) NONE m of
-                        NONE => NONE (*!!! this isn't right, shouldn't this now be using the branch item itself? need to exercise with a test *)
-                      | SOME (k, n') => lastIn (n', k::rpfx)
+                    M.foldri (fn (_, _, SOME result) => SOME result
+                               | (k, n', NONE) =>
+                                 lastIn (n', k::rpfx))
+                             NONE m
         in
             if K.isEmpty xx
             then
@@ -301,7 +368,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                              | SOME item => SOME (rpfx, item)
                     end
         end
-                                     
+*)                                     
     fun locate (EMPTY, xx, ord) = NONE
       | locate (POPULATED n, xx, ord) =
         let val conv = Option.map (fn (kk, item) => (K.implode (rev kk), item))
