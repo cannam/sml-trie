@@ -289,94 +289,14 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             locate''
         end
 
-    (*!!! when these are working, remove & rewrite locate below accordingly *)
-    fun locateGreater (n, xx, rpfx) = locate' (M.foldli, GREATER) (n, xx, rpfx)
-    fun locateLess (n, xx, rpfx) = locate' (M.foldri, LESS) (n, xx, rpfx)
-
-                             
-(*            
-    fun locateGreater (n, xx, rpfx) =
-        let fun firstIn (n, rpfx) =
-                case n of
-                    LEAF item => SOME (rpfx, item)
-                  | TWIG (kk, item) => SOME (rev (K.explode kk) @ rpfx, item)
-                  | BRANCH (SOME item, _) => SOME (rpfx, item)
-                  | BRANCH (NONE, m) =>
-                    M.foldli (fn (_, _, SOME result) => SOME result
-                               | (k, n', NONE) => firstIn (n', k::rpfx))
-                             NONE m
-        in
-            if K.isEmpty xx
-            then firstIn (n, rpfx)
-            else
-                case n of
-                    LEAF item => NONE
-                  | TWIG (kk, item) =>
-                    if compareKeys (K.explode xx, K.explode kk) <> GREATER
-                    then firstIn (n, rpfx)
-                    else NONE
-                  | BRANCH (_, m) =>
-                    let val (x, xs) = (K.head xx, K.tail xx)
-                    in M.foldli (fn (_, _, SOME result) => SOME result
-                                  | (k, n', NONE) =>
-                                  case M.keyCompare (k, x) of
-                                      LESS => NONE
-                                    | GREATER => firstIn (n', k::rpfx)
-                                    | EQUAL => locateGreater(n', xs, k::rpfx))
-                                NONE
-                                m
-                    end
-        end
-
-    fun locateLess (n, xx, rpfx) =
-        let fun lastIn (n, rpfx) =
-                case n of
-                    LEAF item => SOME (rpfx, item)
-                  | TWIG (kk, item) => SOME (rev (K.explode kk) @ rpfx, item)
-                  | BRANCH (_, m) =>
-                    M.foldri (fn (_, _, SOME result) => SOME result
-                               | (k, n', NONE) =>
-                                 lastIn (n', k::rpfx))
-                             NONE m
-        in
-            if K.isEmpty xx
-            then
-                case n of
-                    LEAF item => SOME (rpfx, item)
-                  | BRANCH (SOME item, _) => SOME (rpfx, item)
-                  | _ => NONE
-            else
-                case n of
-                    LEAF item => SOME (rpfx, item)
-                  | TWIG (kk, item) =>
-                    if compareKeys (K.explode xx, K.explode kk) <> LESS
-                    then lastIn (n, rpfx)
-                    else NONE
-                  | BRANCH (iopt, m) =>
-                    let val (x, xs) = (K.head xx, K.tail xx)
-                    in case M.foldri (fn (_, _, SOME result) => SOME result
-                                       | (k, n', NONE) =>
-                                       case M.keyCompare (k, x) of
-                                           LESS => lastIn (n', k::rpfx)
-                                         | GREATER => NONE
-                                         | EQUAL => locateLess(n', xs, k::rpfx))
-                                     NONE m of
-                           SOME result => SOME result
-                         | NONE => 
-                           case iopt of
-                               NONE => NONE
-                             | SOME item => SOME (rpfx, item)
-                    end
-        end
-*)                                     
     fun locate (EMPTY, xx, ord) = NONE
       | locate (POPULATED n, xx, ord) =
         let val conv = Option.map (fn (kk, item) => (K.implode (rev kk), item))
         in
             case ord of
-                LESS => conv (locateLess (n, xx, []))
+                LESS => conv (locate' (M.foldri, LESS) (n, xx, []))
               | EQUAL => findi (POPULATED n, xx)
-              | GREATER => conv (locateGreater (n, xx, []))
+              | GREATER => conv (locate' (M.foldli, GREATER) (n, xx, []))
         end
                                
     fun lookup (t, k) =
