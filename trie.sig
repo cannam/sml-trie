@@ -21,7 +21,7 @@ signature TRIE = sig
 
     (** Test whether the trie contains the given entry *)
     val contains : trie * entry -> bool
-                                                                              
+
     (** Return the entry closest to the given one that exists in the
         trie. If order is EQUAL, then a result is returned only if the
         given entry is actually in the trie; if order is LESS or
