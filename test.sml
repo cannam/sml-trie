@@ -30,6 +30,8 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
 				  (T.empty)
 				  strings
 
+(*!!! + ensure we check foldl/foldr, e.g. for enumerate tests run them three times, once calling enumerate and the other two synthesising using foldl/foldr? *)
+                                  
     fun tests () = [
 	( "enumerate-empty",
           fn () => check_lists id (T.enumerate (T.empty), [])
@@ -52,6 +54,8 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
 		                    (T.contains (t, "parp"), true),
 		                    (T.contains (t, "part"), false),
 		                    (T.contains (t, "quiz"), false),
+		                    (T.contains (t, "z"), false),
+		                    (T.contains (t, "parpy"), false),
 		                    (T.contains (t, ""), false)]
                    end
         ),
@@ -72,8 +76,13 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
                                (T.enumerate
                                     (T.remove
                                          (T.remove
-                                              (T.remove (test_trie (), "zebr"),
-                                               "zebras"),
+                                              (T.remove
+                                                   (T.remove
+                                                        (T.remove (test_trie (),
+                                                                   "zebr"),
+                                                         "zebras"),
+                                                    "z"),
+                                               "parpy"),
                                           "flarp")),
                                 T.enumerate
                                     (test_trie ()))
@@ -112,99 +121,171 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
                        T.isEmpty e1 andalso T.isEmpty e2
                    end
         ),
-        ( "prefixMatch-empty",
-          fn () => check_lists id (T.prefixMatch (T.empty, "parp"), [])
+        ( "enumeratePrefix-empty",
+          fn () => check_lists id (T.enumeratePrefix (T.empty, "parp"), [])
         ),
-        ( "prefixMatch-matches",
-          fn () => check_lists id (T.prefixMatch (test_trie (), "pa"),
+        ( "enumeratePrefix-matches",
+          fn () => check_lists id (T.enumeratePrefix (test_trie (), "pa"),
 			           [ "par", "parp" ])
 	           andalso
-	           check_lists id (T.prefixMatch (test_trie (), "par"),
+	           check_lists id (T.enumeratePrefix (test_trie (), "par"),
 			           [ "par", "parp" ])
+	           andalso
+	           check_lists id (T.enumeratePrefix (test_trie (), "alligat"),
+			           [ "alligator" ])
         ),
-        ( "prefixMatch-no-matches",
-          fn () => check_lists id (T.prefixMatch (test_trie (), "quiz"), [ ])
+        ( "enumeratePrefix-no-matches",
+          fn () => check_lists id (T.enumeratePrefix (test_trie (), "quiz"), [ ])
                    andalso
-                   check_lists id (T.prefixMatch (test_trie (), "aaa"), [ ])
+                   check_lists id (T.enumeratePrefix (test_trie (), "aaa"), [ ])
                    andalso
-                   check_lists id (T.prefixMatch (test_trie (), "zzz"), [ ])
+                   check_lists id (T.enumeratePrefix (test_trie (), "zzz"), [ ])
+                   andalso
+                   check_lists id (T.enumeratePrefix (test_trie (), "parpy"), [ ])
+                   andalso
+                   check_lists id (T.enumeratePrefix (test_trie (), "alligators"), [ ])
         ),
-        ( "prefixMatch-all-matches",
-          fn () => check_lists id (T.prefixMatch (test_trie (), ""),
+        ( "enumeratePrefix-all-matches",
+          fn () => check_lists id (T.enumeratePrefix (test_trie (), ""),
                                    sorted strings)
         ),
         ( "prefixOf-empty",
-          fn () => check_pairs id [(T.prefixOf (T.empty, "parp"), ""),
-                                   (T.prefixOf (T.empty, ""), "")
-                                  ]
+          fn () => check_pairs stringopt_to_string
+                               [(T.prefixOf (T.empty, "parp"), NONE),
+                                (T.prefixOf (T.empty, ""), NONE)
+                               ]
         ),
 	( "prefixOf",
-          fn () => check_pairs id [(T.prefixOf (test_trie (), "par"), "par"),
-		                   (T.prefixOf (test_trie (), "parp"), "parp"),
-		                   (T.prefixOf (test_trie (), "part"), "par"),
-		                   (T.prefixOf (test_trie (), "abras"), "a"),
-		                   (T.prefixOf (test_trie (), "abrasiveness"), "abrasive")
-                                  ]
+          fn () => check_pairs stringopt_to_string
+                               [(T.prefixOf (test_trie (), "par"), SOME "par"),
+		                (T.prefixOf (test_trie (), "parp"), SOME "parp"),
+		                (T.prefixOf (test_trie (), "part"), SOME "par"),
+		                (T.prefixOf (test_trie (), "abras"), SOME "a"),
+		                (T.prefixOf (test_trie (), "abrasiveness"), SOME "abrasive"),
+		                (T.prefixOf (test_trie (), "parpy"), SOME "parp"),
+		                (T.prefixOf (test_trie (), "zebras"), SOME "zebra"),
+		                (T.prefixOf (test_trie (), "zebra"), SOME "zebra")
+                               ]
         ),
 	( "prefixOf-no-matches",
-          fn () => check_pairs id [(T.prefixOf (test_trie (), "AAA"), ""),
-		                   (T.prefixOf (test_trie (), "pa"), ""),
-		                   (T.prefixOf (test_trie (), "quiz"), "")
-                                  ]
+          fn () => check_pairs stringopt_to_string
+                               [(T.prefixOf (test_trie (), "AAA"), NONE),
+		                (T.prefixOf (test_trie (), "pa"), NONE),
+		                (T.prefixOf (test_trie (), "quiz"), NONE),
+		                (T.prefixOf (test_trie (), "zebr"), NONE),
+		                (T.prefixOf (test_trie (), "z"), NONE),
+		                (T.prefixOf (test_trie (), ""), NONE)
+                               ]
         ),
-        ( "patternMatch-empty",
-          fn () => check_lists id (T.patternMatch (T.empty, []), [])
+	( "prefixOf-with-empty-content",
+          fn () =>
+             let val t = T.add (test_trie (), "")
+             in
+                 check_pairs stringopt_to_string
+                             [(T.prefixOf (t, "AAA"), SOME ""),
+		              (T.prefixOf (t, "pa"), SOME ""),
+		              (T.prefixOf (t, "quiz"), SOME ""),
+		              (T.prefixOf (t, "zebr"), SOME ""),
+		              (T.prefixOf (t, "z"), SOME ""),
+		              (T.prefixOf (t, ""), SOME "")
+                             ]
+             end
+        ),
+        ( "enumeratePattern-empty",
+          fn () => check_lists id (T.enumeratePattern (T.empty, []), [])
                    andalso
-                   check_lists id (T.patternMatch (T.empty, [SOME #"p"]), [])
+                   check_lists id (T.enumeratePattern (T.empty, [SOME #"p"]), [])
                    andalso
-                   check_lists id (T.patternMatch (T.empty, [NONE]), [])
+                   check_lists id (T.enumeratePattern (T.empty, [NONE]), [])
         ),
-        ( "patternMatch-nil",
-          fn () => check_lists id (T.patternMatch (test_trie (), []), [])
+        ( "enumeratePattern-nil",
+          fn () => check_lists id (T.enumeratePattern (test_trie (), []), [])
         ),
-        ( "patternMatch-literal",
-          fn () => check_lists id (T.patternMatch
+        ( "enumeratePattern-literal-branch",
+          fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"p", SOME #"a", SOME #"r"]),
 		                   ["par"])
         ),
-        ( "patternMatch-one",
-          fn () => check_lists id (T.patternMatch
+        ( "enumeratePattern-literal-leaf",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [SOME #"p", SOME #"a", SOME #"r", SOME #"p"]),
+		                   ["parp"])
+        ),
+        ( "enumeratePattern-literal-twig",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [SOME #"z", SOME #"e", SOME #"b", SOME #"r", SOME #"a"]),
+		                   ["zebra"])
+        ),
+        ( "enumeratePattern-twig",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [NONE, NONE, SOME #"b", NONE, SOME #"a"]),
+		                   ["zebra"])
+        ),
+        ( "enumeratePattern-one",
+          fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"p", NONE, SOME #"r"]),
 		                   ["par"])
         ),
-        ( "patternMatch-some",
-	  fn () => check_lists id (T.patternMatch
+        ( "enumeratePattern-some-twigs",
+	  fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"a", NONE, NONE, NONE, NONE,
 					 NONE, NONE, SOME #"e"]),
 		                   ["abrasive", "alliance"])
         ),
-        ( "patternMatch-no-literal",
-          fn () => check_lists id (T.patternMatch
+        ( "enumeratePattern-some-branch",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [NONE, NONE, NONE, NONE]),
+		                   ["parp", "poot"])
+        ),
+        ( "enumeratePattern-no-literal",
+          fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"a", SOME #"l", SOME #"l"]),
 		                   [])
         ),
-        ( "patternMatch-none",
-          fn () => check_lists id (T.patternMatch
+        ( "enumeratePattern-no-prefix-twig",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [SOME #"z", SOME #"e", SOME #"b"]),
+		                   [])
+        ),
+        ( "enumeratePattern-no-prefix-twig-2",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [SOME #"z"]),
+		                   [])
+        ),
+        ( "enumeratePattern-no-prefix-branch",
+          fn () => check_lists id (T.enumeratePattern
+                                       (test_trie (),
+                                        [SOME #"p", SOME #"a"]),
+		                   [])
+        ),
+        ( "enumeratePattern-none",
+          fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [SOME #"q", NONE]),
 		                   [])
                    andalso
-                   check_lists id (T.patternMatch
+                   check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [NONE, SOME #"q"]),
 		                   [])
                    andalso
-                   check_lists id (T.patternMatch
+                   check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [NONE, SOME #"A"]),
 		                   [])
         ),
-        ( "patternMatch-overlong",
-          fn () => check_lists id (T.patternMatch
+        ( "enumeratePattern-overlong",
+          fn () => check_lists id (T.enumeratePattern
                                        (test_trie (),
                                         [NONE, NONE, NONE, NONE, NONE,
                                          NONE, NONE, NONE, NONE, NONE]),
@@ -213,7 +294,7 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
     ]
 
 end
-                                     
+
 structure StringMTrieTest = TrieTestFn(struct
                                         structure T = StringMTrie
                                         val name = "string-mtrie"
@@ -227,6 +308,174 @@ structure StringBTrieTest = TrieTestFn(struct
                                         val name = "string-btrie"
                                         end)
 
+functor TrieRangeTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
+
+    open TestSupport
+
+    structure T = ARG.T
+    val name = ARG.name
+
+    val strings = [ "a", "abrasive", "alliance", "alligator",
+                    "asterisk", "asterix", "par", "parp", "part",
+                    "po", "poot"
+                  ]
+                              
+    fun test_trie () = List.foldl (fn (s, t) => T.add (t, s))
+				  (T.empty)
+				  strings
+
+(*!!! how should foldliRange behave if given constraints in the wrong
+      order? i.e. left > right? *)
+                                  
+    val testdata = [
+        ("mid-present-endpoints-1", SOME "alligator", SOME "parp",
+         ["alligator", "asterisk", "asterix", "par", "parp"]),
+        ("mid-present-endpoints-2", SOME "asterix", SOME "par",
+         ["asterix", "par"]),
+        ("mid-present-endpoints-3", SOME "par", SOME "par",
+         ["par"]),
+        ("mid-absent-endpoints-1", SOME "abrade", SOME "aster",
+         ["abrasive", "alliance", "alligator"]),
+        ("mid-absent-endpoints-2", SOME "alliances", SOME "parse",
+         ["alligator", "asterisk", "asterix", "par", "parp"]),
+        ("mid-absent-endpoints-3", SOME "parpy", SOME "party",
+         ["part"]),
+        ("mid-absent-endpoints-4", SOME "abr", SOME "allig",
+         ["abrasive", "alliance"]),
+        ("mid-empty-1", SOME "allied", SOME "allies",
+         []),
+        ("mid-empty-2", SOME "allig", SOME "alliga",
+         []),
+        ("mid-empty-3", SOME "pare", SOME "park",
+         []),
+        ("mid-empty-4", SOME "parry", SOME "parse",
+         []),
+        ("from-start", NONE, SOME "attic",
+         ["a", "abrasive", "alliance", "alligator", "asterisk", "asterix"]),
+        ("to-end", SOME "pat", NONE,
+         ["po", "poot"]),
+        ("from-start-empty", NONE, SOME "",
+         []),
+        ("to-end-empty", SOME "port", NONE,
+         []),
+        ("all", NONE, NONE,
+         strings),
+        ("wrong-order", SOME "party", SOME "alligator",
+         [])
+    ]
+
+    fun tests () =
+        [ ("empty-all",
+           fn () => null (T.enumerateRange (T.empty, (NONE, NONE)))),
+          ("empty-left",
+           fn () => null (T.enumerateRange (T.empty, (NONE, SOME "x")))),
+          ("empty-right",
+           fn () => null (T.enumerateRange (T.empty, (SOME "x", NONE))))
+        ] @
+        (map (fn (name, from, to, expected) =>
+                 (name ^ "-enumerate",
+                  fn () => check_lists
+                               id
+                               (T.enumerateRange (test_trie (), (from, to)),
+                                expected)))
+             testdata) @
+        (map (fn (name, from, to, expected) =>
+                 (name ^ "-foldl",
+                  fn () => check_lists
+                               id
+                               (rev (T.foldlRange (op::) []
+                                                  (test_trie (), (from, to))),
+                                expected)))
+             testdata) @
+        (map (fn (name, from, to, expected) =>
+                 (name ^ "-foldr",
+                  fn () => check_lists
+                               id
+                               (T.foldrRange (op::) []
+                                             (test_trie (), (from, to)),
+                                expected)))
+             testdata)
+end
+
+structure StringMTrieRangeTest = TrieRangeTestFn(struct
+                                                  structure T = StringMTrie
+                                                  val name = "string-mtrie-range"
+                                                  end)
+structure StringATrieRangeTest = TrieRangeTestFn(struct
+                                                  structure T = StringATrie
+                                                  val name = "string-atrie-range"
+                                                  end)
+structure StringBTrieRangeTest = TrieRangeTestFn(struct
+                                                  structure T = StringBTrie
+                                                  val name = "string-btrie-range"
+                                                  end)
+
+functor TrieLocateTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
+
+    open TestSupport
+
+    structure T = ARG.T
+    val name = ARG.name
+
+    val strings = [ "a", "abrasive", "alliance", "alligator",
+                    "asterisk", "asterix", "par", "parp", "part",
+                    "po", "poot"
+                  ]
+                              
+    fun test_trie () = List.foldl (fn (s, t) => T.add (t, s))
+				  (T.empty)
+				  strings
+
+    val testdata = [
+        ("present-twig", "alligator", SOME "alligator", SOME "alligator", SOME "alligator"),
+        ("present-branch", "par", SOME "par", SOME "par", SOME "par"),
+        ("between-twigs-1", "alliances", SOME "alliance", NONE, SOME "alligator"),
+        ("between-twigs-2", "alliam", SOME "abrasive", NONE, SOME "alliance"),
+        ("between-twigs-3", "abra", SOME "a", NONE, SOME "abrasive"),
+        ("within-branch", "parry", SOME "parp", NONE, SOME "part"),
+        ("between-branch-item-and-subnodes", "pare", SOME "par", NONE, SOME "parp"),
+        ("at-start", "a", SOME "a", SOME "a", SOME "a"),
+        ("before-start", "", NONE, NONE, SOME "a"),
+        ("at-end", "poot", SOME "poot", SOME "poot", SOME "poot"),
+        ("past-end", "port", SOME "poot", NONE, NONE),
+        ("present-leaf", "parp", SOME "parp", SOME "parp", SOME "parp"),
+        ("overrunning-leaf", "parpy", SOME "parp", NONE, SOME "part")
+    ]
+
+    fun tests () =
+        (map (fn (name, key, expectedLess, _, _) =>
+                 (name ^ "-less",
+                  fn () => check stringopt_to_string
+                                 (T.locate (test_trie (), key, LESS),
+                                  expectedLess)))
+             testdata) @
+        (map (fn (name, key, _, expectedEqual, _) =>
+                 (name ^ "-equal",
+                  fn () => check stringopt_to_string
+                                 (T.locate (test_trie (), key, EQUAL),
+                                  expectedEqual)))
+             testdata) @
+        (map (fn (name, key, _, _, expectedGreater) =>
+                 (name ^ "-greater",
+                  fn () => check stringopt_to_string
+                                 (T.locate (test_trie (), key, GREATER),
+                                  expectedGreater)))
+             testdata)
+end
+
+structure StringMTrieLocateTest = TrieLocateTestFn(struct
+                                                  structure T = StringMTrie
+                                                  val name = "string-mtrie-locate"
+                                                  end)
+structure StringATrieLocateTest = TrieLocateTestFn(struct
+                                                  structure T = StringATrie
+                                                  val name = "string-atrie-locate"
+                                                  end)
+structure StringBTrieLocateTest = TrieLocateTestFn(struct
+                                                  structure T = StringBTrie
+                                                  val name = "string-btrie-locate"
+                                                  end)
+                                                
 structure BitMappedVectorTest :> TESTS = struct
 
     open TestSupport
@@ -234,8 +483,10 @@ structure BitMappedVectorTest :> TESTS = struct
     structure V = BitMappedVector
     val name = "bitmapped-vector"
 
-    fun stringOptToString NONE = "<none>"
-      | stringOptToString (SOME s) = s
+    fun test_v () = V.tabulate
+                        (4,
+                         fn 0 => SOME "hello" | 1 => NONE
+                          | 2 => SOME "world" | _ => NONE)
                    
     fun tests () = [
         ( "new",
@@ -267,19 +518,13 @@ structure BitMappedVectorTest :> TESTS = struct
                          (V.isEmpty (V.tabulate (0, fn _ => NONE)), true)
         ),
         ( "tabulate-length",
-          fn () => let val v = V.tabulate
-                                   (4,
-                                    fn 0 => SOME "hello" | 1 => NONE
-                                     | 2 => SOME "world" | _ => NONE)
+          fn () => let val v = test_v ()
                    in
                        check Int.toString (V.length v, 4)
                    end
         ),
         ( "tabulate-contents",
-          fn () => let val v = V.tabulate
-                                   (4,
-                                    fn 0 => SOME "hello" | 1 => NONE
-                                     | 2 => SOME "world" | _ => NONE)
+          fn () => let val v = test_v ()
                    in
                        check_pairs id [(V.sub (v, 0), "hello"),
                                        (V.sub (v, 2), "world")]
@@ -293,29 +538,49 @@ structure BitMappedVectorTest :> TESTS = struct
           fn () => check Int.toString
                          (List.length (V.enumerate (V.new 0)), 0)
                    andalso
-                   check_lists stringOptToString
-                               (V.enumerate (V.new 3),
-                                [ NONE, NONE, NONE ])
+                   check_lists stringopt_to_string
+                               (V.enumerate (V.new 3), [ NONE, NONE, NONE ])
         ),
         ( "enumerate",
-          fn () => let val v = V.tabulate
-                                   (4,
-                                    fn 0 => SOME "hello" | 1 => NONE
-                                     | 2 => SOME "world" | _ => NONE)
+          fn () => let val v = test_v ()
                    in check_lists (fn NONE => "*" | SOME s => s)
                                   (V.enumerate v,
                                    [ SOME "hello", NONE,
                                      SOME "world", NONE ])
                    end
         ),
+        ( "foldl",
+          fn () => let val v = test_v ()
+                   in check_lists id (V.foldl (op::) [] v, ["world", "hello"])
+                   end
+        ),
+        ( "foldli",
+          fn () => let val v = test_v ()
+                   in check_lists (fn (i, s) => Int.toString i ^ ": " ^ s)
+                                  (V.foldli (fn (i, x, acc) => (i, x)::acc) [] v,
+                                   [(2, "world"), (0, "hello")])
+                   end
+        ),
+        ( "foldr",
+          fn () => let val v = test_v ()
+                   in check_lists id (V.foldr (op::) [] v, ["hello", "world"])
+                   end
+        ),
+        ( "foldri",
+          fn () => let val v = test_v ()
+                   in check_lists (fn (i, s) => Int.toString i ^ ": " ^ s)
+                                  (V.foldri (fn (i, x, acc) => (i, x)::acc) [] v,
+                                   [(0, "hello"), (2, "world")])
+                   end
+        ),
         ( "update",
           fn () => let val v = V.new 4
                    in
-                       check_lists stringOptToString
+                       check_lists stringopt_to_string
                                    (V.enumerate (V.update (v, 0, "0")),
                                     [ SOME "0", NONE, NONE, NONE ])
                        andalso
-                       check_lists stringOptToString
+                       check_lists stringopt_to_string
                                    (V.enumerate
                                         (V.update
                                              (V.update
@@ -328,22 +593,19 @@ structure BitMappedVectorTest :> TESTS = struct
         ( "remove-empty",
           fn () => let val v = V.new 4
                    in
-                       check_lists stringOptToString
+                       check_lists stringopt_to_string
                                    (V.enumerate (V.remove (v, 2)),
                                     [ NONE, NONE, NONE, NONE ])
                    end
         ),
         ( "remove",
-          fn () => let val v = V.tabulate
-                                   (4,
-                                    fn 0 => SOME "hello" | 1 => NONE
-                                     | 2 => SOME "world" | _ => NONE)
+          fn () => let val v = test_v ()
                    in
-                       check_lists stringOptToString
+                       check_lists stringopt_to_string
                                    (V.enumerate (V.remove (v, 2)),
                                     [ SOME "hello", NONE, NONE, NONE ])
                        andalso
-                       check_lists stringOptToString
+                       check_lists stringopt_to_string
                                    (V.enumerate (V.remove (v, 0)),
                                     [ NONE, NONE, SOME "world", NONE ])
                        andalso
@@ -555,6 +817,13 @@ functor PersistentArrayTestFn (ARG : PERSISTENT_ARRAY_TEST_FN_ARG) :> TESTS = st
                                          (A.fromList [ "hello", "world" ]),
                                 [ (1, "world"), (0, "hello") ])
         ),
+        ( "foldri",
+          fn () => check_lists (fn (i, s) => Int.toString i ^ ":" ^ s)
+                               (A.foldri (fn (i, x, acc) => (i, x) :: acc)
+                                         []
+                                         (A.fromList [ "hello", "world" ]),
+                                [ (0, "hello"), (1, "world") ])
+        ),
         ( "map",
           fn () => check_lists id
                                (A.toList (A.map (implode o rev o explode)
@@ -709,6 +978,12 @@ fun main () =
             (StringATrieTest.name, StringATrieTest.tests ()),
             (BitMappedVectorTest.name, BitMappedVectorTest.tests ()),
             (StringBTrieTest.name, StringBTrieTest.tests ()),
+            (StringMTrieRangeTest.name, StringMTrieRangeTest.tests ()),
+            (StringATrieRangeTest.name, StringATrieRangeTest.tests ()),
+            (StringBTrieRangeTest.name, StringBTrieRangeTest.tests ()),
+            (StringMTrieLocateTest.name, StringMTrieLocateTest.tests ()),
+            (StringATrieLocateTest.name, StringATrieLocateTest.tests ()),
+            (StringBTrieLocateTest.name, StringBTrieLocateTest.tests ()),
             (HashMapTest.name, HashMapTest.tests ()),
             (PersistentArrayTest.name, PersistentArrayTest.tests ()),
             (PersistentQueueTest.name, PersistentQueueTest.tests ())

@@ -8,6 +8,9 @@ structure TestSupport = struct
     type test_suite = string * test list
 
     fun id x = x
+
+    fun stringopt_to_string NONE = "<none>"
+      | stringopt_to_string (SOME s) = s
                                     
     fun report converter (obtained, expected) =
         print ("--- Expected: " ^ (converter expected)
@@ -24,22 +27,23 @@ structure TestSupport = struct
 
     fun check_lists converter (a, b) =
         let fun check_lists' ([], []) = true
-              | check_lists' (a', b') =
-                check converter (hd a', hd b') andalso
-                check_lists' (tl a', tl b')
+              | check_lists' (ax::axs, bx::bxs) =
+                ax = bx andalso check_lists' (axs, bxs)
+              | check_lists' _ = false
+            fun convert list =
+                "[" ^ (String.concatWith "," (List.map converter list)) ^ "]"
         in
             if (List.length a <> List.length b)
             then 
                 (print ("--- Lists have differing lengths (expected " ^
-                        (Int.toString (List.length b)) ^ ": [" ^
-			(String.concatWith "," (List.map converter b)) ^
-                        "]; obtained " ^
-                        (Int.toString (List.length a)) ^ ": [" ^
-			(String.concatWith "," (List.map converter a)) ^
-                        "])\n");
+                        (Int.toString (List.length b)) ^ ": " ^
+                        convert b ^ "; obtained " ^
+                        (Int.toString (List.length a)) ^ ": " ^
+                        convert a ^ ")\n");
                  false)
-            else
-                check_lists' (a, b)
+            else if check_lists' (a, b)
+            then true
+            else (report convert (a, b); false)
         end
 
     fun check_sets converter greater (a, b) =
@@ -60,7 +64,7 @@ structure TestSupport = struct
                              | IO.Io { name, ... } =>
                                (*!!! can we get more info from Exception? *)
                                report_exception test_name ("IO failure: " ^ name)
-                             | ex => report_exception test_name "Exception caught")
+                             | ex => report_exception test_name ("Exception caught: " ^ exnMessage ex))
                     then NONE
                     else (print ("*** Test \"" ^ test_name ^ "\" failed\n");
                           SOME test_name))

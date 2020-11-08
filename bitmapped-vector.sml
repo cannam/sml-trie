@@ -10,6 +10,7 @@ signature BIT_VECTOR = sig
     val sub : vector * int -> bool
     val update : vector * int * bool -> vector
     val foldli : (int * bool * 'a -> 'a) -> 'a -> vector -> 'a
+    val foldri : (int * bool * 'a -> 'a) -> 'a -> vector -> 'a
     val popcount : vector * int -> int
     exception UnsupportedLength
 end
@@ -84,6 +85,17 @@ structure BitWord32 :> BIT_VECTOR = struct
         in
             fold' (0w1, w, 0, acc)
         end
+
+    fun foldri (f : int * bool * 'a -> 'a)
+               (acc : 'a)
+               (w : Word32.word) : 'a =
+        let fun fold' (0w0, w, i, acc) = acc
+              | fold' (bit, w, i, acc) =
+                fold' (>> (bit, 0w1), w, Int.- (i, 1),
+                       f (i, andb (w, bit) <> 0w0, acc))
+        in
+            fold' (0wx80000000, w, 31, acc)
+        end
                   
     (* return number of 1s in the first i bits of the word *)
     fun popcount (w : Word32.word, i : int) : int =
@@ -141,22 +153,30 @@ structure BitVector :> BIT_VECTOR = struct
                                                bitInWord (iw, i),
                                                b)))
                 end
+
+        fun fold' vectorFold bitwordFold f acc (n, vec) =
+            vectorFold (fn (iw, w, acc) =>
+                           bitwordFold (fn (ib, b, acc) =>
+                                           let val i = iw * 32 + ib
+                                           in
+                                               if i >= n
+                                               then acc
+                                               else f (i, b, acc)
+                                           end)
+                                       acc
+                                       w)
+                       acc
+                       vec
                     
         fun foldli (f : (int * bool * 'a -> 'a))
                    (acc : 'a)
-                   ((n, vec) : vector) : 'a =
-            Vector.foldli (fn (iw, w, acc) =>
-                              BitWord32.foldli (fn (ib, b, acc) =>
-                                                   let val i = iw * 32 + ib
-                                                   in
-                                                       if i >= n
-                                                       then acc
-                                                       else f (i, b, acc)
-                                                   end)
-                                               acc
-                                               w)
-                          acc
-                          vec
+                   (v : vector) : 'a =
+            fold' Vector.foldli BitWord32.foldli f acc v
+                       
+        fun foldri (f : (int * bool * 'a -> 'a))
+                   (acc : 'a)
+                   (v : vector) : 'a =
+            fold' Vector.foldri BitWord32.foldri f acc v
                 
         (* population count: return number of 1s in the first i bits
            of the vector *)
@@ -221,14 +241,13 @@ functor BitMappedVectorFn (V : BIT_VECTOR) = struct
           | SOME x => x
 
     fun enumerate (vec as (b, v) : 'a vector) : 'a option list =
-        rev
-            (V.foldli 
-                 (fn (i, b, acc) =>
-                     (if b
-                      then SOME (sub (vec, i))
-                      else NONE)
-                         :: acc)
-                 [] b)
+        V.foldri 
+            (fn (i, b, acc) =>
+                (if b
+                 then SOME (sub (vec, i))
+                 else NONE)
+                :: acc)
+            [] b
             
     fun modify ((b, v) : 'a vector, i : int, f : 'a option -> 'a option) : 'a vector =
         let val pc = V.popcount (b, i)
@@ -272,11 +291,25 @@ functor BitMappedVectorFn (V : BIT_VECTOR) = struct
                  (0, acc) b of
             (ix, acc) => acc
 
-    (* foldl is simpler than foldli, as it doesn't need to look at the
-       bitmap at all *)
+    fun foldri (f : (int * 'a * 'b -> 'b))
+               (acc : 'b) ((b, v) : 'a vector) : 'b =
+        case V.foldri
+                 (fn (i, bit, (ix, acc)) =>
+                     if bit
+                     then (ix-1, f (i, Vector.sub (v, ix-1), acc))
+                     else (ix, acc))
+                 (Vector.length v, acc) b of
+            (ix, acc) => acc
+
+    (* foldl/foldr are simpler than foldli/foldri, as they don't need
+       to look at the bitmap at all *)
     fun foldl (f : ('a * 'b -> 'b))
               (acc : 'b) ((_, v) : 'a vector) : 'b =
         Vector.foldl f acc v
+
+    fun foldr (f : ('a * 'b -> 'b))
+              (acc : 'b) ((_, v) : 'a vector) : 'b =
+        Vector.foldr f acc v
 
 end
 

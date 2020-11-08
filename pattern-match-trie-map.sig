@@ -23,14 +23,20 @@ signature PATTERN_MATCH_TRIE_MAP = sig
     type element
     type pattern = element option list
 
-    (* Return all the key-value pairs in the trie that match the given
-       pattern, in sort order. Will only return entries with exactly
-       the same number of elements as values in the pattern *)
-    val patternMatch : ('a trie * pattern) -> (key * 'a) list
-
     (* Fold over all the key-value pairs in the trie that match the
        given pattern, in sort order. Will only return entries with
        exactly the same number of elements as values in the pattern *)
-    val foldliPatternMatch : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * pattern) -> 'b
+    val foldliPattern : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * pattern) -> 'b
+
+    (* Fold over all the key-value pairs in the trie that match the
+       given pattern, in reverse of sort order. Will only return
+       entries with exactly the same number of elements as values in
+       the pattern *)
+    val foldriPattern : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * pattern) -> 'b
+
+    (* Return all the key-value pairs in the trie that match the given
+       pattern, in sort order. Will only return entries with exactly
+       the same number of elements as values in the pattern *)
+    val enumeratePattern : ('a trie * pattern) -> (key * 'a) list
 	    
 end

@@ -83,6 +83,21 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
     fun foldl f =
         foldli (fn (i, x, acc) => f (x, acc))
 
+    fun foldri f acc v =
+        let fun foldri' i acc =
+                if i = 0
+                then acc
+                else let val i = i - 1
+                     in
+                         foldri' i (f (i, sub (v, i), acc))
+                     end
+        in
+            foldri' (length v) acc
+        end
+
+    fun foldr f =
+        foldri (fn (i, x, acc) => f (x, acc))
+
     fun mapi f v =
         foldli (fn (i, x, acc) => append (acc, f (i, x))) empty v
 

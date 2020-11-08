@@ -15,17 +15,15 @@ signature TRIE_MAP = sig
     (** Test whether a trie is empty *)
     val isEmpty : 'a trie -> bool
 
+    (** Modify a key-value pair in the trie, returning a new trie. The
+        function argument should map from the previous value
+        associated with the key (or NONE if it was absent before) to
+        the new value (or NONE if it is to be removed) *)
+    val modify : 'a trie * key * ('a option -> 'a option) -> 'a trie
+
     (** Insert a key-value pair, returning a new trie. If the key is
         already present, its value will be updated in the new trie *)
     val insert : 'a trie * key * 'a -> 'a trie
-
-    (** Update a key-value pair in the trie, returning a new trie. The
-        function argument should map from the previous value
-        associated with the key (or NONE if it was absent before) to
-        the new value. Thus update (t, k, f) is equivalent to insert
-        (t, k, f (find (t, k)) except that it may be quicker. Note
-        that this cannot be used to remove anything from the trie *)
-    val update : 'a trie * key * ('a option -> 'a) -> 'a trie
 
     (** Return the trie with the given key removed. If the key is
         not present, the returned trie will be unchanged *)
@@ -41,37 +39,72 @@ signature TRIE_MAP = sig
     (** Look for a key and return its corresponding value, raising
         Subscript if the key is not present in the trie *)
     val lookup : 'a trie * key -> 'a
-                                   
-    (** Fold over all the values in the trie, in sort order *)
-    val foldl : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b
-
-    (** Fold over all the key-value pairs in the trie, in sort order *)
-    val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a trie -> 'b
-
-    (** Return a list of all key-value pairs in the trie, in sort order *)
-    val enumerate : 'a trie -> (key * 'a) list
+                                                                              
+    (** Look for the closest key to the given one and return it with
+        its corresponding value. If order is EQUAL, then a result is
+        returned only if the given key is actually in the trie (like
+        find); if order is LESS or GREATER, the given key is still
+        returned if it exists, but otherwise the next key comparing
+        respectively less or greater than it is returned, if there is
+        one *)
+    val locate : 'a trie * key * order -> (key * 'a) option
 
     (** Return the longest prefix of the given key that is present as
         a key in the trie. The given key does not need to be present
         as a key in the trie. If it is present, it will be its own
         longest prefix, and so it will be returned. If there is no
-        prefix of the given key in the trie, return an empty key *)
-    val prefixOf : 'a trie * key -> key
+        prefix of the given key in the trie, return NONE *)
+    val prefixOf : 'a trie * key -> key option
+                                   
+    (** Fold over all the values in the trie, in sort order by key *)
+    val foldl : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b
 
-    (** Return a list of all entries in the trie that have the given
-        key as a prefix, in sort order. The prefix itself does not
-        need to be present as a key in the trie *)
-    val prefixMatch : 'a trie * key -> (key * 'a) list
+    (** Fold over all the key-value pairs in the trie, in sort order
+        by key *)
+    val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a trie -> 'b
+                                   
+    (** Fold over all the values in the trie, in reverse of sort order
+        by key *)
+    val foldr : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b
 
-    (** Fold over all the values in the trie that have the given
-        prefix, in sort order. The prefix itself does not need to be
-        present as a key in the trie *)
-    val foldlPrefixMatch : ('a * 'b -> 'b) -> 'b -> ('a trie * key) -> 'b
+    (** Fold over all the key-value pairs in the trie, in reverse of
+        sort order by key *)
+    val foldri : (key * 'a * 'b -> 'b) -> 'b -> 'a trie -> 'b
+
+    (** Return a list of all key-value pairs in the trie, in sort order
+        by key *)
+    val enumerate : 'a trie -> (key * 'a) list
 
     (** Fold over all the key-value pairs in the trie that have the
-        given prefix, in sort order. The prefix itself does not need
-        to be present as a key in the trie *)
-    val foldliPrefixMatch : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * key) -> 'b
-    
+        given prefix, in sort order by key. The prefix itself does not
+        need to be present as a key in the trie *)
+    val foldliPrefix : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * key) -> 'b
+
+    (** Fold over all the key-value pairs in the trie that have the
+        given prefix, in reverse of sort order by key. The prefix
+        itself does not need to be present as a key in the trie *)
+    val foldriPrefix : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * key) -> 'b
+
+    (** Return a list of all key-value pairs in the trie that have the
+        given key as a prefix, in sort order by key. The prefix itself
+        does not need to be present as a key in the trie *)
+    val enumeratePrefix : 'a trie * key -> (key * 'a) list
+
+    (** Inclusive range of keys (first, last). If either is NONE, then
+        the range is unbounded on that side *)
+    type range = key option * key option
+                                                      
+    (** Fold over all the key-value pairs in the trie that are found
+        within the given key range, in sort order by key *)
+    val foldliRange : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * range) -> 'b
+                                                      
+    (** Fold over all the key-value pairs in the trie that are found
+        within the given key range, in reverse of sort order by key *)
+    val foldriRange : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * range) -> 'b
+
+    (** Return a list of all key-value pairs in the trie that are
+        found within the given key range, in sort order by key *)
+    val enumerateRange : 'a trie * range -> (key * 'a) list
+                                                     
 end
 

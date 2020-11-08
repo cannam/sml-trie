@@ -31,32 +31,59 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
     val isEmpty = T.isEmpty
 
     fun insert (t, k, x) = T.insert (t, enkey k, x)
-    fun update (t, k, f) = T.update (t, enkey k, f)
+    fun modify (t, k, f) = T.modify (t, enkey k, f)
     fun remove (t, k) = T.remove (t, enkey k)
     fun contains (t, k) = T.contains (t, enkey k)
     fun find (t, k) = T.find (t, enkey k)
     fun lookup (t, k) = T.lookup (t, enkey k)
+    fun locate (t, k, order) = Option.map (fn (k, x) => (dekey k, x))
+                                          (T.locate (t, enkey k, order))
+
+    fun prefixOf (t, k) =
+        Option.map dekey (T.prefixOf (t, enkey k))
                                  
     val foldl = T.foldl
+    val foldr = T.foldr
 
     fun foldli f =
         T.foldli (fn (k, x, acc) => f (dekey k, x, acc))
 
+    fun foldri f =
+        T.foldri (fn (k, x, acc) => f (dekey k, x, acc))
+
     fun enumerate t =
         map (fn (k, x) => (dekey k, x)) (T.enumerate t)
 
-    fun prefixOf (t, k) =
-        dekey (T.prefixOf (t, enkey k))
+    fun foldliPrefix f acc (t, k) =
+        T.foldliPrefix (fn (k, x, acc) => f (dekey k, x, acc))
+                       acc (t, enkey k)
 
-    fun prefixMatch (t, k) =
-        map (fn (k, x) => (dekey k, x)) (T.prefixMatch (t, enkey k))
+    fun foldriPrefix f acc (t, k) =
+        T.foldriPrefix (fn (k, x, acc) => f (dekey k, x, acc))
+                       acc (t, enkey k)
 
-    fun foldlPrefixMatch f acc (t, k) =
-        T.foldlPrefixMatch f acc (t, enkey k)
+    fun enumeratePrefix (t, k) =
+        map (fn (k, x) => (dekey k, x)) (T.enumeratePrefix (t, enkey k))
 
-    fun foldliPrefixMatch f acc (t, k) =
-        T.foldliPrefixMatch (fn (k, x, acc) => f (dekey k, x, acc))
-                            acc (t, enkey k)
+    type range = key option * key option
+
+    fun foldliRange f acc (t, (leftConstraint, rightConstraint)) =
+        T.foldliRange (fn (k, x, acc) => f (dekey k, x, acc))
+                      acc (t,
+                           (Option.map enkey leftConstraint,
+                            Option.map enkey rightConstraint))
+
+    fun foldriRange f acc (t, (leftConstraint, rightConstraint)) =
+        T.foldriRange (fn (k, x, acc) => f (dekey k, x, acc))
+                      acc (t,
+                           (Option.map enkey leftConstraint,
+                            Option.map enkey rightConstraint))
+
+    fun enumerateRange (t, (leftConstraint, rightConstraint)) =
+        map (fn (k, x) => (dekey k, x))
+            (T.enumerateRange (t,
+                               (Option.map enkey leftConstraint,
+                                Option.map enkey rightConstraint)))
 end
 
 signature PATTERN_MATCH_TRIE_MAP_KEYADAPTER_FN_ARG = sig
@@ -91,10 +118,13 @@ functor PatternMatchTrieMapKeyAdapterFn (A : PATTERN_MATCH_TRIE_MAP_KEYADAPTER_F
                            
     open T 
 
-    fun patternMatch (t, p) =
-        map (fn (k, x) => (A.dekey k, x)) (A.T.patternMatch (t, p))
+    fun foldliPattern f =
+        A.T.foldliPattern (fn (k, x, acc) => f (A.dekey k, x, acc))
 
-    fun foldliPatternMatch f =
-        A.T.foldliPatternMatch (fn (k, x, acc) => f (A.dekey k, x, acc))
+    fun foldriPattern f =
+        A.T.foldriPattern (fn (k, x, acc) => f (A.dekey k, x, acc))
+
+    fun enumeratePattern (t, p) =
+        map (fn (k, x) => (A.dekey k, x)) (A.T.enumeratePattern (t, p))
                              
 end

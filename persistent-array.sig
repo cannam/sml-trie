@@ -18,8 +18,11 @@ signature PERSISTENT_ARRAY = sig
     val mapi : (int * 'a -> 'b) -> 'a array -> 'b array
     val map : ('a -> 'b) -> 'a array -> 'b array
 
-    val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
     val foldl : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
+    val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
+
+    val foldr : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
+    val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
 
     val empty : 'a array
     val isEmpty : 'a array -> bool

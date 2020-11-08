@@ -44,6 +44,16 @@ functor ATrieNodeMapFn (E : ATRIE_ELEMENT)
                         | (i, SOME x, acc) => f (E.invOrd (i + base), x, acc))
                       acc vec
 
+    fun foldr f acc (MAP { vec, ... }) =
+        Vector.foldr (fn (NONE, acc) => acc
+                       | (SOME x, acc) => f (x, acc))
+                     acc vec
+
+    fun foldri f acc (MAP { base, vec, ... }) =
+        Vector.foldri (fn (i, NONE, acc) => acc
+                        | (i, SOME x, acc) => f (E.invOrd (i + base), x, acc))
+                      acc vec
+
     fun insert (m as MAP { base, nonempty, vec }, k, x) =
         let val i = E.ord k
         in
@@ -79,8 +89,6 @@ functor ATrieNodeMapFn (E : ATRIE_ELEMENT)
                          }
                  end
         end
-
-    fun update (m, k, f) = insert (m, k, f (find (m, k)))
             
     fun remove (m as MAP { base, nonempty, vec }, k) =
         let val i = E.ord k
@@ -96,6 +104,13 @@ functor ATrieNodeMapFn (E : ATRIE_ELEMENT)
                                      vec = Vector.update (vec, i - base, NONE)
                                    }
         end
+
+    fun modify (m, k, f) =
+        case f (find (m, k)) of
+            NONE => remove (m, k)
+          | SOME i => insert (m, k, i)
+
+    fun keyCompare (k1, k2) = Int.compare (E.ord k1, E.ord k2)
             
 end
 

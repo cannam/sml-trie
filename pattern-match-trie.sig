@@ -23,14 +23,20 @@ signature PATTERN_MATCH_TRIE = sig
     type element
     type pattern = element option list
 
-    (* Return all the entries in the trie that match the given
-       pattern, in sort order. Will only return entries with exactly
-       the same number of elements as values in the pattern *)
-    val patternMatch : (trie * pattern) -> entry list
-
     (* Fold over all the entries in the trie that match the given
        pattern, in sort order. Will only return entries with exactly
        the same number of elements as values in the pattern *)
-    val foldlPatternMatch : (entry * 'a -> 'a) -> 'a -> (trie * pattern) -> 'a
+    val foldlPattern : (entry * 'a -> 'a) -> 'a -> (trie * pattern) -> 'a
+
+    (* Fold over all the entries in the trie that match the given
+       pattern, in reverse of sort order. Will only return entries
+       with exactly the same number of elements as values in the
+       pattern *)
+    val foldrPattern : (entry * 'a -> 'a) -> 'a -> (trie * pattern) -> 'a
+
+    (* Return all the entries in the trie that match the given
+       pattern, in sort order. Will only return entries with exactly
+       the same number of elements as values in the pattern *)
+    val enumeratePattern : (trie * pattern) -> entry list
 	    
 end

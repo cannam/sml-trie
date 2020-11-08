@@ -13,22 +13,39 @@ functor TrieFn (M : TRIE_MAP)
     type trie = unit M.trie
     type t = trie
 
-    fun keysOf kvl =
-        map (fn (k, v) => k) kvl
+    type range = entry option * entry option
             
     fun add (t, e) =
         M.insert (t, e, ())
 
     fun foldl f acc t =
         M.foldli (fn (k, v, acc) => f (k, acc)) acc t
+
+    fun foldr f acc t =
+        M.foldri (fn (k, v, acc) => f (k, acc)) acc t
                  
     fun enumerate t =
-        keysOf (M.enumerate t)
+        M.foldri (fn (k, v, acc) => k :: acc) [] t
 
-    fun prefixMatch (t, e) =
-        keysOf (M.prefixMatch (t, e))
+    fun foldlPrefix f acc (t, e) =
+        M.foldliPrefix (fn (k, v, acc) => f (k, acc)) acc (t, e)
 
-    fun foldlPrefixMatch f acc (t, e) =
-        M.foldliPrefixMatch (fn (k, v, acc) => f (k, acc)) acc (t, e)
-                          
+    fun foldrPrefix f acc (t, e) =
+        M.foldriPrefix (fn (k, v, acc) => f (k, acc)) acc (t, e)
+
+    fun enumeratePrefix (t, e) =
+        M.foldriPrefix (fn (k, v, acc) => k :: acc) [] (t, e)
+
+    fun foldlRange f acc (t, range) =
+        M.foldliRange (fn (k, v, acc) => f (k, acc)) acc (t, range)
+
+    fun foldrRange f acc (t, range) =
+        M.foldriRange (fn (k, v, acc) => f (k, acc)) acc (t, range)
+
+    fun enumerateRange (t, range) =
+        M.foldriRange (fn (k, v, acc) => k :: acc) [] (t, range)
+
+    fun locate (t, e, order) =
+        Option.map (fn (k, v) => k) (M.locate (t, e, order))
+               
 end

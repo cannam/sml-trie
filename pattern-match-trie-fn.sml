@@ -13,13 +13,13 @@ functor PatternMatchTrieFn (M : PATTERN_MATCH_TRIE_MAP)
     type entry = M.key
     type pattern = element option list
 
-    fun keysOf kvl =
-        map (fn (k, v) => k) kvl
+    fun foldlPattern f acc (t, p) =
+        M.foldliPattern (fn (k, v, acc) => f (k, acc)) acc (t, p)
 
-    fun patternMatch (t, p) =
-        keysOf (M.patternMatch (t, p))
+    fun foldrPattern f acc (t, p) =
+        M.foldriPattern (fn (k, v, acc) => f (k, acc)) acc (t, p)
 
-    fun foldlPatternMatch f acc (t, p) =
-        M.foldliPatternMatch (fn (k, v, acc) => f (k, acc)) acc (t, p)
+    fun enumeratePattern (t, p) =
+        M.foldriPattern (fn (k, v, acc) => k :: acc) [] (t, p)
                              
 end
