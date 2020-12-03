@@ -969,24 +969,26 @@ structure PersistentQueueTest :> TESTS = struct
         )
         ]
 end
-                                                     
+
+val trie_tests = [
+    (StringMTrieTest.name, StringMTrieTest.tests ()),
+    (StringATrieTest.name, StringATrieTest.tests ()),
+    (BitMappedVectorTest.name, BitMappedVectorTest.tests ()),
+    (StringBTrieTest.name, StringBTrieTest.tests ()),
+    (StringMTrieRangeTest.name, StringMTrieRangeTest.tests ()),
+    (StringATrieRangeTest.name, StringATrieRangeTest.tests ()),
+    (StringBTrieRangeTest.name, StringBTrieRangeTest.tests ()),
+    (StringMTrieLocateTest.name, StringMTrieLocateTest.tests ()),
+    (StringATrieLocateTest.name, StringATrieLocateTest.tests ()),
+    (StringBTrieLocateTest.name, StringBTrieLocateTest.tests ()),
+    (HashMapTest.name, HashMapTest.tests ()),
+    (PersistentArrayTest.name, PersistentArrayTest.tests ()),
+    (PersistentQueueTest.name, PersistentQueueTest.tests ())
+]
+                                             
 fun main () =
     let open TestSupport
     in
-        app run_test_suite [
-            (StringMTrieTest.name, StringMTrieTest.tests ()),
-            (StringATrieTest.name, StringATrieTest.tests ()),
-            (BitMappedVectorTest.name, BitMappedVectorTest.tests ()),
-            (StringBTrieTest.name, StringBTrieTest.tests ()),
-            (StringMTrieRangeTest.name, StringMTrieRangeTest.tests ()),
-            (StringATrieRangeTest.name, StringATrieRangeTest.tests ()),
-            (StringBTrieRangeTest.name, StringBTrieRangeTest.tests ()),
-            (StringMTrieLocateTest.name, StringMTrieLocateTest.tests ()),
-            (StringATrieLocateTest.name, StringATrieLocateTest.tests ()),
-            (StringBTrieLocateTest.name, StringBTrieLocateTest.tests ()),
-            (HashMapTest.name, HashMapTest.tests ()),
-            (PersistentArrayTest.name, PersistentArrayTest.tests ()),
-            (PersistentQueueTest.name, PersistentQueueTest.tests ())
-        ]
+        app run_test_suite trie_tests
     end
 
