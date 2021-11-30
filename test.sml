@@ -1006,6 +1006,119 @@ structure PersistentArrayTest :> TESTS = struct
         ]
                                                      
 end
+
+structure PersistentArraySliceTest :> TESTS = struct
+
+    open TestSupport
+         
+    val name = "persistent-array-slice"
+
+    structure A = PersistentArray
+    structure S = PersistentArraySlice
+
+    fun tests () = [
+        ( "empty",
+          fn () =>
+             S.isEmpty (S.full A.empty) andalso
+             S.isEmpty (S.slice (A.fromList ["hello", "world"], 1, SOME 0))
+        ),
+        ( "length",
+          fn () =>
+             check Int.toString (S.length (S.full A.empty), 0) andalso
+             check Int.toString (S.length (S.full (A.fromList ["hello", "world"])),
+                                 2) andalso
+             check Int.toString (S.length (S.slice (A.fromList ["hello", "world"],
+                                                    1, NONE)),
+                                 1) andalso
+             check Int.toString (S.length (S.slice (A.fromList ["hello", "world"],
+                                                    0, SOME 1)),
+                                 1)
+        ),
+        ( "sub",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d", "banana" ]
+                 val s = S.slice (a, 2, SOME 2)
+             in
+                 check_pairs id [(S.sub (s, 0), "c"),
+                                 (S.sub (s, 1), "d")]
+                 andalso
+                 ((S.sub (s, 2); false) handle Subscript => true)
+                 andalso
+                 ((S.sub (s, ~1); false) handle Subscript => true)
+             end
+        ),
+        ( "array",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d", "banana" ]
+             in
+                 check_lists id
+                             (A.toList (S.array (S.full a)),
+                              A.toList a)
+                 andalso
+                 check_lists id
+                             (A.toList (S.array (S.slice (a, 1, NONE))),
+                              [ "b", "c", "d", "banana" ])
+                 andalso
+                 check_lists id
+                             (A.toList (S.array (S.slice (a, 1, SOME 2))),
+                              [ "b", "c" ])
+                 andalso
+                 check_lists id
+                             (A.toList (S.array (S.slice (a, 2, SOME 1))),
+                              [ "c" ])
+                 andalso
+                 check_lists id
+                             (A.toList (S.array (S.slice (a, 2, SOME 0))),
+                              [ ])
+             end
+        ),
+        ( "base",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d", "banana" ]
+                 val (arr, s, c) = S.base (S.slice (a, 2, SOME 2))
+             in
+                 check Int.toString (s, 2) andalso
+                 check Int.toString (c, 2) andalso
+                 check_lists id (A.toList arr, A.toList a)
+             end
+        ),
+        ( "foldl",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d", "banana" ]
+             in
+                 check_lists id
+                             (S.foldl (op::) [] (S.slice (a, 2, NONE)),
+                              [ "banana", "d", "c" ])
+                 andalso
+                 check_lists id
+                             (S.foldl (op::) [] (S.slice (a, 0, SOME 3)),
+                              [ "c", "b", "a" ])
+                 andalso
+                 check_lists id
+                             (S.foldl (op::) [] (S.slice (a, 2, SOME 0)),
+                              [ ])
+             end
+        ),
+        ( "foldr",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d", "banana" ]
+             in
+                 check_lists id
+                             (S.foldr (op::) [] (S.slice (a, 2, NONE)),
+                              [ "c", "d", "banana" ])
+                 andalso
+                 check_lists id
+                             (S.foldr (op::) [] (S.slice (a, 0, SOME 3)),
+                              [ "a", "b", "c" ])
+                 andalso
+                 check_lists id
+                             (S.foldr (op::) [] (S.slice (a, 2, SOME 0)),
+                              [ ])
+             end
+        )
+    ]
+                   
+end
                                              
 structure PersistentQueueTest :> TESTS = struct
 
@@ -1116,6 +1229,7 @@ val trie_tests = [
     (StringBTrieLocateTest.name, StringBTrieLocateTest.tests ()),
     (HashMapTest.name, HashMapTest.tests ()),
     (PersistentArrayTest.name, PersistentArrayTest.tests ()),
+    (PersistentArraySliceTest.name, PersistentArraySliceTest.tests ()),
     (PersistentQueueTest.name, PersistentQueueTest.tests ())
 ]
                                              

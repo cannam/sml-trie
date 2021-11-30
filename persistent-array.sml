@@ -1,5 +1,5 @@
 
-structure PersistentArray :> PERSISTENT_ARRAY = struct
+structure PersistentArrayImpl = struct
 
     structure T = Word32TrieMap
 
@@ -149,3 +149,6 @@ structure PersistentArray :> PERSISTENT_ARRAY = struct
         tabulate (n, fn _ => x)
                  
 end
+
+structure PersistentArray : PERSISTENT_ARRAY = PersistentArrayImpl
+

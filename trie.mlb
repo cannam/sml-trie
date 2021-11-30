@@ -23,5 +23,7 @@ string-tries.sml
 string-hash-map.sml
 persistent-array.sig
 persistent-array.sml
+persistent-array-slice.sig
+persistent-array-slice.sml
 persistent-queue.sig
 persistent-queue.sml
