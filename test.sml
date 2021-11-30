@@ -423,6 +423,14 @@ functor TrieRangeTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
                                 expected)))
              testdata) @
         (map (fn (name, from, to, expected) =>
+                 (name ^ "-extract",
+                  fn () => check_lists
+                               id
+                               (T.enumerate
+                                    (T.extractRange (test_trie (), (from, to))),
+                                expected)))
+             testdata) @
+        (map (fn (name, from, to, expected) =>
                  (name ^ "-foldl",
                   fn () => check_lists
                                id

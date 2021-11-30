@@ -118,6 +118,11 @@ signature TRIE_MAP = sig
         within the given key range, in reverse of sort order by key *)
     val foldriRange : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * range) -> 'b
 
+    (** Return a trie containing all key-value pairs in the trie that
+        are found within the given key range, sharing the structure of
+        the given trie as far as possible *)
+    val extractRange : 'a trie * range -> 'a trie
+                                                                              
     (** Return a list of all key-value pairs in the trie that are
         found within the given key range, in sort order by key *)
     val enumerateRange : 'a trie * range -> (key * 'a) list

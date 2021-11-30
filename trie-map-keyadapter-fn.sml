@@ -86,6 +86,10 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
                            (Option.map enkey leftConstraint,
                             Option.map enkey rightConstraint))
 
+    fun extractRange (t, (leftConstraint, rightConstraint)) =
+        T.extractRange (t, (Option.map enkey leftConstraint,
+                            Option.map enkey rightConstraint))
+                      
     fun enumerateRange (t, (leftConstraint, rightConstraint)) =
         map (fn (k, x) => (dekey k, x))
             (T.enumerateRange (t,

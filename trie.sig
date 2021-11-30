@@ -84,6 +84,11 @@ signature TRIE = sig
         the given range, in reverse of sort order *)
     val foldrRange : (entry * 'a -> 'a) -> 'a -> (trie * range) -> 'a
 
+    (** Return a trie containing all entries in the trie that are
+        found within the given range, sharing the structure of the
+        given trie as far as possible *)
+    val extractRange : trie * range -> trie
+
     (** Return a list of all entries in the trie that are found within
         the given range, in sort order *)
     val enumerateRange : trie * range -> entry list
