@@ -462,7 +462,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun enumerate trie =
         foldri (fn (k, v, acc) => (k, v) :: acc) [] trie
             
-    fun foldiPrefix nodeFolder f =
+    fun foldiPrefixNode nodeFolder f =
         let fun foldi' (rpfx, xx, n, acc) =
                 if K.isEmpty xx
                 then nodeFolder f (rpfx, n, acc)
@@ -485,12 +485,12 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun foldliPrefix f acc (trie, e) =
         case trie of
             EMPTY => acc
-          | POPULATED n => foldiPrefix foldliNode f ([], e, n, acc)
+          | POPULATED n => foldiPrefixNode foldliNode f ([], e, n, acc)
 
     fun foldriPrefix f acc (trie, e) =
         case trie of
             EMPTY => acc
-          | POPULATED n => foldiPrefix foldriNode f ([], e, n, acc)
+          | POPULATED n => foldiPrefixNode foldriNode f ([], e, n, acc)
             
     fun enumeratePrefix (trie, e) =
         foldriPrefix (fn (k, v, acc) => (k, v) :: acc) [] (trie, e)
