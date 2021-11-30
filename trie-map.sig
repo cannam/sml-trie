@@ -4,8 +4,6 @@
 
 signature TRIE_MAP = sig
 
-    (*!!! how far should this match ORD_MAP? *)
-    
     type 'a trie
     type key
 
@@ -48,13 +46,25 @@ signature TRIE_MAP = sig
         respectively less or greater than it is returned, if there is
         one *)
     val locate : 'a trie * key * order -> (key * 'a) option
-
+                                                     
     (** Return the longest prefix of the given key that is present as
         a key in the trie. The given key does not need to be present
         as a key in the trie. If it is present, it will be its own
         longest prefix, and so it will be returned. If there is no
         prefix of the given key in the trie, return NONE *)
     val prefixOf : 'a trie * key -> key option
+
+    (** Examine the values in the trie, in sort order by key, and
+        return the first one for which the given function returns
+        true. This is similar to Vector.find in that it must iterate
+        through the trie rather than performing a direct lookup *)
+    val search : ('a -> bool) -> 'a trie -> 'a option
+
+    (** Examine the key/value pairs in the trie, in sort order by key,
+        and return the first one for which the given function returns
+        true. This is similar to Vector.findi in that it must iterate
+        through the trie rather than performing a direct lookup *)
+    val searchi : (key * 'a -> bool) -> 'a trie -> (key * 'a) option
                                    
     (** Fold over all the values in the trie, in sort order by key *)
     val foldl : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b

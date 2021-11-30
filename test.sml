@@ -755,12 +755,34 @@ structure HashMapTest :> TESTS = struct
                        
 end
 
-signature PERSISTENT_ARRAY_TEST_FN_ARG = sig
-    structure A : PERSISTENT_ARRAY
+signature PERSISTENT_COMMON_TEST_FN_ARG = sig
+    structure A : sig
+                  type 'a t
+                  val maxLen : int
+                  val fromList : 'a list -> 'a t 
+                  val tabulate : int * (int -> 'a) -> 'a t
+                  val length : 'a t -> int
+                  val sub : 'a t * int -> 'a
+                  val app : ('a -> unit) -> 'a t -> unit
+                  val appi : (int * 'a -> unit) -> 'a t -> unit
+                  val foldl : ('a * 'b -> 'b) -> 'b -> 'a t -> 'b
+                  val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a t -> 'b
+                  val foldr : ('a * 'b -> 'b) -> 'b -> 'a t -> 'b
+                  val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a t -> 'b
+                  val update : 'a t * int * 'a -> 'a t
+                  val toList : 'a t -> 'a list
+                  val map : ('a -> 'b) -> 'a t -> 'b t
+                  val mapi : (int * 'a -> 'b) -> 'a t -> 'b t
+                  val empty : 'a t
+                  val isEmpty : 'a t -> bool
+                  val append : 'a t * 'a -> 'a t
+                  val popEnd : 'a t -> 'a t * 'a
+              end
+                      
     val name : string
 end
     
-functor PersistentArrayTestFn (ARG : PERSISTENT_ARRAY_TEST_FN_ARG) :> TESTS = struct
+functor PersistentCommonTestFn (ARG : PERSISTENT_COMMON_TEST_FN_ARG) :> TESTS = struct
 
     open TestSupport
 
@@ -873,26 +895,86 @@ functor PersistentArrayTestFn (ARG : PERSISTENT_ARRAY_TEST_FN_ARG) :> TESTS = st
     ]
 end
 
-structure PersistentArrayTest = PersistentArrayTestFn(struct
-                                                       structure A = PersistentArray
-                                                       val name = "persistent-array"
-                                                       end)
+structure PersistentArrayTest :> TESTS = struct
 
+    open TestSupport
+
+    val name = "persistent-array"
+
+    structure CommonTestPart = PersistentCommonTestFn
+                                   (struct
+                                     structure A = struct
+                                     open PersistentArray
+                                     type 'a t = 'a array
+                                     end
+                                     val name = name ^ "-common"
+                                     end)
+
+    structure A = PersistentArray
+
+    fun tests () =
+        (CommonTestPart.tests ()) @ [
+        ( "find",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d", "banana" ]
+             in
+                 A.find (fn "d" => true | _ => false) a = SOME "d"
+                 andalso
+                 A.find (fn "q" => true | _ => false) a = NONE
+             end
+        ),
+        ( "findi",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d", "banana" ]
+             in
+                 A.findi (fn (3, "d") => true | _ => false) a = SOME (3, "d")
+                 andalso
+                 A.findi (fn (_, "d") => true | _ => false) a = SOME (3, "d")
+                 andalso
+                 A.findi (fn (_, "q") => true | _ => false) a = NONE
+             end
+        ),
+        ( "exists",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d", "banana" ]
+             in
+                 A.exists (fn "d" => true | _ => false) a = true
+                 andalso
+                 A.exists (fn "q" => true | _ => false) a = false
+             end
+        ),
+        ( "all",
+          fn () =>
+             let val a = A.fromList [ "a", "b", "c", "d", "banana" ]
+             in
+                 A.all (fn "d" => true | _ => false) a = false
+                 andalso
+                 A.all (fn "q" => false | _ => true) a = true
+             end
+        )
+        ]
+                                                     
+end
+                                             
 structure PersistentQueueTest :> TESTS = struct
 
     open TestSupport
 
     val name = "persistent-queue"
 
-    structure ArrayTestPart = PersistentArrayTestFn(struct
-                                                     structure A = PersistentQueue
-                                                     val name = name
-                                                     end)
+    structure CommonTestPart = PersistentCommonTestFn
+                                   (struct
+                                     structure A = struct
+                                     open PersistentQueue
+                                     type 'a t = 'a queue
+                                     end
+                                     val name = name ^ "-common"
+                                     end)
 
     structure Q = PersistentQueue
                                                    
     fun tests () =
-        (ArrayTestPart.tests ()) @ [
+        (CommonTestPart.tests ()) @ [
         ( "prepend",
           fn () => check_lists id (Q.toList (Q.prepend (Q.empty, "hello")),
                                    [ "hello" ])

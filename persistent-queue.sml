@@ -3,13 +3,11 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
 
     structure T = Word32TrieMap
 
-    type 'a array = {
+    type 'a queue = {
         start : Word32.word,
         size : Word32.word,
         trie : 'a T.trie
     }
-
-    type 'a queue = 'a array
 
     val maxLen = PersistentArray.maxLen
     val maxLenW = Word32.fromInt maxLen
@@ -123,7 +121,13 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
         end
 
     fun toList v =
-        rev (foldl (op::) [] v)
+        foldr (op::) [] v
+
+    fun vector v =
+        Vector.fromList (toList v)
+
+    fun queue (n, x) =
+        tabulate (n, fn _ => x)
                  
 end
                                  

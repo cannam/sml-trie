@@ -39,6 +39,10 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
     fun locate (t, k, order) = Option.map (fn (k, x) => (dekey k, x))
                                           (T.locate (t, enkey k, order))
 
+    val search = T.search
+    fun searchi f t = Option.map (fn (k, x) => (dekey k, x))
+                                 (T.searchi (fn (k, x) => f (dekey k, x)) t)
+                                          
     fun prefixOf (t, k) =
         Option.map dekey (T.prefixOf (t, enkey k))
                                  

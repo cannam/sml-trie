@@ -75,6 +75,19 @@ structure PersistentArray :> PERSISTENT_ARRAY = struct
     fun foldri f acc { size, trie } =
         T.foldri (fn (w, x, acc) => f (Word32.toInt w, x, acc)) acc trie
 
+    fun find f { size, trie } =
+        T.search f trie
+
+    fun findi f { size, trie } =
+        Option.map (fn (w, x) => (Word32.toInt w, x))
+                   (T.searchi (fn (w, x) => f (Word32.toInt w, x)) trie)
+
+    fun exists f { size, trie } =
+        Option.isSome (T.search f trie)
+
+    fun all f { size, trie } =
+        not (Option.isSome (T.search (fn x => not (f x)) trie))
+            
     fun mapi f v =
         foldli (fn (i, x, acc) => append (acc, f (i, x))) empty v
 
@@ -100,6 +113,39 @@ structure PersistentArray :> PERSISTENT_ARRAY = struct
         end
 
     fun toList v =
-        rev (foldl (op::) [] v)
-            
+        foldr (op::) [] v
+
+    fun vector v =
+        Vector.fromList (toList v)
+
+    fun modifyi f v =
+        foldli (fn (i, x, updating) =>
+                   case f (i, x) of
+                       NONE => updating
+                     | SOME x' => update (updating, i, x'))
+               v v
+
+    fun modify f v =
+        modifyi (fn (i, x) => f x) v
+
+    fun collate f (v1, v2) =
+        let val len1 = length v1
+            val len2 = length v2
+            fun collate' i =
+                if i = len1
+                then if i = len2
+                     then EQUAL
+                     else LESS
+                else if i = len2
+                then GREATER
+                else case f (sub (v1, i), sub (v2, i)) of
+                         EQUAL => collate' (i+1)
+                       | order => order
+        in
+            collate' 0
+        end
+
+    fun array (n, x) =
+        tabulate (n, fn _ => x)
+                 
 end

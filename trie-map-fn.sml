@@ -309,6 +309,68 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             SOME _ => true
           | NONE => false
 
+    fun searchNode f =
+        let fun search' n =
+                case n of
+                    LEAF item => if f item
+                                 then SOME item
+                                 else NONE
+                  | TWIG (kk, item) => if f item
+                                       then SOME item
+                                       else NONE
+                  | BRANCH (iopt, m) =>
+                    if Option.isSome iopt andalso f (Option.valOf iopt)
+                    then iopt
+                    else M.foldl (fn (n', SOME r) => SOME r
+                                   | (n', NONE) => search' n')
+                                 NONE
+                                 m
+        in
+            search'
+        end
+
+    fun search (f : 'a -> bool) (t : 'a trie) : 'a option =
+        case t of
+            EMPTY => NONE
+          | POPULATED n => searchNode f n
+            
+    fun searchiNode f =
+        let fun searchi' (rpfx, n) =
+                case n of
+                    LEAF item =>
+                    let val k = K.implode (rev rpfx)
+                    in
+                        if f (k, item)
+                        then SOME (k, item)
+                        else NONE
+                    end
+                  | TWIG (kk, item) =>
+                    let val k = K.implode (rev rpfx @ K.explode kk)
+                    in
+                        if f (k, item)
+                        then SOME (k, item)
+                        else NONE
+                    end
+                  | BRANCH (iopt, m) =>
+                    let val k = K.implode (rev rpfx)
+                    in
+                        if Option.isSome iopt andalso f (k, Option.valOf iopt)
+                        then SOME (k, Option.valOf iopt)
+                        else M.foldli (fn (x, n', SOME r) => SOME r
+                                        | (x, n', NONE) =>
+                                          searchi' (x::rpfx, n'))
+                                      NONE
+                                      m
+                    end
+        in
+            searchi'
+        end
+
+    fun searchi (f : key * 'a -> bool) (t : 'a trie) : (key * 'a) option =
+        case t of
+            EMPTY => NONE
+          | POPULATED n => searchiNode f ([], n)
+            
     fun foldlNode f =
         let fun fold' (n, acc) =
                 case n of
