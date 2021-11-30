@@ -66,6 +66,9 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
         T.foldriPrefix (fn (k, x, acc) => f (dekey k, x, acc))
                        acc (t, enkey k)
 
+    fun extractPrefix (t, k) =
+        T.extractPrefix (t, enkey k)
+                       
     fun enumeratePrefix (t, k) =
         map (fn (k, x) => (dekey k, x)) (T.enumeratePrefix (t, enkey k))
 

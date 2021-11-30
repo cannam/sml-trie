@@ -61,6 +61,12 @@ signature TRIE = sig
         need to be present as an entry in the trie *)
     val foldrPrefix : (entry * 'a -> 'a) -> 'a -> (trie * entry) -> 'a 
 
+    (** Return a trie containing all entries in the trie that have the
+        given entry as a prefix, sharing the structure of the given
+        trie as far as possible. The prefix itself does not need to be
+        present as an entry in the trie *)
+    val extractPrefix : trie * entry -> trie
+
     (** Return a list of all entries in the trie that have the given
         entry as a prefix, in sort order. The prefix itself does not
         need to be present as an entry in the trie *)

@@ -121,6 +121,49 @@ functor TrieTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
                        T.isEmpty e1 andalso T.isEmpty e2
                    end
         ),
+        ( "extractPrefix-empty",
+          fn () => check_lists id (T.enumerate
+                                       (T.extractPrefix (T.empty, "parp")), [])
+        ),
+        ( "extractPrefix-matches",
+          fn () => check_lists id (T.enumerate
+                                       (T.extractPrefix (test_trie (), "pa")),
+			           [ "par", "parp" ])
+	           andalso
+	           check_lists id (T.enumerate
+                                       (T.extractPrefix (test_trie (), "par")),
+			           [ "par", "parp" ])
+	           andalso
+	           check_lists id (T.enumerate
+                                       (T.extractPrefix (test_trie (), "alligat")),
+			           [ "alligator" ])
+        ),
+        ( "extractPrefix-no-matches",
+          fn () => check_lists id (T.enumerate
+                                       (T.extractPrefix (test_trie (), "quiz")),
+                                   [ ])
+                   andalso
+                   check_lists id (T.enumerate
+                                       (T.extractPrefix (test_trie (), "aaa")),
+                                   [ ])
+                   andalso
+                   check_lists id (T.enumerate
+                                       (T.extractPrefix (test_trie (), "zzz")),
+                                   [ ])
+                   andalso
+                   check_lists id (T.enumerate
+                                       (T.extractPrefix (test_trie (), "parpy")),
+                                   [ ])
+                   andalso
+                   check_lists id (T.enumerate
+                                       (T.extractPrefix (test_trie (), "alligators")),
+                                   [ ])
+        ),
+        ( "extractPrefix-all-matches",
+          fn () => check_lists id (T.enumerate
+                                       (T.extractPrefix (test_trie (), "")),
+                                   sorted strings)
+        ),
         ( "enumeratePrefix-empty",
           fn () => check_lists id (T.enumeratePrefix (T.empty, "parp"), [])
         ),

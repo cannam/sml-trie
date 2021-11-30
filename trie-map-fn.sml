@@ -495,6 +495,34 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
     fun enumeratePrefix (trie, e) =
         foldriPrefix (fn (k, v, acc) => (k, v) :: acc) [] (trie, e)
 
+    fun extractPrefixNode (xx, n) =
+        if K.isEmpty xx
+        then SOME n
+        else
+            case n of
+                LEAF item => NONE
+              | TWIG (kk, item) =>
+                (if isPrefixOf (K.explode xx, K.explode kk)
+                 then SOME n
+                 else NONE)
+              | BRANCH (_, m) =>
+                case M.find (m, K.head xx) of
+                    NONE => NONE
+                  | SOME nsub =>
+                    case extractPrefixNode (K.tail xx, nsub) of
+                        NONE => NONE
+                      | SOME nsub' => 
+                        SOME (BRANCH (NONE, M.modify (M.new (), K.head xx,
+                                                      fn _ => SOME nsub')))
+
+    fun extractPrefix (trie, e) =
+        case trie of
+            EMPTY => EMPTY
+          | POPULATED n =>
+            case extractPrefixNode (e, n) of
+                NONE => EMPTY
+              | SOME n => POPULATED n
+
     fun foldiNodeRange right f (rpfx, n, leftConstraintK, rightConstraintK, acc) =
         let fun f' (pfx, item, acc) =
                 f (K.implode pfx, item, acc)

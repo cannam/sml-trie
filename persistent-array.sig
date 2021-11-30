@@ -24,7 +24,7 @@ signature PERSISTENT_ARRAY = sig
     val all : ('a -> bool) -> 'a array -> bool
     val collate : ('a * 'a -> order) -> 'a array * 'a array -> order
 
-    (* II. Functions similar to ARRAY, but altered for persistent
+    (* II. Functions similar to ARRAY, but altered for a persistent
            array. The functions passed to modify/modifyi should return
            NONE for "no change" or SOME x to change the value. *)
 

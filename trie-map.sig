@@ -95,6 +95,12 @@ signature TRIE_MAP = sig
         itself does not need to be present as a key in the trie *)
     val foldriPrefix : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * key) -> 'b
 
+    (** Return a trie containing all key-value pairs in the trie that
+        have the given key as a prefix, sharing the structure of the
+        given trie as far as possible. The prefix itself does not need
+        to be present as a key in the trie *)
+    val extractPrefix : 'a trie * key -> 'a trie
+
     (** Return a list of all key-value pairs in the trie that have the
         given key as a prefix, in sort order by key. The prefix itself
         does not need to be present as a key in the trie *)
