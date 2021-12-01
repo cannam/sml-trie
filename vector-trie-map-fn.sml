@@ -1,5 +1,5 @@
 
-(* Copyright 2015-2018 Chris Cannam.
+(* Copyright 2015-2021 Chris Cannam.
    MIT/X11 licence. See the file COPYING for details. *)
 
 signature VECTOR_TRIE_MAP_FN_ARG = sig
