@@ -520,6 +520,34 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             EMPTY => EMPTY
           | POPULATED n => extractPrefixNode (n, e)
 
+    local
+        (* The functions to which these are local (foldiRangeNode,
+           foldRangeNode, extractRangeNode) still have quite a lot of
+           duplication between them, but it's not immediately obvious
+           to me how to factor that out without jeopardising
+           performance.
+
+           Note that first function (foldiRangeNode) has some comments
+           that are relevant to all three. The subsequent two are
+           essentially modified versions of it.
+         *)
+
+        fun acceptTwig (kk, lc, rc) =
+            (null lc orelse compareKeys (kk, lc) <> LESS)
+            andalso
+            (null rc orelse compareKeys (kk, rc) <> GREATER)
+
+        fun subConstraint (x, []) = NONE
+          | subConstraint (x, c::cs) = if c = x
+                                       then SOME (K.implode cs)
+                                       else NONE
+
+        fun acceptMapElement (x, lc, rc) =
+            (null lc orelse M.keyCompare (x, hd lc) <> LESS)
+            andalso
+            (null rc orelse M.keyCompare (x, hd rc) <> GREATER)
+
+    in
     fun foldiRangeNode right f (rpfx, n, leftConstraintK, rightConstraintK, acc) =
         let fun f' (pfx, item, acc) =
                 f (K.implode pfx, item, acc)
@@ -545,11 +573,6 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                                   
             fun leaf (item, [], _) = f' (rev rpfx, item, acc)
               | leaf _ = acc
-
-            fun acceptTwig (kk, lc, rc) =
-                 (null lc orelse compareKeys (kk, lc) <> LESS)
-                 andalso
-                 (null rc orelse compareKeys (kk, rc) <> GREATER)
                              
             fun twig ((kk, item), lc, rc) =
                 let val kk' = K.explode kk
@@ -558,16 +581,6 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                     then f' ((rev rpfx) @ kk', item, acc)
                     else acc
                 end
-
-            fun subConstraint (x, []) = NONE
-              | subConstraint (x, c::cs) = if c = x
-                                           then SOME (K.implode cs)
-                                           else NONE
-
-            fun acceptMapElement (x, lc, rc) =
-                (null lc orelse M.keyCompare (x, hd lc) <> LESS)
-                andalso
-                (null rc orelse M.keyCompare (x, hd rc) <> GREATER)
 
             fun branchl ((iopt, m), [], []) =
                 foldliNode f (rpfx, n, acc)
@@ -634,45 +647,95 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                    | TWIG (kk, item) => twig ((kk, item), lc, rc)
                    | BRANCH (iopt, m) => branch ((iopt, m), lc, rc))
         end
+        
+    fun foldRangeNode right f (n, leftConstraintK, rightConstraintK, acc) =
+        let (* this is identical to foldiRangeNode but with prefix
+               args removed everywhere *)
+                                  
+            fun leaf (item, [], _) = f (item, acc)
+              | leaf _ = acc
+                             
+            fun twig ((kk, item), lc, rc) =
+                let val kk' = K.explode kk
+                in
+                    if acceptTwig (kk', lc, rc)
+                    then f (item, acc)
+                    else acc
+                end
 
-    fun foldliRange f acc (t, (leftConstraint, rightConstraint)) =
-        case t of
-            EMPTY => acc
-          | POPULATED n =>
-            foldiRangeNode false
-                           f ([], n, leftConstraint, rightConstraint, acc)
+            fun branchl ((iopt, m), [], []) =
+                foldlNode f (n, acc)
+              | branchl ((iopt, m), lc, rc) =
+                M.foldli
+                    (fn (x, nsub, acc) =>
+                        if not (acceptMapElement (x, lc, rc)) then acc
+                        else foldRangeNode false
+                                           f (nsub,
+                                              subConstraint (x, lc),
+                                              subConstraint (x, rc),
+                                              acc))
+                    (case iopt of
+                         NONE => acc
+                       | SOME item => case lc of
+                                          [] => f (item, acc)
+                                        | _ => acc)
+                    m
+                                                    
+            fun branchr ((iopt, m), [], []) =
+                foldrNode f (n, acc)
+              | branchr ((iopt, m), lc, rc) =
+                let val acc =
+                        M.foldri
+                            (fn (x, n, acc) =>
+                                if not (acceptMapElement (x, lc, rc)) then acc
+                                else foldRangeNode true
+                                                   f (n,
+                                                      subConstraint (x, lc),
+                                                      subConstraint (x, rc),
+                                                      acc))
+                            acc m
+                in
+                    case iopt of
+                        NONE => acc
+                      | SOME item => case lc of
+                                         [] => f (item, acc)
+                                       | _ => acc
+                end
 
-    fun foldriRange f acc (t, (leftConstraint, rightConstraint)) =
-        case t of
-            EMPTY => acc
-          | POPULATED n =>
-            foldiRangeNode true
-                           f ([], n, leftConstraint, rightConstraint, acc)
+            val branch = if right then branchr else branchl
+                    
+            val leftConstraint = Option.map K.explode leftConstraintK
+            val rightConstraint = Option.map K.explode rightConstraintK
+
+            val lc = Option.getOpt (leftConstraint, [])
+            val rc = Option.getOpt (rightConstraint, [])
+        in
+            (* see notes in foldiRangeNode *)
+            case rightConstraint of
+                SOME [] =>
+                (if null lc
+                 then case n of
+                          LEAF item => leaf (item, lc, NONE)
+                        | TWIG _ => acc
+                        | BRANCH (NONE, _) => acc
+                        | BRANCH (SOME item, _) => f (item, acc)
+                 else acc)
+              | _ =>
+                (case n of
+                     LEAF item => leaf (item, lc, rc)
+                   | TWIG (kk, item) => twig ((kk, item), lc, rc)
+                   | BRANCH (iopt, m) => branch ((iopt, m), lc, rc))
+        end
 
     fun extractRangeNode (n, leftConstraintK, rightConstraintK) =
         let (* quite some duplication with foldiRangeNode here *)
             fun leaf (item, [], _) = POPULATED (LEAF item)
               | leaf _ = EMPTY
 
-            fun acceptTwig (kk, lc, rc) =
-                (null lc orelse compareKeys (kk, lc) <> LESS)
-                andalso
-                (null rc orelse compareKeys (kk, rc) <> GREATER)
-
             fun twig (tw as (kk, item), lc, rc) =
                 if acceptTwig (K.explode kk, lc, rc)
                 then POPULATED (TWIG tw)
                 else EMPTY
-            
-            fun subConstraint (x, []) = NONE
-              | subConstraint (x, c::cs) = if c = x
-                                           then SOME (K.implode cs)
-                                           else NONE
-
-            fun acceptMapElement (x, lc, rc) =
-                (null lc orelse M.keyCompare (x, hd lc) <> LESS)
-                andalso
-                (null rc orelse M.keyCompare (x, hd rc) <> GREATER)
 
             fun branch ((iopt, m), [], []) = POPULATED (BRANCH (iopt, m))
               | branch ((iopt, m), lc, rc) =
@@ -727,6 +790,33 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                   | TWIG (kk, item) => twig ((kk, item), lc, rc)
                   | BRANCH (iopt, m) => branch ((iopt, m), lc, rc))
         end
+    end (* end local *)
+
+    fun foldliRange f acc (t, (leftConstraint, rightConstraint)) =
+        case t of
+            EMPTY => acc
+          | POPULATED n =>
+            foldiRangeNode false
+                           f ([], n, leftConstraint, rightConstraint, acc)
+
+    fun foldriRange f acc (t, (leftConstraint, rightConstraint)) =
+        case t of
+            EMPTY => acc
+          | POPULATED n =>
+            foldiRangeNode true
+                           f ([], n, leftConstraint, rightConstraint, acc)
+
+    fun foldlRange f acc (t, (leftConstraint, rightConstraint)) =
+        case t of
+            EMPTY => acc
+          | POPULATED n =>
+            foldRangeNode false f (n, leftConstraint, rightConstraint, acc)
+
+    fun foldrRange f acc (t, (leftConstraint, rightConstraint)) =
+        case t of
+            EMPTY => acc
+          | POPULATED n =>
+            foldRangeNode true f (n, leftConstraint, rightConstraint, acc)
             
     fun extractRange (trie, (leftConstraint, rightConstraint)) =
         case trie of

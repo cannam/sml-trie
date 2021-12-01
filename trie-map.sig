@@ -110,9 +110,17 @@ signature TRIE_MAP = sig
         the range is unbounded on that side *)
     type range = key option * key option
                                                       
+    (** Fold over all the values in the trie that are found within the
+        given key range, in sort order by key *)
+    val foldlRange : ('a * 'b -> 'b) -> 'b -> ('a trie * range) -> 'b
+                                                      
     (** Fold over all the key-value pairs in the trie that are found
         within the given key range, in sort order by key *)
     val foldliRange : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * range) -> 'b
+                                                      
+    (** Fold over all the values in the trie that are found within the
+        given key range, in reverse of sort order by key *)
+    val foldrRange : ('a * 'b -> 'b) -> 'b -> ('a trie * range) -> 'b
                                                       
     (** Fold over all the key-value pairs in the trie that are found
         within the given key range, in reverse of sort order by key *)

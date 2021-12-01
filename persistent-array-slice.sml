@@ -81,16 +81,14 @@ structure PersistentArraySlice :>
         }
                                                           
     fun foldl f acc (s as S { array = { size, trie }, start, count }) =
-        T.foldliRange (fn (_, x, acc) => f (x, acc))
-                      acc (trie, makeRange s)
+        T.foldlRange f acc (trie, makeRange s)
                                                           
     fun foldli f acc (s as S { array = { size, trie }, start, count }) =
         T.foldliRange (fn (w, x, acc) => f (Word32.toInt w, x, acc))
                       acc (trie, makeRange s)
                                                           
     fun foldr f acc (s as S { array = { size, trie }, start, count }) =
-        T.foldriRange (fn (_, x, acc) => f (x, acc))
-                      acc (trie, makeRange s)
+        T.foldrRange f acc (trie, makeRange s)
                                                           
     fun foldri f acc (s as S { array = { size, trie }, start, count }) =
         T.foldriRange (fn (w, x, acc) => f (Word32.toInt w, x, acc))

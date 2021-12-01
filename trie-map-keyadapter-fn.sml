@@ -74,11 +74,21 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
 
     type range = key option * key option
 
+    fun foldlRange f acc (t, (leftConstraint, rightConstraint)) =
+        T.foldlRange f acc (t,
+                            (Option.map enkey leftConstraint,
+                             Option.map enkey rightConstraint))
+
     fun foldliRange f acc (t, (leftConstraint, rightConstraint)) =
         T.foldliRange (fn (k, x, acc) => f (dekey k, x, acc))
                       acc (t,
                            (Option.map enkey leftConstraint,
                             Option.map enkey rightConstraint))
+
+    fun foldrRange f acc (t, (leftConstraint, rightConstraint)) =
+        T.foldrRange f acc (t,
+                            (Option.map enkey leftConstraint,
+                             Option.map enkey rightConstraint))
 
     fun foldriRange f acc (t, (leftConstraint, rightConstraint)) =
         T.foldriRange (fn (k, x, acc) => f (dekey k, x, acc))
