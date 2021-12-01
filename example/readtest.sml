@@ -33,7 +33,7 @@ functor ReadSummariseFn (T : STRING_TRIE_MAP) = struct
         let fun wc (k, v) = k ^ " (" ^ Int.toString v ^ ")"
         in
             app (fn (k, v) =>
-                    let val matching = tl (T.prefixMatch (trie, k))
+                    let val matching = tl (T.enumeratePrefix (trie, k))
                     in
                         print (wc (k, v) ^
                                (case matching of
