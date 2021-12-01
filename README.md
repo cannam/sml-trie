@@ -14,8 +14,8 @@ data structures:
    3. Persistent Array and Queue (implemented using bitmap tries)
 
 
-1. TRIE AND TRIE MAP
---------------------
+TRIE AND TRIE MAP
+-----------------
 
 A trie is an ordered container. It stores a set of entries of a common
 entry type, which is some sort of sequence (vector, list, string etc),
@@ -140,8 +140,8 @@ in `string-tries.sml`:
    `StringMTrie`
 
 
-2. PERSISTENT HASH MAP
-----------------------
+PERSISTENT HASH MAP
+-------------------
 
 This library contains an implementation of a persistent hash map
 structure. This is a hash map in which every insertion or removal
@@ -174,8 +174,8 @@ There is a specialisation for string keys:
    with string keys
 
 
-3. PERSISTENT ARRAY AND QUEUE
------------------------------
+PERSISTENT ARRAY AND QUEUE
+--------------------------
 
 This library contains implementations of persistent array and
 double-ended queue containers. These are immutable containers like the
