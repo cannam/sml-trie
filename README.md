@@ -14,7 +14,7 @@ data structures:
    3. Persistent Array and Queue (implemented using bitmap tries)
 
 
-TRIE AND TRIE MAP
+Trie and Trie Map
 -----------------
 
 A trie is an ordered container. It stores a set of entries of a common
@@ -140,7 +140,7 @@ in `string-tries.sml`:
    `StringMTrie`
 
 
-PERSISTENT HASH MAP
+Persistent Hash Map
 -------------------
 
 This library contains an implementation of a persistent hash map
@@ -174,7 +174,7 @@ There is a specialisation for string keys:
    with string keys
 
 
-PERSISTENT ARRAY AND QUEUE
+Persistent Array and Queue
 --------------------------
 
 This library contains implementations of persistent array and
@@ -222,7 +222,7 @@ And these are implemented by
    persistent queue container
 
 
-TO BUILD & TEST
+To Build & Test
 ---------------
 
 Basic unit tests are provided. With the MLton compiler, run
@@ -234,9 +234,9 @@ Basic unit tests are provided. With the MLton compiler, run
 To use in other projects, include `trie.mlb` from your MLB file.
 
 
-AUTHOR
+Author
 ------
 
 Copyright 2015-2021 Chris Cannam.
-MIT/X11 licence. See the file COPYING for details.
+MIT/X11 licence. See the file `COPYING` for details.
 
