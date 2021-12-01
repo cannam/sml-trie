@@ -181,10 +181,10 @@ This library contains implementations of persistent array and
 double-ended queue containers. These are immutable containers like the
 Basis vector with the addition of update, append, and pop-from-end
 operations which return new (partly shared) containers. The queue
-supports all of the same operations plus prepend and pop-from-start,
-but its plain iteration (`foldl`) is not as fast as the array. For
-both containers, all of the update, append, prepend, and pop
-operations take time independent of the container size.
+supports most of the same operations as the array plus prepend and
+pop-from-start, but its plain iteration (`foldl`) is not as fast as
+the array. For both containers, all of the update, append, prepend,
+and pop operations take time independent of the container size.
 
 Note that these containers are competitive only if both immutability
 and general updating are desired. A vector is faster to tabulate and
