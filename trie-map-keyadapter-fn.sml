@@ -31,7 +31,7 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
     val isEmpty = T.isEmpty
 
     fun insert (t, k, x) = T.insert (t, enkey k, x)
-    fun modify (t, k, f) = T.modify (t, enkey k, f)
+    fun alter (t, k, f) = T.alter (t, enkey k, f)
     fun remove (t, k) = T.remove (t, enkey k)
     fun contains (t, k) = T.contains (t, enkey k)
     fun find (t, k) = T.find (t, enkey k)

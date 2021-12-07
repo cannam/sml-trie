@@ -24,7 +24,7 @@ functor MTrieNodeMapFn (E : MTRIE_ELEMENT)
 
     fun remove (m, k) = #1 (M.remove (m, k))
 
-    fun modify (m, k, f) =
+    fun alter (m, k, f) =
         case find (m, k) of
             NONE => (case f NONE of
                          NONE => m

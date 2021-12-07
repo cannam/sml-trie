@@ -105,7 +105,7 @@ functor ATrieNodeMapFn (E : ATRIE_ELEMENT)
                                    }
         end
 
-    fun modify (m, k, f) =
+    fun alter (m, k, f) =
         case f (find (m, k)) of
             NONE => remove (m, k)
           | SOME i => insert (m, k, i)

@@ -15,7 +15,7 @@ signature TRIE_NODE_MAP = sig
     val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a map -> 'b
     val foldr : ('a * 'b -> 'b) -> 'b -> 'a map -> 'b
     val foldri : (key * 'a * 'b -> 'b) -> 'b -> 'a map -> 'b
-    val modify : 'a map * key * ('a option -> 'a option) -> 'a map
+    val alter : 'a map * key * ('a option -> 'a option) -> 'a map
     val remove : 'a map * key -> 'a map
     val keyCompare : key * key -> order
 end
@@ -90,7 +90,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                 (print "Not canonical: branch with non-canonical sub-branch\n"; false)
             else true
 
-    fun modify' (n, xx, f : 'a option -> 'a option) =
+    fun alter' (n, xx, f : 'a option -> 'a option) =
         if K.isEmpty xx
         then
             case n of
@@ -104,7 +104,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                    | SOME new =>
                      (* switch to inserting the existing item back into
                         a branch built on the new one *)
-                     modify' (newBranch (SOME new), kk, fn _ => SOME unrelated))
+                     alter' (newBranch (SOME new), kk, fn _ => SOME unrelated))
               | BRANCH (iopt, m) => BRANCH (f iopt, m)
         else (* xx is nonempty, so we are not at our leaf yet *)
             case n of
@@ -112,7 +112,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                 (case f NONE of
                      NONE => LEAF unrelated
                    | SOME new =>
-                     modify' (newBranch (SOME unrelated), xx, fn _ => SOME new))
+                     alter' (newBranch (SOME unrelated), xx, fn _ => SOME new))
               | TWIG (kk, existing) =>
                 (if K.equal (kk, xx)
                  then case f (SOME existing) of
@@ -122,25 +122,25 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                           NONE => TWIG (kk, existing)
                         | SOME new => 
                           if K.head kk = K.head xx (* e.g. XDEF next to XABC *)
-                          then let val nsub = modify' (newBranch NONE,
-                                                       K.tail xx,
-                                                       fn _ => SOME new)
+                          then let val nsub = alter' (newBranch NONE,
+                                                      K.tail xx,
+                                                      fn _ => SOME new)
                                    (* reinsert existing into new: *)
-                                   val nsub = modify' (nsub,
-                                                       K.tail kk,
-                                                       fn _ => SOME existing)
+                                   val nsub = alter' (nsub,
+                                                      K.tail kk,
+                                                      fn _ => SOME existing)
                                in
                                    BRANCH (NONE,
-                                           M.modify (M.new (), K.head xx,
-                                                     fn _ => SOME nsub))
+                                           M.alter (M.new (), K.head xx,
+                                                    fn _ => SOME nsub))
                                end
                           else (* e.g. CDEF next to GHIJ, both known nonempty *)
-                              modify' (modify' (newBranch NONE, kk,
-                                                fn _ => SOME existing),
-                                       xx, fn _ => SOME new))
+                              alter' (alter' (newBranch NONE, kk,
+                                              fn _ => SOME existing),
+                                      xx, fn _ => SOME new))
               | BRANCH (iopt, m) =>
                 BRANCH (iopt,
-                        M.modify
+                        M.alter
                             (m, K.head xx,
                              fn NONE =>
                                 (case f NONE of
@@ -153,18 +153,18 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                                                else TWIG (xs, new)
                                            end))
                              | SOME nsub =>
-                               let val nsub' = modify' (nsub, K.tail xx, f)
+                               let val nsub' = alter' (nsub, K.tail xx, f)
                                in
                                    if isEmptyBranch nsub'
                                    then NONE
                                    else SOME nsub'
                                end))
                                
-    fun modify (n, xx, f) =
-        let val n' = modify' (case n of
-                                  EMPTY => newBranch NONE
-                                | POPULATED n => n,
-                              xx, f)
+    fun alter (n, xx, f) =
+        let val n' = alter' (case n of
+                                 EMPTY => newBranch NONE
+                               | POPULATED n => n,
+                             xx, f)
         in
             if isEmptyBranch n'
             then EMPTY
@@ -178,10 +178,10 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         end
 
     fun insert (nopt, xx, v) =
-        modify (nopt, xx, fn _ => SOME v)
+        alter (nopt, xx, fn _ => SOME v)
                         
     fun remove (nopt, xx) =
-        modify (nopt, xx, fn _ => NONE)
+        alter (nopt, xx, fn _ => NONE)
 
     fun isPrefixOf ([], yy) = true
       | isPrefixOf (xx, []) = false
@@ -512,8 +512,8 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                     case extractPrefixNode (nsub, K.tail xx) of
                         EMPTY => EMPTY
                       | POPULATED nsub' => 
-                        POPULATED (BRANCH (NONE, M.modify (M.new (), K.head xx,
-                                                           fn _ => SOME nsub')))
+                        POPULATED (BRANCH (NONE, M.alter (M.new (), K.head xx,
+                                                          fn _ => SOME nsub')))
 
     fun extractPrefix (trie, e) =
         case trie of
@@ -750,7 +750,7 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                                                subConstraint (x, rc)) of
                                          EMPTY => acc
                                        | POPULATED nsub' =>
-                                         M.modify (acc, x, fn _ => SOME nsub'))
+                                         M.alter (acc, x, fn _ => SOME nsub'))
                             (M.new ())
                             m
                 in

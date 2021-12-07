@@ -13,11 +13,13 @@ signature TRIE_MAP = sig
     (** Test whether a trie is empty *)
     val isEmpty : 'a trie -> bool
 
-    (** Modify a key-value pair in the trie, returning a new trie. The
+    (** Alter a key-value pair in the trie, returning a new trie. The
         function argument should map from the previous value
-        associated with the key (or NONE if it was absent before) to
-        the new value (or NONE if it is to be removed) *)
-    val modify : 'a trie * key * ('a option -> 'a option) -> 'a trie
+        associated with the key, or NONE if it was absent before, to
+        the new value, or NONE if it is to be removed. (This is called
+        alter rather than modify to avoid confusion with the array
+        modify functions, which do something rather different) *)
+    val alter : 'a trie * key * ('a option -> 'a option) -> 'a trie
 
     (** Insert a key-value pair, returning a new trie. If the key is
         already present, its value will be updated in the new trie *)
