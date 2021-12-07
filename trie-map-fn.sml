@@ -605,10 +605,10 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
               | branchr ((iopt, m), lc, rc) =
                 let val acc =
                         M.foldri
-                            (fn (x, n, acc) =>
+                            (fn (x, nsub, acc) =>
                                 if not (acceptMapElement (x, lc, rc)) then acc
                                 else foldiRangeNode true
-                                                    f (x :: rpfx, n,
+                                                    f (x :: rpfx, nsub,
                                                        subConstraint (x, lc),
                                                        subConstraint (x, rc),
                                                        acc))
@@ -686,10 +686,10 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
               | branchr ((iopt, m), lc, rc) =
                 let val acc =
                         M.foldri
-                            (fn (x, n, acc) =>
+                            (fn (x, nsub, acc) =>
                                 if not (acceptMapElement (x, lc, rc)) then acc
                                 else foldRangeNode true
-                                                   f (n,
+                                                   f (nsub,
                                                       subConstraint (x, lc),
                                                       subConstraint (x, rc),
                                                       acc))
@@ -720,6 +720,85 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
                         | BRANCH (NONE, _) => acc
                         | BRANCH (SOME item, _) => f (item, acc)
                  else acc)
+              | _ =>
+                (case n of
+                     LEAF item => leaf (item, lc, rc)
+                   | TWIG (kk, item) => twig ((kk, item), lc, rc)
+                   | BRANCH (iopt, m) => branch ((iopt, m), lc, rc))
+        end
+
+    fun resolveRangeNode right (rpfx, n, leftConstraintK, rightConstraintK) =
+        let fun leaf (item, [], _) = SOME (K.implode (rev rpfx))
+              | leaf _ = NONE
+                             
+            fun twig ((kk, item), lc, rc) =
+                let val kk' = K.explode kk
+                in
+                    if acceptTwig (kk', lc, rc)
+                    then SOME (K.implode ((rev rpfx) @ kk'))
+                    else NONE
+                end
+
+            fun branchl ((SOME item, m), [], rc) =
+                SOME (K.implode (rev rpfx))
+              | branchl ((iopt, m), [], []) =
+                foldliNode (fn (k, _, NONE) => SOME k
+                             | (_, _, acc) => acc)
+                           (rpfx, n, NONE)
+              | branchl ((iopt, m), lc, rc) =
+                M.foldli
+                    (fn (x, nsub, SOME k) => SOME k
+                      | (x, nsub, NONE) =>
+                        if not (acceptMapElement (x, lc, rc)) then NONE
+                        else resolveRangeNode false
+                                              (x :: rpfx, nsub,
+                                               subConstraint (x, lc),
+                                               subConstraint (x, rc)))
+                    NONE m
+                                                    
+            fun branchr ((iopt, m), [], []) =
+                foldriNode (fn (k, _, NONE) => SOME k
+                             | (_, _, acc) => acc)
+                           (rpfx, n, NONE)
+              | branchr ((iopt, m), lc, rc) =
+                let val acc =
+                        M.foldri
+                            (fn (x, nsub, SOME k) => SOME k
+                              | (x, nsub, NONE) =>
+                                if not (acceptMapElement (x, lc, rc)) then NONE
+                                else resolveRangeNode true
+                                                      (x :: rpfx, nsub,
+                                                       subConstraint (x, lc),
+                                                       subConstraint (x, rc)))
+                            NONE m
+                in
+                    case acc of
+                        SOME k => SOME k
+                      | NONE => 
+                        case iopt of
+                            NONE => NONE
+                          | SOME item => case lc of
+                                             [] => SOME (K.implode (rev rpfx))
+                                           | _ => NONE
+                end
+
+            val branch = if right then branchr else branchl
+                    
+            val leftConstraint = Option.map K.explode leftConstraintK
+            val rightConstraint = Option.map K.explode rightConstraintK
+
+            val lc = Option.getOpt (leftConstraint, [])
+            val rc = Option.getOpt (rightConstraint, [])
+        in
+            case rightConstraint of
+                SOME [] =>
+                (if null lc
+                 then case n of
+                          LEAF item => leaf (item, lc, NONE)
+                        | TWIG _ => NONE
+                        | BRANCH (NONE, _) => NONE
+                        | BRANCH (SOME item, _) => SOME (K.implode (rev rpfx))
+                 else NONE)
               | _ =>
                 (case n of
                      LEAF item => leaf (item, lc, rc)
@@ -817,7 +896,20 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
             EMPTY => acc
           | POPULATED n =>
             foldRangeNode true f (n, leftConstraint, rightConstraint, acc)
-            
+
+    fun resolveRange (trie, (leftConstraint, rightConstraint)) =
+        case trie of
+            EMPTY => NONE
+          | POPULATED n =>
+            case (resolveRangeNode false
+                                   ([], n, leftConstraint, rightConstraint),
+                  resolveRangeNode true
+                                   ([], n, leftConstraint, rightConstraint)) of
+                (NONE, NONE) => NONE
+              | (SOME left, SOME right) => SOME (left, right)
+              | _ => 
+                raise Fail "internal error: resolveRange obtained NONE from one end but SOME from the other"
+                          
     fun extractRange (trie, (leftConstraint, rightConstraint)) =
         case trie of
             EMPTY => EMPTY

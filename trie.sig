@@ -84,6 +84,14 @@ signature TRIE = sig
         the given range, in reverse of sort order *)
     val foldrRange : (entry * 'a -> 'a) -> 'a -> (trie * range) -> 'a
 
+    (** Return the entries at either end of the given range. That is,
+        return entries e1 and e2, present in the trie, for which the
+        range (SOME e1, SOME e2) is equivalent to the given range
+        within the given trie. If the given range is empty within the
+        given trie, return NONE. This is equivalent to checking the
+        first entries of foldl/foldrRange, but typically faster. *)
+    val resolveRange : trie * range -> (entry * entry) option
+
     (** Return a trie containing all entries in the trie that are
         found within the given range, sharing the structure of the
         given trie as far as possible *)

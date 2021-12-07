@@ -445,6 +445,31 @@ functor TrieRangeTestFn (ARG : TRIE_TEST_FN_ARG) :> TESTS = struct
                                (T.foldrRange (op::) []
                                              (test_trie (), (from, to)),
                                 expected)))
+             testdata) @
+        (map (fn (name, from, to, expected) =>
+                 (name ^ "-resolve",
+                  fn () => let val t = test_trie ()
+                               val leftCheck = T.foldlRange
+                                                   (fn (e, NONE) => SOME e
+                                                     | (_, opt) => opt)
+                                                   NONE (t, (from, to))
+                               val rightCheck = T.foldrRange
+                                                    (fn (e, NONE) => SOME e
+                                                      | (_, opt) => opt)
+                                                    NONE (t, (from, to))
+                               val resolved = T.resolveRange (t, (from, to))
+                           in
+                               case (leftCheck, rightCheck, resolved) of
+                                   (NONE, NONE, NONE) => true
+                                 | (SOME l, SOME r, SOME (l', r')) =>
+                                   check_pairs id [(l', l), (r', r)]
+                                 | (NONE, NONE, SOME (l', r')) =>
+                                   (report id (l' ^ "," ^ r', "<none>"); false)
+                                 | (SOME l, SOME r, NONE) =>
+                                   (report id ("<none>", l ^ "," ^ r); false)
+                                 | _ =>
+                                   raise Fail "inconsistency from foldli/foldriRange!"
+                           end))
              testdata)
 end
 

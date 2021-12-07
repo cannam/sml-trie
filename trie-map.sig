@@ -128,6 +128,14 @@ signature TRIE_MAP = sig
         within the given key range, in reverse of sort order by key *)
     val foldriRange : (key * 'a * 'b -> 'b) -> 'b -> ('a trie * range) -> 'b
 
+    (** Return the keys at either end of the given range. That is,
+        return keys k1 and k2, present in the trie, for which the
+        range (SOME k1, SOME k2) is equivalent to the given range
+        within the given trie. If the given range is empty within the
+        given trie, return NONE. This is equivalent to checking the
+        first keys of foldli/foldriRange, but typically faster. *)
+    val resolveRange : 'a trie * range -> (key * key) option
+                                                                              
     (** Return a trie containing all key-value pairs in the trie that
         are found within the given key range, sharing the structure of
         the given trie as far as possible *)
