@@ -75,30 +75,30 @@ structure PersistentArraySlice :>
 
     fun isEmpty (S { array, start, count }) = count = 0
 
-    fun array (s as S { array = { size, trie }, start, count }) =
-        { size = Word32.fromInt count,
-          trie = T.extractRange (trie, makeRange s)
-        }
+    fun array (s as S { array = A.A { size, trie }, start, count }) =
+        A.A { size = Word32.fromInt count,
+              trie = T.extractRange (trie, makeRange s)
+            }
                                                           
-    fun foldl f acc (s as S { array = { size, trie }, start, count }) =
+    fun foldl f acc (s as S { array = A.A { size, trie }, start, count }) =
         T.foldlRange f acc (trie, makeRange s)
                                                           
-    fun foldli f acc (s as S { array = { size, trie }, start, count }) =
+    fun foldli f acc (s as S { array = A.A { size, trie }, start, count }) =
         T.foldliRange (fn (w, x, acc) => f (Word32.toInt w, x, acc))
                       acc (trie, makeRange s)
                                                           
-    fun foldr f acc (s as S { array = { size, trie }, start, count }) =
+    fun foldr f acc (s as S { array = A.A { size, trie }, start, count }) =
         T.foldrRange f acc (trie, makeRange s)
                                                           
-    fun foldri f acc (s as S { array = { size, trie }, start, count }) =
+    fun foldri f acc (s as S { array = A.A { size, trie }, start, count }) =
         T.foldriRange (fn (w, x, acc) => f (Word32.toInt w, x, acc))
                       acc (trie, makeRange s)
                                             
-    fun app f (s as S { array = { size, trie }, start, count }) =
+    fun app f (s as S { array = A.A { size, trie }, start, count }) =
         T.foldliRange (fn (_, x, _) => f x)
                       () (trie, makeRange s)
                                             
-    fun appi f (s as S { array = { size, trie }, start, count }) =
+    fun appi f (s as S { array = A.A { size, trie }, start, count }) =
         T.foldliRange (fn (w, x, _) => f (Word32.toInt w, x))
                       () (trie, makeRange s)
 

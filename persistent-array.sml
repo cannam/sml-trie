@@ -3,7 +3,7 @@ structure PersistentArrayImpl = struct
 
     structure T = Word32TrieMap
 
-    type 'a array = {
+    datatype 'a array = A of {
         size : Word32.word,
         trie : 'a T.trie
     }
@@ -23,69 +23,69 @@ structure PersistentArrayImpl = struct
 
     val maxLen = Word32.toInt maxLenW
 
-    val empty : 'a array = {
+    val empty : 'a array = A {
         size = 0w0,
         trie = T.empty
     }
                     
-    fun isEmpty ({ size, trie } : 'a array) =
+    fun isEmpty (A { size, trie } : 'a array) =
         size = 0w0
 
-    fun length { size, trie } =
+    fun length (A { size, trie }) =
         Word32.toInt size
             
-    fun append ({ size, trie }, x) =
+    fun append (A { size, trie }, x) =
         let val _ = if size = maxLenW then raise Size else ()
             val t = T.insert (trie, size, x)
         in
-            { size = size + 0w1, trie = t }
+            A { size = size + 0w1, trie = t }
         end
 
-    fun popEnd { size, trie } =
+    fun popEnd (A { size, trie }) =
         case T.find (trie, size - 0w1) of
             NONE => raise Size
           | SOME x =>
             let val t = T.remove (trie, size - 0w1)
             in
-                ({ size = size - 0w1, trie = t }, x)
+                (A { size = size - 0w1, trie = t }, x)
             end
 
-    fun sub (v as { size, trie }, i) =
+    fun sub (v as A { size, trie }, i) =
         if i < 0 orelse i >= length v
         then raise Subscript
         else T.lookup (trie, Word32.fromInt i)
 
-    fun update (v as { size, trie }, i, x) =
+    fun update (v as A { size, trie }, i, x) =
         if i < 0 orelse i >= length v
         then raise Subscript
         else let val t = T.insert (trie, Word32.fromInt i, x)
              in
-                 { size = size, trie = t }
+                 A { size = size, trie = t }
              end
 
-    fun foldl f acc { size, trie } =
+    fun foldl f acc (A { size, trie }) =
         T.foldl f acc trie
 
-    fun foldli f acc { size, trie } =
+    fun foldli f acc (A { size, trie }) =
         T.foldli (fn (w, x, acc) => f (Word32.toInt w, x, acc)) acc trie
 
-    fun foldr f acc { size, trie } =
+    fun foldr f acc (A { size, trie }) =
         T.foldr f acc trie
 
-    fun foldri f acc { size, trie } =
+    fun foldri f acc (A { size, trie }) =
         T.foldri (fn (w, x, acc) => f (Word32.toInt w, x, acc)) acc trie
 
-    fun find f { size, trie } =
+    fun find f (A { size, trie }) =
         T.search f trie
 
-    fun findi f { size, trie } =
+    fun findi f (A { size, trie }) =
         Option.map (fn (w, x) => (Word32.toInt w, x))
                    (T.searchi (fn (w, x) => f (Word32.toInt w, x)) trie)
 
-    fun exists f { size, trie } =
+    fun exists f (A { size, trie }) =
         Option.isSome (T.search f trie)
 
-    fun all f { size, trie } =
+    fun all f (A { size, trie }) =
         not (Option.isSome (T.search (fn x => not (f x)) trie))
             
     fun mapi f v =
