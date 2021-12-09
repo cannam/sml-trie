@@ -84,22 +84,24 @@ structure PersistentArraySlice :>
         T.foldlRange f acc (trie, makeRange s)
                                                           
     fun foldli f acc (s as S { array = A.A { size, trie }, start, count }) =
-        T.foldliRange (fn (w, x, acc) => f (Word32.toInt w, x, acc))
-                      acc (trie, makeRange s)
+        case T.foldlRange (fn (x, (i, acc)) => (i + 1, f (i, x, acc)))
+                          (0, acc)
+                          (trie, makeRange s) of
+            (_, acc) => acc
                                                           
     fun foldr f acc (s as S { array = A.A { size, trie }, start, count }) =
         T.foldrRange f acc (trie, makeRange s)
                                                           
     fun foldri f acc (s as S { array = A.A { size, trie }, start, count }) =
-        T.foldriRange (fn (w, x, acc) => f (Word32.toInt w, x, acc))
-                      acc (trie, makeRange s)
-                                            
-    fun app f (s as S { array = A.A { size, trie }, start, count }) =
-        T.foldliRange (fn (_, x, _) => f x)
-                      () (trie, makeRange s)
-                                            
-    fun appi f (s as S { array = A.A { size, trie }, start, count }) =
-        T.foldliRange (fn (w, x, _) => f (Word32.toInt w, x))
-                      () (trie, makeRange s)
+        case T.foldrRange (fn (x, (i, acc)) => (i - 1, f (i, x, acc)))
+                          (count - 1, acc)
+                          (trie, makeRange s) of
+            (_, acc) => acc
+                                        
+    fun app f s =
+        foldl (fn (x, _) => ignore (f x)) () s
+                  
+    fun appi f s =
+        foldli (fn (i, x, _) => ignore (f (i, x))) () s
 
 end

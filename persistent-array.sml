@@ -67,13 +67,20 @@ structure PersistentArrayImpl = struct
         T.foldl f acc trie
 
     fun foldli f acc (A { size, trie }) =
-        T.foldli (fn (w, x, acc) => f (Word32.toInt w, x, acc)) acc trie
+        (* T.foldli is much slower than T.foldl, because it has to reconstruct
+           the keys as it goes. It's quicker for us just to count them *)
+        case T.foldl (fn (x, (i, acc)) => (i + 1, f (i, x, acc)))
+                     (0, acc) trie of
+            (_, acc) => acc
 
     fun foldr f acc (A { size, trie }) =
         T.foldr f acc trie
 
     fun foldri f acc (A { size, trie }) =
-        T.foldri (fn (w, x, acc) => f (Word32.toInt w, x, acc)) acc trie
+        (* as foldli *)
+        case T.foldr (fn (x, (i, acc)) => (i - 1, f (i, x, acc)))
+                     (Word32.toInt size - 1, acc) trie of
+            (_, acc) => acc
 
     fun find f (A { size, trie }) =
         T.search f trie
