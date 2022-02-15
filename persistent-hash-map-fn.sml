@@ -47,6 +47,9 @@ functor PersistentHashMapFn (Key : HASH_KEY)
             T.alter (m, h, fn eopt => SOME (addToEntry (h, k, v) eopt))
         end
 
+    fun singleton (k, v) =
+        insert (T.empty, k, v)
+            
     fun remove (m, k) =
         let val h = Key.hashVal k
         in
@@ -74,6 +77,41 @@ functor PersistentHashMapFn (Key : HASH_KEY)
                 case List.find (fn (k', v) => Key.sameKey (k', k)) values of
                     NONE => NONE
                   | SOME (_, v) => SOME v
+        end
+
+    fun alter (m : 'a hash_map, k : hash_key, f : 'a option -> 'a option) =
+        let val h = Key.hashVal k
+        in
+            case T.find (m, h) of
+                NONE =>
+                (case f NONE of
+                     NONE => m
+                   | SOME v => T.insert (m, h, ONE (k, v)))
+              | SOME (ONE (k', v')) =>
+                (if Key.sameKey (k', k)
+                 then case f (SOME v') of
+                          NONE => T.remove (m, h)
+                        | SOME v => T.insert (m, h, ONE (k, v))
+                 else case f NONE of
+                          NONE => m
+                        | SOME v => T.insert (m, h, MANY [(k', v'), (k, v)]))
+              | SOME (MANY values) =>
+                (case List.foldr (fn ((k', v'), (acc, found)) =>
+                                     if Key.sameKey (k', k)
+                                     then case f (SOME v') of
+                                              NONE => (acc, true)
+                                            | SOME v => ((k, v) :: acc, true)
+                                     else ((k', v') :: acc, found))
+                                 ([], false)
+                                 values of
+                     ([], true) => T.remove (m, h)
+                   | ([value], true) => T.insert (m, h, ONE value)
+                   | (values, true) => T.insert (m, h, MANY values)
+                   | (values, false) =>
+                     (case f NONE of
+                          NONE => m
+                        | SOME v => T.insert (m, h, MANY ((k, v) :: values)))
+                )
         end
 
     fun lookup (m, k) =
@@ -122,7 +160,32 @@ functor PersistentHashMapFn (Key : HASH_KEY)
                                        f (k, v, acc)) acc values)
                 acc m
 
+    fun map f m =
+        foldli (fn (k, v, acc) => insert (acc, k, f v)) T.empty m
+
+    fun mapi f m =
+        foldli (fn (k, v, acc) => insert (acc, k, f (k, v))) T.empty m
+
+    fun filter f m =
+        foldli (fn (k, v, acc) => if f v
+                                  then insert (acc, k, v)
+                                  else acc)
+               T.empty m
+
+    fun filteri f m =
+        foldli (fn (k, v, acc) => if f (k, v)
+                                  then insert (acc, k, v)
+                                  else acc)
+               T.empty m
+               
     fun enumerate m =
         foldri (fn (k, v, acc) => (k, v) :: acc) [] m
-                
+               
+    fun listKeys m =
+        foldri (fn (k, v, acc) => k :: acc) [] m
+               
+    val inDomain = contains
+    val listItemsi = enumerate
+               
 end
+
