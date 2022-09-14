@@ -43,12 +43,17 @@ structure PersistentArrayImpl = struct
 
     fun popEnd (A { size, trie }) =
         case T.find (trie, size - 0w1) of
-            NONE => raise Size
+            NONE => raise Empty
           | SOME x =>
             let val t = T.remove (trie, size - 0w1)
             in
                 (A { size = size - 0w1, trie = t }, x)
             end
+
+    fun peekEnd (A { size, trie }) =
+        case T.find (trie, size - 0w1) of
+            NONE => raise Empty
+          | SOME x => x
 
     fun sub (v as A { size, trie }, i) =
         if i < 0 orelse i >= length v

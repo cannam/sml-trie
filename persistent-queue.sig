@@ -25,11 +25,13 @@ signature PERSISTENT_QUEUE = sig
     val isEmpty : 'a queue -> bool
     val append : 'a queue * 'a -> 'a queue
     val popEnd : 'a queue -> 'a queue * 'a
+    val peekEnd : 'a queue -> 'a
             
     (* II. Functions specific to PERSISTENT_QUEUE *)
             
     val queue : int * 'a -> 'a queue
     val prepend : 'a queue * 'a -> 'a queue
     val popStart : 'a queue -> 'a queue * 'a
+    val peekStart : 'a queue -> 'a
 
 end

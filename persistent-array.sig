@@ -41,5 +41,6 @@ signature PERSISTENT_ARRAY = sig
     val isEmpty : 'a array -> bool
     val append : 'a array * 'a -> 'a array
     val popEnd : 'a array -> 'a array * 'a
+    val peekEnd : 'a array -> 'a
                                 
 end

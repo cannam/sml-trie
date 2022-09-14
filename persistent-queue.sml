@@ -33,12 +33,17 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
 
     fun popStart ({ start, size, trie } : 'a queue) : ('a queue * 'a) =
         case T.find (trie, start) of
-            NONE => raise Size
+            NONE => raise Empty
           | SOME x =>
             let val t = T.remove (trie, start)
             in
                 ({ start = start + 0w1, size = size - 0w1, trie = t }, x)
             end
+
+    fun peekStart ({ start, size, trie } : 'a queue) : 'a =
+        case T.find (trie, start) of
+            NONE => raise Empty
+          | SOME x => x
             
     fun append ({ start, size, trie }, x) =
         let val _ = if size = maxLenW then raise Size else ()
@@ -49,12 +54,17 @@ structure PersistentQueue :> PERSISTENT_QUEUE = struct
 
     fun popEnd ({ start, size, trie } : 'a queue) : ('a queue * 'a) =
         case T.find (trie, start + size - 0w1) of
-            NONE => raise Size
+            NONE => raise Empty
           | SOME x =>
             let val t = T.remove (trie, start + size - 0w1)
             in
                 ({ start = start, size = size - 0w1, trie = t }, x)
             end
+
+    fun peekEnd ({ start, size, trie } : 'a queue) : 'a =
+        case T.find (trie, start + size - 0w1) of
+            NONE => raise Empty
+          | SOME x => x
 
     fun sub (v as { start, size, trie }, i) =
         if i < 0 orelse i >= length v
