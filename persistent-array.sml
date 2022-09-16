@@ -103,8 +103,8 @@ structure PersistentArrayImpl = struct
     fun mapi f v =
         foldli (fn (i, x, acc) => append (acc, f (i, x))) empty v
 
-    fun map f v =
-        foldl (fn (x, acc) => append (acc, f x)) empty v
+    fun map f (A { size, trie }) =
+        A { size = size, trie = T.map f trie }
 
     fun appi f v =
         foldli (fn (i, x, _) => ignore (f (i, x))) () v

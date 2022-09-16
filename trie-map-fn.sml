@@ -11,6 +11,8 @@ signature TRIE_NODE_MAP = sig
     val new : unit -> 'a map
     val isEmpty : 'a map -> bool
     val find : 'a map * key -> 'a option
+    val map : ('a -> 'b) -> 'a map -> 'b map
+    val mapi : (key * 'a -> 'b) -> 'a map -> 'b map
     val foldl : ('a * 'b -> 'b) -> 'b -> 'a map -> 'b
     val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a map -> 'b
     val foldr : ('a * 'b -> 'b) -> 'b -> 'a map -> 'b
@@ -370,7 +372,39 @@ functor TrieMapFn (A : TRIE_MAP_FN_ARG)
         case t of
             EMPTY => NONE
           | POPULATED n => searchiNode f ([], n)
-            
+
+    fun mapiNode f =
+        let fun f' (rpfx, item) = f (K.implode (rev rpfx), item)
+            fun mapi' (rpfx, n) =
+                case n of
+                    LEAF item =>
+                    LEAF (f' (rpfx, item))
+                  | TWIG (kk, item) =>
+                    TWIG (kk, f' (rpfx, item))
+                  | BRANCH (iopt, m) =>
+                    BRANCH (Option.map (fn item => f' (rpfx, item)) iopt,
+                            M.mapi (fn (x, n) => mapi' (x::rpfx, n)) m)
+        in
+            mapi'
+        end
+                                       
+    fun mapi (f : key * 'a -> 'b) (t : 'a trie) : 'b trie =
+        case t of
+            EMPTY => EMPTY
+          | POPULATED n =>
+            POPULATED (mapiNode f ([], n))
+
+    fun mapNode f n =
+        case n of
+            LEAF item => LEAF (f item)
+          | TWIG (kk, item) => TWIG (kk, f item)
+          | BRANCH (iopt, m) => BRANCH (Option.map f iopt, M.map (mapNode f) m)
+                                       
+    fun map (f : 'a -> 'b) (t : 'a trie) : 'b trie =
+        case t of
+            EMPTY => EMPTY
+          | POPULATED n => POPULATED (mapNode f n)
+                                       
     fun foldlNode f =
         let fun fold' (n, acc) =
                 case n of

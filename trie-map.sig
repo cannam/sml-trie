@@ -67,22 +67,30 @@ signature TRIE_MAP = sig
         true. This is similar to Vector.findi in that it must iterate
         through the trie rather than performing a direct lookup *)
     val searchi : (key * 'a -> bool) -> 'a trie -> (key * 'a) option
-                                   
-    (** Fold over all the values in the trie, in sort order by key *)
-    val foldl : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b
+
+    (** Map all the values in the trie to new values using the given
+        map function, supplied with key and value for each. *)
+    val mapi : (key * 'a -> 'b) -> 'a trie -> 'b trie
+
+    (** Map all the values in the trie to new values using the given
+        map function, supplied with value only. *)
+    val map : ('a -> 'b) -> 'a trie -> 'b trie
 
     (** Fold over all the key-value pairs in the trie, in sort order
         by key *)
     val foldli : (key * 'a * 'b -> 'b) -> 'b -> 'a trie -> 'b
                                    
-    (** Fold over all the values in the trie, in reverse of sort order
-        by key *)
-    val foldr : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b
+    (** Fold over all the values in the trie, in sort order by key *)
+    val foldl : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b
 
     (** Fold over all the key-value pairs in the trie, in reverse of
         sort order by key *)
     val foldri : (key * 'a * 'b -> 'b) -> 'b -> 'a trie -> 'b
-
+                                   
+    (** Fold over all the values in the trie, in reverse of sort order
+        by key *)
+    val foldr : ('a * 'b -> 'b) -> 'b -> 'a trie -> 'b
+                                                               
     (** Return a list of all key-value pairs in the trie, in sort order
         by key *)
     val enumerate : 'a trie -> (key * 'a) list

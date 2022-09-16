@@ -21,9 +21,11 @@ functor BTrieNodeMapFn (E : BTRIE_ELEMENT)
     fun new () = V.new E.maxOrd
     val isEmpty = V.isEmpty
     fun find (v, k) = V.find (v, E.ord k)
-    fun foldl f = V.foldl (fn (x, acc) => f (x, acc))
+    fun map f = V.map f
+    fun mapi f = V.mapi (fn (i, x) => f (E.invOrd i, x))
+    fun foldl f = V.foldl f
     fun foldli f = V.foldli (fn (i, x, acc) => f (E.invOrd i, x, acc))
-    fun foldr f = V.foldr (fn (x, acc) => f (x, acc))
+    fun foldr f = V.foldr f
     fun foldri f = V.foldri (fn (i, x, acc) => f (E.invOrd i, x, acc))
     fun alter (v, k, f) = V.alter (v, E.ord k, f)
     fun remove (v, k) = V.remove (v, E.ord k)

@@ -34,6 +34,21 @@ functor ATrieNodeMapFn (E : ATRIE_ELEMENT)
             else Vector.sub (vec, i - base)
         end        
 
+    fun map f (MAP { base, nonempty, vec }) =
+        MAP { base = base,
+              nonempty = nonempty,
+              vec = Vector.map (fn a => Option.map f a) vec
+            }
+
+    fun mapi f (MAP { base, nonempty, vec }) =
+        MAP { base = base,
+              nonempty = nonempty,
+              vec = Vector.mapi
+                        (fn (i, NONE) => NONE
+                          | (i, SOME x) => SOME (f (E.invOrd (i + base), x)))
+                        vec
+            }
+            
     fun foldl f acc (MAP { vec, ... }) =
         Vector.foldl (fn (NONE, acc) => acc
                        | (SOME x, acc) => f (x, acc))

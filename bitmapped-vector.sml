@@ -281,6 +281,20 @@ functor BitMappedVectorFn (V : BIT_VECTOR) = struct
     fun remove (vec, i) =
         alter (vec, i, fn _ => NONE)
 
+    fun mapi (f : int * 'a -> 'b) ((b, v) : 'a vector) : 'b vector =
+        (b,
+         let val i = ref (~1)
+             fun advance () =
+                 (i := ! i + 1;
+                  if V.sub (b, ! i) then ()
+                  else advance ())
+         in
+             Vector.mapi (fn (ix, x) => (advance (); f (! i, x))) v
+         end)
+
+    fun map (f : 'a -> 'b) ((b, v) : 'a vector) : 'b vector =
+        (b, Vector.map f v)
+              
     fun foldli (f : (int * 'a * 'b -> 'b))
                (acc : 'b) ((b, v) : 'a vector) : 'b =
         case V.foldli

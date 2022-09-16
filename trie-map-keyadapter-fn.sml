@@ -45,7 +45,12 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
                                           
     fun prefixOf (t, k) =
         Option.map dekey (T.prefixOf (t, enkey k))
-                                 
+
+    val map = T.map
+
+    fun mapi f =
+        T.mapi (fn (k, x) => f (dekey k, x)) 
+                  
     val foldl = T.foldl
     val foldr = T.foldr
 
@@ -56,7 +61,7 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
         T.foldri (fn (k, x, acc) => f (dekey k, x, acc))
 
     fun enumerate t =
-        map (fn (k, x) => (dekey k, x)) (T.enumerate t)
+        List.map (fn (k, x) => (dekey k, x)) (T.enumerate t)
 
     fun foldliPrefix f acc (t, k) =
         T.foldliPrefix (fn (k, x, acc) => f (dekey k, x, acc))
@@ -70,7 +75,7 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
         T.extractPrefix (t, enkey k)
                        
     fun enumeratePrefix (t, k) =
-        map (fn (k, x) => (dekey k, x)) (T.enumeratePrefix (t, enkey k))
+        List.map (fn (k, x) => (dekey k, x)) (T.enumeratePrefix (t, enkey k))
 
     type range = key option * key option
 
@@ -107,10 +112,10 @@ functor TrieMapKeyAdapterFn (A : TRIE_MAP_KEYADAPTER_FN_ARG)
                             Option.map enkey rightConstraint))
                       
     fun enumerateRange (t, (leftConstraint, rightConstraint)) =
-        map (fn (k, x) => (dekey k, x))
-            (T.enumerateRange (t,
-                               (Option.map enkey leftConstraint,
-                                Option.map enkey rightConstraint)))
+        List.map (fn (k, x) => (dekey k, x))
+                 (T.enumerateRange (t,
+                                    (Option.map enkey leftConstraint,
+                                     Option.map enkey rightConstraint)))
 end
 
 signature PATTERN_MATCH_TRIE_MAP_KEYADAPTER_FN_ARG = sig
@@ -152,6 +157,6 @@ functor PatternMatchTrieMapKeyAdapterFn (A : PATTERN_MATCH_TRIE_MAP_KEYADAPTER_F
         A.T.foldriPattern (fn (k, x, acc) => f (A.dekey k, x, acc))
 
     fun enumeratePattern (t, p) =
-        map (fn (k, x) => (A.dekey k, x)) (A.T.enumeratePattern (t, p))
+        List.map (fn (k, x) => (A.dekey k, x)) (A.T.enumeratePattern (t, p))
                              
 end
