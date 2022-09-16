@@ -905,7 +905,7 @@ functor PersistentCommonTestFn (ARG : PERSISTENT_COMMON_TEST_FN_ARG) :> TESTS = 
                              (A.toList (#1 (A.popEnd (A.fromList [ "a" ]))),
                               [])
                  andalso
-                 ((A.popEnd (A.fromList []); false) handle Size => true)
+                 ((A.popEnd (A.fromList []); false) handle Empty => true)
              end
         ),
         ( "foldli",
@@ -1189,7 +1189,7 @@ structure PersistentQueueTest :> TESTS = struct
                              (Q.toList (#1 (Q.popStart (Q.fromList [ "a" ]))),
                               [])
                  andalso
-                 ((Q.popStart (Q.fromList []); false) handle Size => true)
+                 ((Q.popStart (Q.fromList []); false) handle Empty => true)
              end
         ),
         ( "queue-forward",
